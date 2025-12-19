@@ -430,7 +430,7 @@ def marcar_cancion_actual_como_cantada(db: Session):
     Simula una puntuaciÃÂ³n de IA.
     """
     import os
-    import ia_scorer # Importamos nuestro nuevo mÃÂ³dulo de IA
+    import random_scorer # Importamos nuestro nuevo mÃÂ³dulo de IA
 
     # 1. Buscar la canciÃÂ³n que estÃÂ¡ actualmente en estado 'reproduciendo'
     cancion_actual = db.query(models.Cancion).filter(models.Cancion.estado == "reproduciendo").first()
@@ -442,10 +442,10 @@ def marcar_cancion_actual_como_cantada(db: Session):
     # 2. Calcular el puntaje usando el mÃÂ³dulo de IA.
     #    Asumimos que el audio del usuario se sube a una carpeta temporal con el ID de la canciÃÂ³n.
     #    Este es un paso que el frontend deberÃÂ¡ implementar en el futuro.
-    user_audio_path = os.path.join(ia_scorer.TEMP_DIR, f"user_recording_{cancion_actual.id}.wav")
+    user_audio_path = os.path.join(random_scorer.TEMP_DIR, f"user_recording_{cancion_actual.id}.wav")
     
     if os.path.exists(user_audio_path):
-        puntuacion = ia_scorer.calculate_score(cancion_actual.youtube_id, user_audio_path)
+        puntuacion = random_scorer.calculate_score(cancion_actual.youtube_id, user_audio_path)
         # Opcional: eliminar el audio del usuario despuÃÂ©s de procesarlo
         # os.remove(user_audio_path)
     else:
