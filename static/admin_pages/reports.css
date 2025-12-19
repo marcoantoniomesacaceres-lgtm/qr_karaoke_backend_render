@@ -1,0 +1,171 @@
+/* Reports Page - BEES Style */
+
+#reports {
+    animation: slideInUp 0.3s ease-out;
+}
+
+#reports .bees-header {
+    margin-bottom: 24px;
+}
+
+#reports .bees-card {
+    padding: 24px;
+}
+
+/* Report Controls */
+#report-selector {
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+#report-selector:hover {
+    border-color: var(--bees-yellow) !important;
+}
+
+#report-selector:focus {
+    outline: none;
+    border-color: var(--bees-yellow) !important;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+}
+
+#generate-report-btn {
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+#generate-report-btn:hover {
+    transform: translateY(-2px);
+}
+
+#generate-report-btn:active {
+    transform: translateY(0);
+}
+
+/* Report Output */
+#report-output {
+    min-height: 100px;
+}
+
+/* Table Styling */
+#reports .bees-table {
+    width: 100%;
+    margin-top: 16px;
+    border-collapse: collapse;
+    background: var(--page-input-bg);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#reports .bees-table thead {
+    background: linear-gradient(135deg, #FFD700 0%, #FFC700 100%);
+    color: var(--bees-black);
+    font-weight: 700;
+}
+
+#reports .bees-table th {
+    padding: 14px;
+    text-align: left;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#reports .bees-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--page-border);
+    font-size: 14px;
+    color: var(--page-text);
+}
+
+#reports .bees-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+#reports .bees-table tbody tr:hover {
+    background-color: var(--bees-yellow);
+    color: var(--bees-black);
+}
+
+#reports .bees-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Metrics Grid */
+#reports [style*="gridTemplateColumns"] {
+    margin-top: 16px;
+}
+
+#reports .bees-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+#reports .bees-badge-warning {
+    background-color: #FFA500;
+    color: white;
+}
+
+/* Info Text */
+#reports p {
+    font-size: 12px;
+    color: var(--page-text-secondary);
+    margin-top: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #reports .bees-card {
+        padding: 16px;
+    }
+
+    #reports .bees-table {
+        font-size: 12px;
+    }
+
+    #reports .bees-table th,
+    #reports .bees-table td {
+        padding: 10px;
+    }
+
+    #report-selector {
+        min-width: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    #reports .bees-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    #reports .bees-header-icon {
+        margin-right: 0;
+        margin-bottom: 12px;
+        font-size: 32px;
+    }
+
+    #report-selector,
+    #generate-report-btn {
+        width: 100% !important;
+    }
+
+    #reports [style*="display: flex"] {
+        flex-direction: column;
+    }
+
+    #reports .bees-table {
+        font-size: 11px;
+        display: block;
+        overflow-x: auto;
+    }
+
+    #reports .bees-table th,
+    #reports .bees-table td {
+        padding: 8px;
+    }
+}

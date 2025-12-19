@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LA CANTA QUE RANA</title>
+    <link rel="stylesheet" href="/static/styles_bees.css">
+</head>
+
+<body>
+    <!-- PANTALLA DE LOGIN -->
+    <div class="login-view" id="login-container">
+        <div class="login-box">
+            <div class="logo-container">
+                <h1>🎤 LA CANTA QUE RANA</h1>
+            </div>
+            <p id="welcome-message">Para empezar, elige un apodo para esta noche.</p>
+            <input type="text" id="nick-input" placeholder="Tu apodo" required autocomplete="off">
+            <button type="button" id="connect-button" class="btn-primary">Conectar</button>
+            <div class="error-msg" id="error-message"></div>
+        </div>
+    </div>
+
+    <!-- PANTALLA PRINCIPAL (DASHBOARD) -->
+    <div class="dashboard-view hidden" id="dashboard-view">
+        <!-- HEADER CON PERFIL -->
+        <header class="header-bees">
+            <div class="header-content">
+                <div class="user-info">
+                    <div class="user-avatar">🎤</div>
+                    <div>
+                        <h2 id="user-nick">Usuario</h2>
+                        <p class="table-info">Mesa: <span id="table-name"></span></p>
+                    </div>
+                </div>
+                <div class="user-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="user-points">0</span>
+                        <span class="stat-label">Puntos</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="user-level">Bronce</span>
+                        <span class="stat-label">Nivel</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- BUSCADOR GRANDE (ESTILO BEES) -->
+        <div class="search-container">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" placeholder="Buscar en LA CANTA QUE RANA">
+            </div>
+            <div class="search-buttons">
+                <button id="search-songs-btn" class="btn-search">🎵 Escuchar</button>
+                <button id="search-karaoke-btn" class="btn-search-karaoke">🎤 Cantar</button>
+            </div>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            <!-- TAB: BÚSQUEDA DE CANCIONES -->
+            <div id="tab-search" class="tab-content">
+                <div id="search-results" class="results-grid">
+                    <!-- Los resultados se insertarán aquí -->
+                </div>
+            </div>
+
+            <!-- TAB: CATÁLOGO DE PRODUCTOS -->
+            <div id="tab-catalog" class="tab-content">
+                <div class="section-header">
+                    <h3>🛒 Hacer Pedido</h3>
+                    <button id="cart-btn" class="btn-cart hidden">
+                        <span class="cart-icon">🛒</span>
+                        <span id="cart-count">0</span>
+                    </button>
+                </div>
+                <div id="product-catalog-list" class="product-grid">
+                    <!-- Los productos se insertarán aquí -->
+                </div>
+                <button id="add-all-btn" class="btn-add-all hidden">Agregar todo</button>
+            </div>
+
+            <!-- TAB: LISTA DE CANCIONES (COLA) -->
+            <div id="tab-queue" class="tab-content active">
+                <div class="section-header">
+                    <h3>🎵 Ahora Sonando</h3>
+                </div>
+                <div id="now-playing-container" class="now-playing">
+                    <p>La cola está vacía. ¡Añade una canción!</p>
+                </div>
+                <div class="section-header">
+                    <h3>📋 Próximas Canciones</h3>
+                </div>
+                <ul id="upcoming-list" class="song-list">
+                    <!-- Las canciones se insertarán aquí -->
+                </ul>
+            </div>
+
+            <!-- TAB: MI LISTA -->
+            <div id="tab-my-list" class="tab-content">
+                <div class="section-header">
+                    <h3>🎤 Mis Canciones</h3>
+                </div>
+                <ul id="my-song-list" class="song-list">
+                    <!-- Las canciones del usuario se insertarán aquí -->
+                </ul>
+            </div>
+
+            <!-- TAB: MI CUENTA -->
+            <div id="tab-my-account" class="tab-content">
+                <div class="section-header">
+                    <h3>💰 Estado de Cuenta</h3>
+                </div>
+                <div id="my-account-content" class="account-view">
+                    <!-- El contenido de la cuenta se insertará aquí -->
+                </div>
+            </div>
+
+            <!-- TAB: REACCIONES -->
+            <div id="tab-reactions" class="tab-content">
+                <div class="section-header">
+                    <h3>😊 Enviar Reacción</h3>
+                </div>
+                <div id="reaction-buttons" class="reaction-grid">
+                    <button class="reaction-btn" data-emoji="😊" title="¡Genial!">😊</button>
+                    <button class="reaction-btn" data-emoji="👍" title="¡Me gusta!">👍</button>
+                    <button class="reaction-btn" data-emoji="🔥" title="¡Fuego!">🔥</button>
+                    <button class="reaction-btn" data-emoji="🤩" title="¡Increíble!">🤩</button>
+                    <button class="reaction-btn" data-emoji="🎤" title="¡Buena voz!">🎤</button>
+                    <button class="reaction-btn" data-emoji="❤️" title="¡Me encanta!">❤️</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- BARRA DE NAVEGACIÓN INFERIOR (ESTILO BEES) -->
+        <nav class="bottom-nav">
+            <button class="nav-item" data-tab="tab-queue">
+                <span class="nav-icon">🎵</span>
+                <span class="nav-label">Cola</span>
+            </button>
+            <button class="nav-item" data-tab="tab-search">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Buscar</span>
+            </button>
+            <button class="nav-item" data-tab="tab-catalog">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-label">Pedidos</span>
+            </button>
+            <button class="nav-item" data-tab="tab-my-list">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Mi Lista</span>
+            </button>
+            <button class="nav-item" data-tab="tab-my-account">
+                <span class="nav-icon">💰</span>
+                <span class="nav-label">Cuenta</span>
+            </button>
+            <button class="nav-item" data-tab="tab-reactions">
+                <span class="nav-icon">😊</span>
+                <span class="nav-label">Reacciones</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- MODAL PARA CARRITO -->
+    <div id="cart-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>🛒 Mi Pedido</h3>
+            <div id="cart-items-list" class="cart-items">
+                <p>Tu carrito está vacío.</p>
+            </div>
+            <div class="modal-actions">
+                <button id="confirm-cart-order-btn" class="btn-confirm">Hacer Pedido</button>
+                <button id="cancel-cart-btn" class="btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICACIÓN FLOTANTE -->
+    <div id="notification-banner"></div>
+
+    <!-- CONTENEDOR DE REACCIONES FLOTANTES -->
+    <div id="reaction-container" class="reaction-container"></div>
+
+    <!-- SCRIPT PRINCIPAL -->
+    <script src="/static/app_bees.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaoke 'La Rana que Canta'</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .login-view { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        .login-box {
+            background-color: #1e1e1e;
+            padding: 2em;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1, h2 { color: #4CAF50; }
+        p { color: #b0b0b0; }
+        input {
+            width: calc(100% - 24px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #fff;
+            font-size: 1em;
+        }
+        button {
+            padding: 12px;
+            background-color: #4CAF50;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover:not(:disabled) { background-color: #45a049; }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        .error-msg { color: #ff4d4d; margin-top: 1em; min-height: 1.2em; }
+        .hidden {
+            display: none;
+        }
+        .tabs { display: flex; border-bottom: 1px solid #333; margin-bottom: 20px; }
+        .tab-button { background: none; border: none; color: #aaa; padding: 15px 20px; cursor: pointer; font-size: 1em; }
+        .tab-button.active { color: #4CAF50; border-bottom: 2px solid #4CAF50; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .song-list { list-style: none; padding: 0; }
+        .song-item { background-color: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .song-item-info { display: flex; align-items: center; gap: 15px; }
+        .song-item img { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; }
+        .song-title { font-weight: bold; }
+        .song-status { font-size: 0.8em; padding: 4px 8px; border-radius: 12px; color: #121212; }
+        .status-pendiente { background-color: #ffc107; }
+        .status-aprobado { background-color: #28a745; }
+        .status-reproduciendo { background-color: #17a2b8; animation: pulse 1.5s infinite; }
+        .status-cantada { background-color: #6c757d; }
+        .status-rechazada { background-color: #dc3545; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(23, 162, 184, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(23, 162, 184, 0); } 100% { box-shadow: 0 0 0 0 rgba(23, 162, 184, 0); } }
+        .profile-card { background-color: #1e1e1e; padding: 20px; border-radius: 8px; text-align: center; }
+        .profile-card h3 { margin-top: 0; }
+        .profile-level { font-size: 1.2em; font-weight: bold; }
+        .level-bronce { color: #cd7f32; }
+        .level-plata { color: #c0c0c0; }
+        .level-oro { color: #ffd700; }
+        #search-results { max-height: 400px; overflow-y: auto; }
+        #notification-banner {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: top 0.5s ease-in-out;
+            z-index: 1000;
+        }
+        /* Estilos para el Catálogo de Productos */
+        .product-catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .product-card {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .product-card img { width: 100%; height: 150px; object-fit: cover; background-color: #333; }
+        .product-card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+        .product-card-title { font-size: 1.1em; font-weight: bold; margin: 0 0 5px 0; }
+        .product-card-category { font-size: 0.8em; color: #aaa; margin-bottom: 10px; }
+        .product-card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+        .product-price { font-size: 1.2em; font-weight: bold; color: #bb86fc; }
+        .product-card .order-btn { background-color: #bb86fc; font-size: 0.9em; padding: 8px 16px; }
+
+        /* Estilos para el Modal de Confirmación */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-content { background: #1e1e1e; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; text-align: center; }
+        .modal-content h3 { margin-top: 0; color: #bb86fc; }
+        .modal-content label { display: block; margin: 15px 0 5px 0; }
+        .modal-content input[type="number"] { text-align: center; width: 80px; }
+        .modal-actions { margin-top: 20px; display: flex; justify-content: space-around; }
+        .modal-actions button { width: 120px; }
+        .btn-confirm { background-color: #4CAF50; }
+        .btn-cancel { background-color: #6c757d; }
+        #notification.error {
+            background-color: #cf6679;
+            color: #121212;
+        }
+        #notification.success {
+            background-color: #66bb6a;
+            color: #121212;
+        }
+    </style>
+</head>
+<body>
+    <div id="notification-banner"></div>
+
+    <div class="login-view" id="login-container">
+        <div class="login-box">
+            <h1>¡Bienvenido a La Rana que Canta!</h1>
+            <p id="welcome-message">Para empezar, elige un apodo para esta noche.</p>
+            <form id="login-form">
+                <input type="text" id="nick-input" placeholder="Tu apodo" required autocomplete="off">
+                <button type="submit" id="connect-button">Conectar</button>
+            </form>
+            <div class="error-msg" id="error-message"></div>
+        </div>
+    </div>
+
+    <div class="container hidden" id="dashboard-view">
+        <div class="profile-card">
+            <h3><span id="user-nick"></span></h3>
+            <p>Mesa: <strong id="table-name"></strong></p>
+            <p>Puntos: <strong id="user-points">0</strong></p>
+            <p>Nivel: <strong id="user-level" class="profile-level"></strong></p>
+            <button id="logout-button" style="width: auto; font-size: 0.8em; padding: 8px 12px;">Salir</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="tab-queue">Cola</button>
+            <button class="tab-button" data-tab="tab-search">Buscar Canción</button>
+            <button class="tab-button" data-tab="tab-catalog">Catálogo</button>
+            <button class="tab-button" data-tab="tab-my-list">Mi Lista</button>
+        </div>
+
+        <!-- Pestaña de la Cola de Karaoke -->
+        <div id="tab-queue" class="tab-content active">
+            <h2>Ahora Sonando</h2>
+            <div id="now-playing-container">
+                <p>La cola está vacía. ¡Añade una canción!</p>
+            </div>
+            <h2>Próximas Canciones</h2>
+            <ul id="upcoming-list" class="song-list">
+                <!-- Las canciones se insertarán aquí dinámicamente -->
+            </ul>
+        </div>
+
+        <!-- Pestaña de Búsqueda -->
+        <div id="tab-search" class="tab-content">
+            <h2>Buscar Canción en YouTube</h2>
+            <form id="search-form">
+                <input type="text" id="search-input" placeholder="Artista o título de la canción" required>
+                <button type="submit" id="search-button">Buscar</button>
+            </form>
+            <div id="search-results" class="song-list">
+                <!-- Los resultados de búsqueda se insertarán aquí -->
+            </div>
+        </div>
+
+        <!-- Pestaña de Catálogo de Productos -->
+        <div id="tab-catalog" class="tab-content">
+            <h2>Catálogo de Productos</h2>
+            <div id="product-catalog-list" class="product-catalog-grid">
+                <!-- Los productos se insertarán aquí -->
+            </ul>
+        </div>
+
+        <!-- Pestaña de Mi Lista -->
+        <div id="tab-my-list" class="tab-content">
+            <h2>Mis Canciones</h2>
+            <ul id="my-song-list" class="song-list">
+                <!-- Las canciones del usuario se insertarán aquí -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal para confirmar pedido -->
+    <div id="order-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-product-name"></h3>
+            <p>¿Cuántas unidades deseas pedir?</p>
+            <label for="quantity-input">Cantidad</label>
+            <input type="number" id="quantity-input" value="1" min="1" max="10">
+            <div class="modal-actions">
+                <button id="confirm-order-btn" class="btn-confirm">Confirmar Pedido</button>
+                <button id="cancel-order-btn" class="btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN ---
+        const API_BASE_URL = '/api/v1';
+        const WEBSOCKET_URL = `ws://${window.location.host}/ws/cola`;
+
+        // --- ESTADO DE LA APLICACIÓN ---
+        let state = {
+            user: null,
+            tableQrCode: null,
+            websocket: null,
+            dashboardInitialized: false, // Para asignar eventos del dashboard solo una vez
+        };
+
+        // --- ELEMENTOS DEL DOM ---
+        const loginContainer = document.getElementById('login-container');
+        const dashboardView = document.getElementById('dashboard-view');
+        const loginForm = document.getElementById('login-form');
+        const nickInput = document.getElementById('nick-input');
+        const connectButton = document.getElementById('connect-button');
+        const errorMessage = document.getElementById('error-message');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const logoutButton = document.getElementById('logout-button');
+        const notificationBanner = document.getElementById('notification-banner');
+        const orderModal = document.getElementById('order-modal');
+        const modalProductName = document.getElementById('modal-product-name');
+        const quantityInput = document.getElementById('quantity-input');
+        const confirmOrderBtn = document.getElementById('confirm-order-btn');
+        const cancelOrderBtn = document.getElementById('cancel-order-btn');
+        const catalogList = document.getElementById('product-catalog-list');
+
+
+        // --- FUNCIONES DE RENDERIZADO ---
+
+        function renderQueue(queueData) {
+            const nowPlayingContainer = document.getElementById('now-playing-container');
+            const upcomingList = document.getElementById('upcoming-list');
+            nowPlayingContainer.innerHTML = '';
+            upcomingList.innerHTML = '';
+
+            if (queueData.now_playing) {
+                nowPlayingContainer.innerHTML = createSongItemHTML(queueData.now_playing, false);
+            } else {
+                nowPlayingContainer.innerHTML = '<p>La cola está vacía. ¡Añade una canción!</p>';
+            }
+
+            if (queueData.upcoming && queueData.upcoming.length > 0) {
+                queueData.upcoming.forEach(song => {
+                    upcomingList.innerHTML += createSongItemHTML(song, false);
+                });
+            } else if (!queueData.now_playing) {
+                 upcomingList.innerHTML = '';
+            } else {
+                 upcomingList.innerHTML = '<li><p>No hay más canciones en la cola.</p></li>';
+            }
+        }
+
+        function renderMyList(songs) {
+            const myList = document.getElementById('my-song-list');
+            myList.innerHTML = '';
+            if (songs.length > 0) {
+                songs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).forEach(song => {
+                    myList.innerHTML += createSongItemHTML(song, true);
+                });
+            } else {
+                myList.innerHTML = '<li><p>Aún no has añadido ninguna canción.</p></li>';
+            }
+        }
+
+        function createSongItemHTML(song, isMyList) {
+            const statusClass = `status-${song.estado}`;
+            const canDelete = isMyList && song.estado === 'pendiente';
+            const deleteButton = `<button class="delete-song-btn" data-song-id="${song.id}" style="background-color: #dc3545;">Eliminar</button>`;
+
+            return `
+                <li class="song-item" id="song-${song.id}">
+                    <div class="song-item-info">
+                        <img src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura">
+                        <div>
+                            <div class="song-title">${song.titulo}</div>
+                            ${song.usuario ? `<div class="song-user">por: ${song.usuario.nick}</div>` : ''}
+                        </div>
+                    </div>
+                    <div>
+                        ${isMyList ? `<span class="song-status ${statusClass}">${song.estado}</span>` : ''}
+                        ${canDelete ? deleteButton : ''}
+                    </div>
+                </li>
+            `;
+        }
+
+        function renderCatalog(products) {
+            catalogList.innerHTML = '';
+            const availableProducts = products.filter(p => p.is_active && p.stock > 0);
+
+            if (availableProducts.length > 0) {
+                availableProducts.forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'product-card';
+                    productCard.innerHTML = `
+                        <img src="https://placehold.co/300x200/1e1e1e/e0e0e0.png?text=${encodeURIComponent(product.nombre)}" alt="${product.nombre}">
+                        <div class="product-card-body">
+                            <h3 class="product-card-title">${product.nombre}</h3>
+                            <p class="product-card-category">${product.categoria}</p>
+                            <div class="product-card-footer">
+                                <span class="product-price">$${product.valor}</span>
+                                <button class="order-btn" data-product-id="${product.id}" data-product-name="${product.nombre}" data-product-stock="${product.stock}">Pedir</button>
+                            </div>
+                        </div>
+                    `;
+                    catalogList.appendChild(productCard);
+                });
+            } else {
+                catalogList.innerHTML = '<p>No hay productos disponibles en este momento.</p>';
+            }
+        }
+
+        function showNotification(message, type = 'success', duration = 3000) {
+            notificationBanner.textContent = message;
+            // Remove previous classes
+            notificationBanner.classList.remove('success', 'error');
+            // Add new class
+            notificationBanner.classList.add(type);
+
+            notificationBanner.style.top = '20px';
+
+            setTimeout(() => {
+                notificationBanner.style.top = '-100px';
+            }, duration);
+        }
+
+        // --- LÓGICA DE WEBSOCKET ---
+
+        function connectWebSocket() {
+            state.websocket = new WebSocket(WEBSOCKET_URL);
+
+            state.websocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'notification' || data.type === 'admin_notification') {
+                    showNotification(data.payload.mensaje);
+                } else if (data.type === 'product_update') {
+                    fetchProducts(); // Recargamos el catálogo de productos
+                } else {
+                    // Asumimos que es una actualización de la cola
+                    renderQueue(data);
+                }
+            };
+
+            state.websocket.onclose = () => {
+                console.log('WebSocket desconectado. Intentando reconectar en 5 segundos...');
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            state.websocket.onerror = (error) => {
+                console.error('Error de WebSocket:', error);
+                state.websocket.close();
+            };
+        }
+
+        // --- LÓGICA DE API Y EVENTOS ---
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const nick = nickInput.value.trim();
+
+            if (!nick) {
+                errorMessage.textContent = 'Por favor, introduce un apodo.';
+                return;
+            }
+            connectButton.disabled = true;
+            connectButton.textContent = 'Conectando...';
+            errorMessage.textContent = '';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/mesas/${state.tableQrCode}/conectar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nick: nick }),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Ocurrió un error al conectar.');
+                }
+                state.user = data;
+                sessionStorage.setItem('karaokeUser', JSON.stringify(state.user));
+                sessionStorage.setItem('karaokeTable', state.tableQrCode);
+                showDashboard();
+            } catch (error) {
+                errorMessage.textContent = error.message;
+            } finally {
+                connectButton.disabled = false;
+                connectButton.textContent = 'Conectar';
+            }
+        }
+
+        async function handleSearch(event) {
+            event.preventDefault();
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+
+            const searchButton = document.getElementById('search-button');
+            searchButton.disabled = true;
+            searchButton.textContent = 'Buscando...';
+
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '<p>Buscando...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/youtube/public-search?q=${encodeURIComponent(query)}`);
+                // Si la respuesta no es OK (ej: 403, 500), leemos el error y lo lanzamos
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Error del servidor: ${response.status}`);
+                }
+
+                const results = await response.json();
+                resultsContainer.innerHTML = '';
+                if (results.length > 0) {
+                    results.forEach(song => {
+                        resultsContainer.innerHTML += `
+                            <li class="song-item">
+                                <div class="song-item-info">
+                                    <img src="${song.thumbnail}" alt="Miniatura">
+                                    <div>
+                                        <div class="song-title">${song.title}</div>
+                                        <div class="song-duration">${Math.floor(song.duration_seconds / 60)}:${(song.duration_seconds % 60).toString().padStart(2, '0')}</div>
+                                    </div>
+                                </div>
+                                <button class="add-song-btn" data-title="${song.title}" data-youtube-id="${song.video_id}" data-duration="${song.duration_seconds}">Añadir</button>
+                            </li>
+                        `;
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<p>No se encontraron resultados.</p>';
+                }
+            } catch (error) {
+                resultsContainer.innerHTML = `<p class="error-msg">Error al buscar: ${error.message}</p>`;
+            } finally {
+                searchButton.disabled = false;
+                searchButton.textContent = 'Buscar';
+            }
+        }
+
+        async function handleAddSong(event) {
+            if (!event.target.classList.contains('add-song-btn')) return;
+
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Añadiendo...';
+
+            const songData = {
+                titulo: button.dataset.title,
+                youtube_id: button.dataset.youtubeId,
+                duracion_seconds: parseInt(button.dataset.duration, 10)
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/canciones/${state.user.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(songData)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Error al añadir la canción.');
+                }
+                showNotification(`'${songData.titulo}' añadida a tu lista.`);
+                fetchMyList(); // Actualizar la lista personal
+            } catch (error) {
+                showNotification(error.message, 5000);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Añadir';
+            }
+        }
+
+        async function handleDeleteSong(event) {
+            if (!event.target.classList.contains('delete-song-btn')) return;
+            if (!confirm('¿Seguro que quieres eliminar esta canción de tu lista?')) return;
+
+            const button = event.target;
+            const songId = button.dataset.songId;
+            button.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/canciones/${songId}?usuario_id=${state.user.id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'No se pudo eliminar la canción.');
+                }
+                showNotification('Canción eliminada.');
+                fetchMyList();
+            } catch (error) {
+                showNotification(error.message, 5000);
+                button.disabled = false;
+            }
+        }
+
+        async function handleOrderProduct(event) {
+            if (!event.target.classList.contains('order-btn')) return;
+
+            const button = event.target;
+            const productId = button.dataset.productId;
+            const productName = button.dataset.productName;
+            const productStock = parseInt(button.dataset.productStock, 10);
+
+            modalProductName.textContent = productName;
+            quantityInput.value = 1;
+            quantityInput.max = productStock;
+            orderModal.style.display = 'flex';
+
+            confirmOrderBtn.onclick = async () => {
+                const cantidad = parseInt(quantityInput.value, 10);
+                if (cantidad <= 0 || cantidad > productStock) {
+                    showNotification(`Cantidad inválida. Stock disponible: ${productStock}`, 'error');
+                    return;
+                }
+
+                const orderData = {
+                    producto_id: parseInt(productId, 10),
+                    cantidad: cantidad
+                };
+
+                confirmOrderBtn.disabled = true;
+                confirmOrderBtn.textContent = 'Pidiendo...';
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/consumos/pedir/${state.user.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(orderData)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.detail || 'Error al procesar el pedido.');
+
+                    showNotification(`¡Pedido de ${cantidad}x ${productName} realizado!`, 'success');
+                    fetchUserProfile();
+                    fetchProducts();
+                } catch (error) {
+                    showNotification(`Error: ${error.message}`, 'error', 5000);
+                } finally {
+                    orderModal.style.display = 'none';
+                    confirmOrderBtn.disabled = false;
+                    confirmOrderBtn.textContent = 'Confirmar Pedido';
+                }
+            };
+        }
+
+        async function fetchProducts() {
+            catalogList.innerHTML = '<p>Cargando catálogo...</p>';
+            const response = await fetch(`${API_BASE_URL}/productos/`);
+            const products = await response.json();
+            renderCatalog(products);
+        }
+
+        async function fetchMyList() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/canciones/${state.user.id}/lista`);
+                const songs = await response.json();
+                renderMyList(songs);
+            } catch (error) {
+                console.error('Error al obtener mi lista:', error);
+            }
+        }
+
+        async function fetchUserProfile() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/usuarios/${state.user.id}/perfil`);
+                const profile = await response.json();
+                state.user = profile; // Actualizamos el estado local del usuario
+                sessionStorage.setItem('karaokeUser', JSON.stringify(state.user));
+                updateProfileCard();
+            } catch (error) {
+                console.error('Error al actualizar el perfil:', error);
+            }
+        }
+
+        function updateProfileCard() {
+            document.getElementById('user-nick').textContent = state.user.nick;
+            document.getElementById('user-points').textContent = state.user.puntos;
+            const levelEl = document.getElementById('user-level');
+            levelEl.textContent = state.user.nivel.charAt(0).toUpperCase() + state.user.nivel.slice(1);
+            levelEl.className = `profile-level level-${state.user.nivel}`;
+        }
+
+        function showDashboard() {
+            document.getElementById('table-name').textContent = state.tableQrCode;
+            updateProfileCard();
+
+            loginContainer.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+
+            connectWebSocket();
+            fetchMyList();
+
+            // Asignar eventos del dashboard solo la primera vez que se muestra
+            if (!state.dashboardInitialized) {
+                logoutButton.addEventListener('click', handleLogout);
+                document.querySelector('.tabs').addEventListener('click', handleTabClick);
+                document.getElementById('search-form').addEventListener('submit', handleSearch);
+                document.getElementById('search-results').addEventListener('click', handleAddSong);
+                catalogList.addEventListener('click', handleOrderProduct);
+                document.getElementById('my-song-list').addEventListener('click', handleDeleteSong);
+                cancelOrderBtn.addEventListener('click', () => {
+                    orderModal.style.display = 'none';
+                });
+                state.dashboardInitialized = true;
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('karaokeUser');
+            sessionStorage.removeItem('karaokeTable');
+            if (state.websocket) state.websocket.close();
+            state.user = null;
+            state.tableQrCode = getQueryParam('table'); // Mantenemos el código de la mesa
+            dashboardView.classList.add('hidden');
+            loginContainer.classList.remove('hidden');
+            nickInput.value = '';
+            errorMessage.textContent = '';
+        }
+
+        function handleTabClick(event) {
+            const clickedTab = event.target.closest('.tab-button');
+            if (!clickedTab) return;
+
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            clickedTab.classList.add('active');
+            document.getElementById(clickedTab.dataset.tab).classList.add('active');
+
+            if (clickedTab.dataset.tab === 'tab-my-list') {
+                fetchMyList();
+            }
+            if (clickedTab.dataset.tab === 'tab-catalog') {
+                fetchProducts();
+            }
+        }
+
+        function getQueryParam(param) {
+            return new URLSearchParams(window.location.search).get(param);
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.addEventListener('DOMContentLoaded', () => {
+            state.tableQrCode = getQueryParam('table');
+            if (!state.tableQrCode) {
+                welcomeMessage.textContent = 'Error: No se encontró el código de la mesa.';
+                loginForm.classList.add('hidden');
+                return;
+            }
+
+            const storedUser = sessionStorage.getItem('karaokeUser');
+            const storedTable = sessionStorage.getItem('karaokeTable');
+
+            if (storedUser && storedTable === state.tableQrCode) {
+                state.user = JSON.parse(storedUser);
+                showDashboard();
+            }
+
+            // Asignar eventos
+            loginForm.addEventListener('submit', handleLogin);
+
+        });
+    </script>
+</body>
+</html>

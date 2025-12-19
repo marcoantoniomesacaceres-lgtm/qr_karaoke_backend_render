@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="origin">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; frame-src 'self' https://www.youtube.com; style-src 'self' 'unsafe-inline';">
+    <title>LA CANTA QUE RANA - Reproductor</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #4CAF50;
+            --surface-color: rgba(18, 18, 18, 0.85);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #background-carousel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            /* Detrás de todo */
+            background-image: url('/static/player_background.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-color: var(--bg-color);
+            transition: opacity 1.5s ease-in-out;
+            opacity: 0;
+        }
+
+        #background-carousel.active {
+            opacity: 1;
+        }
+
+        #background-carousel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        #player-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            /* Encima del carrusel */
+        }
+
+        #standby-screen {
+            position: relative;
+            z-index: 5;
+            /* Encima de todo cuando está activo */
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s ease-in-out;
+            background-color: transparent;
+            /* El fondo lo da el carrusel */
+        }
+
+        h1 {
+            font-size: 4vw;
+            color: var(--primary-color);
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 2vw;
+            text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        /* --- Overlay informativo --- */
+        .info-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 20;
+            /* Encima del reproductor */
+            display: flex;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.6) 40%, rgba(0, 0, 0, 0) 100%);
+            padding: 10px 40px;
+            /* Reducido el padding vertical */
+            box-sizing: border-box;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .info-section {
+            flex: 1;
+            padding: 0 20px;
+            /* Mantenemos el padding horizontal */
+        }
+
+        .info-section:first-child {
+            border-right: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .info-section h2 {
+            font-size: 1.2vw;
+            /* Reducido */
+            margin-top: 0;
+            margin-bottom: 5px;
+            /* Reducido */
+            color: var(--primary-color);
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        .info-title {
+            font-size: 1.5vw;
+            /* Reducido */
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .info-artist {
+            font-size: 1vw;
+            color: #ccc;
+        }
+
+        /* --- Reacciones --- */
+        .reaction-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 9999;
+        }
+
+        .reaction-emoji {
+            position: absolute;
+            bottom: -100px;
+            font-size: 5rem;
+            animation: float-up 6s ease-out forwards;
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes float-up {
+            to {
+                bottom: 100%;
+                transform: translateX(var(--tx, 0)) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* --- Banner de Notificaciones Globales --- */
+        #notification-banner {
+            position: fixed;
+            top: -150px;
+            /* Empieza fuera de la pantalla */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 1200px;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            text-align: center;
+            padding: 20px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            z-index: 9000;
+            font-size: 2.5vw;
+            font-weight: bold;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+            transition: top 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        #notification-banner.show {
+            top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="background-carousel"></div>
+
+    <div id="standby-screen">
+        <h1>LA CANTA QUE RANA</h1>
+        <p>Esperando la siguiente canción...</p>
+    </div>
+
+    <div id="player-container"></div>
+
+
+
+    <div class="info-overlay" id="info-overlay">
+        <div class="info-section">
+            <h2>Ahora Cantando</h2>
+            <div id="now-playing-info">
+                <div class="info-title">Esperando canción...</div>
+                <div class="info-artist"></div>
+            </div>
+        </div>
+        <div class="info-section">
+            <h2>Siguiente</h2>
+            <div id="upcoming-info">
+                <div class="info-title">No hay canciones en espera</div>
+                <div class="info-artist"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner para mensajes globales -->
+    <div id="notification-banner"></div>
+
+    <div id="reaction-container" class="reaction-container"></div>
+
+    <script>
+        // Cargar YouTube IFrame API para control programático
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // Variable global para el reproductor de YouTube
+        let ytPlayer = null;
+
+        // Callback cuando la API está lista
+        function onYouTubeIframeAPIReady() {
+            console.log("✅ YouTube IFrame API lista y cargada");
+        }
+    </script>
+    <script>
+        // Usar WebSocket URL relativa para funcionar tanto en HTTP como HTTPS
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const WEBSOCKET_URL = `${wsProtocol}//${window.location.host}/ws/cola`;
+        const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api/v1`;
+        let standbyScreen = document.getElementById('standby-screen');
+        let backgroundCarousel = document.getElementById('background-carousel');
+        let infoOverlay = document.getElementById('info-overlay');
+        let notificationBanner = document.getElementById('notification-banner');
+
+        // Variables para el autoplay automático
+        let autoplayTimer = null;
+
+        // Variables para rastrear el video actual (necesarias para reiniciar)
+        let currentVideoId = null;
+        let currentVideoDuration = 0;
+        let nextSongInfo = null; // Información de la siguiente canción para mostrar en transición
+
+        // (Pre-carga deshabilitada) -- anteriormente había lógica para pre-cargar
+
+        // --- Lógica del Carrusel de Fondos ---
+        const backgroundImages = [];
+        let currentImageIndex = 0;
+        let carouselInterval;
+
+        function changeBackgroundImage() {
+            // El fondo se manejará con imagen local en su lugar
+        }
+
+        function startCarousel() {
+            if (carouselInterval) return; // Ya está corriendo
+            standbyScreen.style.opacity = '1';
+            infoOverlay.style.opacity = '0';
+            backgroundCarousel.classList.add('active');
+
+
+        }
+
+        function stopCarousel() {
+            standbyScreen.style.opacity = '0';
+            infoOverlay.style.opacity = '1';
+            clearInterval(carouselInterval);
+            carouselInterval = null;
+            backgroundCarousel.classList.remove('active');
+
+
+        }
+
+        // Función para crear el reproductor de YouTube con la API
+        function createYouTubePlayer(videoId) {
+            const container = document.getElementById('player-container');
+            if (!container) {
+                console.error('player-container not found in DOM');
+                return;
+            }
+
+            // Limpiar contenedor y crear div para el reproductor
+            container.innerHTML = '<div id="youtube-iframe"></div>';
+
+            // Crear reproductor con YouTube IFrame API
+            ytPlayer = new YT.Player('youtube-iframe', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 1,
+                    'modestbranding': 1,
+                    'rel': 0,
+                    'iv_load_policy': 3,
+                    'playsinline': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+
+            console.log('✅ Reproductor de YouTube creado con API para video:', videoId);
+        }
+
+        // Evento cuando el reproductor está listo
+        function onPlayerReady(event) {
+            console.log('✅ Reproductor listo, iniciando reproducción');
+            event.target.playVideo();
+        }
+
+        // Evento cuando cambia el estado del reproductor
+        function onPlayerStateChange(event) {
+            // YT.PlayerState.ENDED = 0
+            if (event.data === YT.PlayerState.ENDED) {
+                console.log('🎬 Video terminado, iniciando transición de 5 segundos...');
+                // Sin pre-carga: no hay watcher que limpiar
+                showTransitionScreen();
+            } else if (event.data === YT.PlayerState.PLAYING) {
+                console.log('▶️ Video reproduciéndose');
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                console.log('⏸️ Video pausado');
+                // Sin pre-carga: no watcher que limpiar
+            }
+        }
+
+        // Mostrar pantalla de transición entre canciones
+        function showTransitionScreen() {
+            // Limpiar el reproductor
+            const container = document.getElementById('player-container');
+            container.innerHTML = '';
+
+            // Mostrar pantalla de espera con fondo
+            startCarousel();
+
+            // Actualizar mensaje de standby con información de la siguiente canción
+            const standbyParagraph = standbyScreen.querySelector('p');
+            if (nextSongInfo) {
+                standbyParagraph.innerHTML = `
+                    <strong style="color: #4CAF50; font-size: 1.2em;">Próxima canción:</strong><br><br>
+                    <span style="font-size: 1.5em;">${nextSongInfo.titulo}</span><br>
+                    <span style="font-size: 1em; color: #b0b0b0;">Por: ${nextSongInfo.cantante}</span><br><br>
+                    <span style="font-size: 0.9em; color: #888;">Comenzando en 5 segundos...</span>
+                `;
+            } else {
+                standbyParagraph.innerHTML = 'Cargando siguiente canción...';
+            }
+
+            // Esperar 5 segundos antes de avanzar a la siguiente canción
+            setTimeout(() => {
+                console.log('⏭️ Transición completada, avanzando a la siguiente canción');
+                advanceToNextSong();
+            }, 5000);
+        }
+
+        // Función para avanzar automáticamente a la siguiente canción
+        async function advanceToNextSong() {
+            console.log('⏭️ Avanzando automáticamente a la siguiente canción...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/canciones/siguiente`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.status === 204) {
+                    console.log('✅ No hay más canciones en la cola');
+                    const container = document.getElementById('player-container');
+                    if (container) container.innerHTML = '';
+                    startCarousel();
+                } else if (response.ok) {
+                    // Intentar usar la respuesta JSON como fallback en caso de que
+                    // el evento WebSocket `play_song` no llegue al cliente.
+                    try {
+                        const data = await response.json();
+                        // El endpoint retorna PlayNextResponse con `play_url` y `cancion`.
+                        let videoId = null;
+                        let duration = 0;
+                        if (data.cancion && data.cancion.youtube_id) {
+                            videoId = data.cancion.youtube_id;
+                            duration = data.cancion.duracion_seconds || 0;
+                        } else if (data.play_url) {
+                            try {
+                                const u = new URL(data.play_url);
+                                const parts = u.pathname.split('/');
+                                videoId = parts.pop() || parts.pop();
+                            } catch (e) {
+                                console.warn('No se pudo parsear play_url:', e);
+                            }
+                        }
+
+                        if (videoId) {
+                            console.log('✅ Iniciando reproducción (fallback HTTP) de:', videoId);
+                            playVideo(videoId, duration);
+                        } else {
+                            console.log('✅ Siguiente canción iniciada automáticamente (sin videoId en respuesta)');
+                        }
+                    } catch (err) {
+                        console.warn('No se pudo leer la respuesta JSON de /siguiente:', err);
+                        console.log('✅ Siguiente canción iniciada automáticamente');
+                    }
+                } else {
+                    console.error('❌ Error al avanzar:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Error en advanceToNextSong:', error);
+            }
+        }
+
+        function playVideo(videoId, duration = 0) {
+            console.log('🎵 playVideo called with:', videoId, 'duration:', duration);
+
+            // Guardar el video actual para poder reiniciarlo
+            currentVideoId = videoId;
+            currentVideoDuration = duration;
+
+            // Limpiar temporizador anterior si existe (ya no lo necesitamos)
+            if (autoplayTimer) {
+                clearTimeout(autoplayTimer);
+                autoplayTimer = null;
+                console.log('🔄 Temporizador anterior limpiado (ya no se usa)');
+            }
+
+            stopCarousel(); // Oculta standby, muestra overlay y detiene carrusel
+
+            // Verificamos si el iframe realmente existe (puede haber sido borrado por la transición)
+            const iframeExists = document.getElementById('youtube-iframe');
+
+            // Si el reproductor ya existe y el iframe está en el DOM, cargar el nuevo video
+            if (ytPlayer && ytPlayer.loadVideoById && iframeExists) {
+                console.log('🔄 Cargando nuevo video en reproductor existente');
+                ytPlayer.loadVideoById(videoId);
+            } else {
+                // Crear nuevo reproductor (el contenedor fue limpiado o es la primera carga)
+                console.log('🆕 Creando nuevo reproductor');
+                createYouTubePlayer(videoId);
+            }
+
+            // Pre-carga deshabilitada: no se inicia watcher ni preloader
+
+            // NOTA: Ya no usamos temporizador porque detectamos el fin del video automáticamente
+            // con el evento onStateChange del YouTube IFrame API
+        }
+
+        // Pre-carga totalmente eliminada: no existe handleFiftyPercentPreLoad
+
+        // Función para obtener y actualizar la cola inicial
+        async function fetchAndUpdateQueue() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/canciones/cola/extended`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📋 Cola inicial cargada:', data);
+                    updateQueueUI(data);
+                }
+            } catch (err) {
+                console.warn('⚠️ Error cargando cola inicial:', err);
+            }
+        }
+
+        // 3. Conexión WebSocket para recibir órdenes
+        function connectWebSocket() {
+            console.log('Intentando conectar a WebSocket:', WEBSOCKET_URL);
+            let socket = new WebSocket(WEBSOCKET_URL);
+
+            socket.onopen = () => {
+                console.log('WebSocket conectado exitosamente');
+                // Obtener la cola inicial al conectar
+                fetchAndUpdateQueue();
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Mensaje WebSocket recibido:', data);
+
+                // 1. Reiniciar canción (Prioridad alta - Detiene el flujo si se ejecuta)
+                if (data.type === 'restart_song') {
+                    console.log('🔄 Recibida orden de reiniciar canción');
+                    if (currentVideoId) {
+                        console.log(`🔄 Reiniciando video: ${currentVideoId}`);
+                        playVideo(currentVideoId, currentVideoDuration);
+                    } else {
+                        console.warn('⚠️ No hay video actual para reiniciar');
+                    }
+                    return; // Importante: Evita que se evalúen otros bloques
+                }
+
+                // 2. Reproducir canción
+                if (data.type === 'play_song' && data.payload) {
+                    // Soportar tanto youtube_id como youtube_url
+                    let videoId = data.payload.youtube_id;
+
+                    if (!videoId && data.payload.youtube_url) {
+                        // Extraer el ID de la URL si es necesario
+                        const match = data.payload.youtube_url.match(/\/embed\/([a-zA-Z0-9_-]+)/);
+                        videoId = match ? match[1] : null;
+                    }
+
+                    if (videoId) {
+                        console.log('Recibida orden de reproducir:', videoId);
+                        const duration = data.payload.duracion_seconds || data.payload.duration || 0;
+                        playVideo(videoId, duration);
+                    } else {
+                        console.error('No se pudo extraer el ID de YouTube:', data.payload);
+                    }
+                }
+
+                // 3. Canción finalizada
+                if (data.type === 'song_finished' && data.payload) {
+                    const scoreInfo = data.payload;
+                    const standbyParagraph = standbyScreen.querySelector('p');
+                    let message = '';
+
+                    if (scoreInfo.puntuacion_ia > 0) {
+                        message = `¡Felicitaciones, <strong>${scoreInfo.cantante_nombre}</strong>! Tu puntaje fue de <strong>${scoreInfo.puntuacion_ia}</strong> puntos. ¡Sigue así!`;
+                    } else {
+                        message = `Nadie cantó la última canción. Puntaje: 0.`;
+                    }
+                    standbyParagraph.innerHTML = `${message}<br>Esperando la siguiente canción...`;
+                }
+
+                // 4. Notificaciones globales
+                if (data.type === 'notification' && data.payload && data.payload.mensaje) {
+                    notificationBanner.textContent = data.payload.mensaje;
+                    notificationBanner.classList.add('show');
+
+                    // Ocultar el banner después de 10 segundos
+                    setTimeout(() => {
+                        notificationBanner.classList.remove('show');
+                    }, 10000);
+                }
+
+                // 5. Pausar reproducción
+                if (data.type === 'pause_playback') {
+                    if (ytPlayer && ytPlayer.pauseVideo) {
+                        ytPlayer.pauseVideo();
+                        console.log('⏸️ Video pausado por admin');
+                    }
+                }
+
+                // 6. Reanudar reproducción
+                if (data.type === 'resume_playback') {
+                    if (ytPlayer && ytPlayer.playVideo) {
+                        ytPlayer.playVideo();
+                        console.log('▶️ Video reanudado por admin');
+                    }
+                }
+
+                // 7. Reacciones
+                if (data.type === 'reaction' && data.payload && data.payload.reaction) {
+                    const emoji = document.createElement('div');
+                    emoji.className = 'reaction-emoji';
+                    emoji.textContent = data.payload.reaction;
+
+                    // Posición horizontal y movimiento lateral aleatorios
+                    emoji.style.left = `${Math.random() * 90 + 5}%`;
+                    emoji.style.setProperty('--tx', `${(Math.random() - 0.5) * 200}px`);
+
+                    document.getElementById('reaction-container').appendChild(emoji);
+                    setTimeout(() => emoji.remove(), 6000); // Limpiar el emoji del DOM después de la animación
+                }
+
+                // 8. Actualización explícita de la cola
+                if (data.type === 'queue_update') {
+                    console.log('📋 Actualización de cola recibida por WebSocket');
+                    if (data.payload) {
+                        updateQueueUI(data.payload);
+                    }
+                    return;
+                }
+
+                // 9. Fallback para otros tipos de dato
+                // Si no es un tipo específico de los anteriores, asumimos que es data de la cola
+                if (!['play_song', 'song_finished', 'notification', 'reaction', 'restart_song', 'pause_playback', 'resume_playback', 'queue_update'].includes(data.type)) {
+                    updateQueueUI(data);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket desconectado. Reconectando en 3 segundos...');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            socket.onerror = (error) => {
+                console.error("Error de WebSocket:", error);
+                socket.close();
+            };
+        }
+
+        function updateQueueUI(queueData) {
+            const nowPlayingInfo = document.getElementById('now-playing-info');
+            const upcomingInfo = document.getElementById('upcoming-info');
+
+            // Actualizar "Ahora Cantando"
+            if (queueData.now_playing) {
+                const song = queueData.now_playing;
+                const addedBy = song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick;
+                nowPlayingInfo.innerHTML = `
+                    <div class="info-title">${song.titulo}</div>
+                    <div class="info-artist">Por: <strong>${addedBy}</strong></div>`;
+            } else {
+                nowPlayingInfo.innerHTML = `<div class="info-title">Esperando canción...</div><div class="info-artist"></div>`;
+            }
+
+            // Actualizar "Siguiente" y guardar información para la transición
+            if (queueData.upcoming && queueData.upcoming.length > 0) {
+                const nextSong = queueData.upcoming[0];
+                const addedBy = nextSong.usuario.mesa ? nextSong.usuario.mesa.nombre : nextSong.usuario.nick;
+
+                // Guardar información de la siguiente canción para mostrar en la transición
+                nextSongInfo = {
+                    titulo: nextSong.titulo,
+                    cantante: addedBy
+                };
+
+                upcomingInfo.innerHTML = `
+                    <div class="info-title">${nextSong.titulo}</div>
+                    <div class="info-artist">Por: <strong>${addedBy}</strong></div>`;
+            } else {
+                nextSongInfo = null;
+                upcomingInfo.innerHTML = `<div class="info-title">No hay canciones en espera</div><div class="info-artist"></div>`;
+            }
+        }
+
+        // Iniciar la conexión al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            connectWebSocket();
+            startCarousel(); // Inicia el carrusel al cargar la página
+        });
+
+
+    </script>
+</body>
+
+</html>
