@@ -438,20 +438,8 @@ def marcar_cancion_actual_como_cantada(db: Session):
     if not cancion_actual:
         return None  # No hay ninguna canciÃÂ³n reproduciÃÂ©ndose
     
-    # --- INICIO DE LA INTEGRACIÃÂN CON IA ---
-    # 2. Calcular el puntaje usando el mÃÂ³dulo de IA.
-    #    Asumimos que el audio del usuario se sube a una carpeta temporal con el ID de la canciÃÂ³n.
-    #    Este es un paso que el frontend deberÃÂ¡ implementar en el futuro.
-    user_audio_path = os.path.join(random_scorer.TEMP_DIR, f"user_recording_{cancion_actual.id}.wav")
-    
-    if os.path.exists(user_audio_path):
-        puntuacion = random_scorer.calculate_score(cancion_actual.youtube_id, user_audio_path)
-        # Opcional: eliminar el audio del usuario despuÃÂ©s de procesarlo
-        # os.remove(user_audio_path)
-    else:
-        # Si no se subiÃÂ³ audio, la puntuaciÃÂ³n es 0.
-        puntuacion = 0
-    # --- FIN DE LA INTEGRACIÃÂN CON IA ---
+    # 2. Calcular puntaje aleatorio (la IA fue eliminada por ser muy pesada)
+    puntuacion = random_scorer.calculate_score(cancion_actual.youtube_id, "")
     
     cancion_actual.puntuacion_ia = puntuacion
 
