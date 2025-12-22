@@ -10,6 +10,7 @@
 </head>
 
 <body>
+    <!-- SIDEBAR PARA DESKTOP -->
     <div class="sidebar">
         <h1>LA CANTA QUE RANA</h1>
         <ul class="nav-menu">
@@ -23,6 +24,42 @@
         </ul>
         <button class="logout-btn" id="logout-btn">Cerrar Sesión</button>
     </div>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES -->
+    <nav class="bottom-nav-admin">
+        <button class="nav-item-admin" data-page="dashboard" title="Dashboard">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item-admin" data-page="queue" title="Cola">
+            <span class="nav-icon">🎵</span>
+            <span class="nav-label">Cola</span>
+        </button>
+        <button class="nav-item-admin" data-page="inventory" title="Inventario">
+            <span class="nav-icon">📦</span>
+            <span class="nav-label">Inventario</span>
+        </button>
+        <button class="nav-item-admin" data-page="accounts" title="Cuentas">
+            <span class="nav-icon">💰</span>
+            <span class="nav-label">Cuentas</span>
+        </button>
+        <button class="nav-item-admin" data-page="reports" title="Reportes">
+            <span class="nav-icon">📈</span>
+            <span class="nav-label">Reportes</span>
+        </button>
+        <button class="nav-item-admin" data-page="tables" title="Mesas">
+            <span class="nav-icon">🪑</span>
+            <span class="nav-label">Mesas</span>
+        </button>
+        <button class="nav-item-admin" data-page="settings" title="Configuración">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">Config</span>
+        </button>
+        <button class="nav-item-admin logout-btn-mobile" id="logout-btn-mobile" title="Cerrar sesión">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-label">Salir</span>
+        </button>
+    </nav>
 
     <div class="main-content">
         <!-- PÁGINA: DASHBOARD -->
@@ -585,6 +622,33 @@
             window.location.href = '/admin';
         }
 
+        // --- MANEJO DE BARRA DE NAVEGACIÓN MÓVIL ---
+        function setupMobileNavigation() {
+            const navItems = document.querySelectorAll('.nav-item-admin');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const pageName = item.dataset.page;
+                    if (pageName === undefined) return;
+
+                    // Crear un evento sintético para simular el click en el nav-link de sidebar
+                    const navLink = document.querySelector(`.nav-link[href="#${pageName}"]`);
+                    if (navLink) {
+                        navLink.click();
+                    }
+
+                    // Actualizar estado activo en la barra móvil
+                    document.querySelectorAll('.nav-item-admin').forEach(n => n.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+
+            // Manejo del botón logout móvil
+            const logoutBtnMobile = document.getElementById('logout-btn-mobile');
+            if (logoutBtnMobile) {
+                logoutBtnMobile.addEventListener('click', handleLogout);
+            }
+        }
+
         // --- INITIALIZATION ---
         // Helpers to load per-page HTML fragments (module separation)
         function loadFragment(pageId) {
@@ -622,6 +686,9 @@
 
                 // Setup WebSocket for realtime updates (consume events and others)
                 setupAdminWebSocket();
+
+                // Setup mobile navigation
+                setupMobileNavigation();
 
                 // Event Listeners - Global only
                 document.querySelector('.nav-menu').addEventListener('click', handleNavigation);
