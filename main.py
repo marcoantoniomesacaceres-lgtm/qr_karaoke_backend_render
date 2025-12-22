@@ -124,7 +124,7 @@ async def read_admin_index():
 
 @app.get("/admin/dashboard", response_class=FileResponse, include_in_schema=False)
 async def read_admin_dashboard():
-    return FileResponse(os.path.join("static", "admin_dashboard.html"))
+    return FileResponse(os.path.join("static", "admin_dashboard_bees.html"))
 
 @app.get("/player", response_class=FileResponse, include_in_schema=False)
 async def read_player():
