@@ -10,56 +10,59 @@
 </head>
 
 <body>
-    <!-- SIDEBAR PARA DESKTOP -->
-    <div class="sidebar">
-        <h1>LA CANTA QUE RANA</h1>
-        <ul class="nav-menu">
-            <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
-            <li><a href="#queue" class="nav-link">Cola de Canciones</a></li>
-            <li><a href="#inventory" class="nav-link">Inventario</a></li>
-            <li><a href="#accounts" class="nav-link">Cuentas por Mesa</a></li>
-            <li><a href="#reports" class="nav-link">Reportes</a></li>
-            <li><a href="#tables" class="nav-link">Mesas y QR</a></li>
-            <li><a href="#settings" class="nav-link">Configuración</a></li>
-        </ul>
-        <button class="logout-btn" id="logout-btn">Cerrar Sesión</button>
-    </div>
-
-    <!-- BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES -->
-    <nav class="bottom-nav-admin">
-        <button class="nav-item-admin" data-page="dashboard" title="Dashboard">
-            <span class="nav-icon">📊</span>
-            <span class="nav-label">Dashboard</span>
-        </button>
-        <button class="nav-item-admin" data-page="queue" title="Cola">
-            <span class="nav-icon">🎵</span>
-            <span class="nav-label">Cola</span>
-        </button>
-        <button class="nav-item-admin" data-page="inventory" title="Inventario">
-            <span class="nav-icon">📦</span>
-            <span class="nav-label">Inventario</span>
-        </button>
-        <button class="nav-item-admin" data-page="accounts" title="Cuentas">
-            <span class="nav-icon">💰</span>
-            <span class="nav-label">Cuentas</span>
-        </button>
-        <button class="nav-item-admin" data-page="reports" title="Reportes">
-            <span class="nav-icon">📈</span>
-            <span class="nav-label">Reportes</span>
-        </button>
-        <button class="nav-item-admin" data-page="tables" title="Mesas">
-            <span class="nav-icon">🪑</span>
-            <span class="nav-label">Mesas</span>
-        </button>
-        <button class="nav-item-admin" data-page="settings" title="Configuración">
-            <span class="nav-icon">⚙️</span>
-            <span class="nav-label">Config</span>
-        </button>
-        <button class="nav-item-admin logout-btn-mobile" id="logout-btn-mobile" title="Cerrar sesión">
-            <span class="nav-icon">🚪</span>
-            <span class="nav-label">Salir</span>
-        </button>
+    <!-- BARRA DE NAVEGACIÓN HORIZONTAL SUPERIOR -->
+    <nav class="admin-top-nav">
+        <div class="admin-nav-container">
+            <h1 class="admin-nav-title">LA CANTA QUE RANA</h1>
+            <div class="admin-nav-items">
+                <button class="admin-nav-item" data-page="dashboard" title="Dashboard">
+                    <span class="admin-nav-icon">📊</span>
+                    <span class="admin-nav-label">Dashboard</span>
+                </button>
+                <button class="admin-nav-item" data-page="queue" title="Cola de Canciones">
+                    <span class="admin-nav-icon">🎵</span>
+                    <span class="admin-nav-label">Cola</span>
+                </button>
+                <button class="admin-nav-item" data-page="inventory" title="Inventario">
+                    <span class="admin-nav-icon">📦</span>
+                    <span class="admin-nav-label">Inventario</span>
+                </button>
+                <button class="admin-nav-item" data-page="accounts" title="Cuentas por Mesa">
+                    <span class="admin-nav-icon">💰</span>
+                    <span class="admin-nav-label">Cuentas</span>
+                </button>
+                <button class="admin-nav-item" data-page="reports" title="Reportes">
+                    <span class="admin-nav-icon">📈</span>
+                    <span class="admin-nav-label">Reportes</span>
+                </button>
+                <button class="admin-nav-item" data-page="tables" title="Mesas y QR">
+                    <span class="admin-nav-icon">🪑</span>
+                    <span class="admin-nav-label">Mesas</span>
+                </button>
+                <button class="admin-nav-item" data-page="settings" title="Configuración">
+                    <span class="admin-nav-icon">⚙️</span>
+                    <span class="admin-nav-label">Config</span>
+                </button>
+            </div>
+            <button class="admin-logout-btn" id="logout-btn-top" title="Cerrar sesión">
+                <span class="admin-nav-icon">🚪</span>
+                <span class="admin-nav-label">Salir</span>
+            </button>
+        </div>
     </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="admin-main-wrapper">
+        <!-- NAV LINKS OCULTOS PARA COMPATIBILIDAD CON JAVASCRIPT EXISTENTE -->
+        <div class="nav-menu" style="display: none;">
+            <a href="#dashboard" class="nav-link active"></a>
+            <a href="#queue" class="nav-link"></a>
+            <a href="#inventory" class="nav-link"></a>
+            <a href="#accounts" class="nav-link"></a>
+            <a href="#reports" class="nav-link"></a>
+            <a href="#tables" class="nav-link"></a>
+            <a href="#settings" class="nav-link"></a>
+        </div>
 
     <div class="main-content">
         <!-- PÁGINA: DASHBOARD -->
@@ -76,6 +79,12 @@
 
         <!-- PÁGINA: CUENTAS POR MESA -->
         <div id="accounts" class="page"></div>
+
+        <!-- PÁGINA: REPORTES -->
+        <div id="reports" class="page"></div>
+
+        <!-- PÁGINA: CONFIGURACIÓN -->
+        <div id="settings" class="page"></div>
 
         <!-- MODAL PARA REGISTRAR PAGO -->
         <div id="payment-modal"
@@ -129,6 +138,7 @@
         <!-- PÁGINA: CONFIGURACIÓN -->
         <div id="settings" class="page"></div>
     </div>
+    </div>
 
     <!-- Input oculto para la subida de archivos -->
     <input type="file" id="product-image-upload" accept="image/png, image/jpeg, image/webp" style="display: none;">
@@ -138,7 +148,6 @@
 
     <!-- Elemento de audio para la notificación de pedido -->
     <audio id="order-notification-sound" src="/static/notification.mp3" preload="auto"></audio>
-
 
     <div id="notification"></div>
 
@@ -622,6 +631,33 @@
             window.location.href = '/admin';
         }
 
+        // --- MANEJO DE BARRA DE NAVEGACIÓN HORIZONTAL ---
+        function setupTopNavigation() {
+            const navItems = document.querySelectorAll('.admin-nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const pageName = item.dataset.page;
+                    if (pageName === undefined) return;
+
+                    // Simular click en nav-link de antigua estructura
+                    const navLink = document.querySelector(`.nav-link[href="#${pageName}"]`);
+                    if (navLink) {
+                        navLink.click();
+                    }
+
+                    // Actualizar estado activo en la barra superior
+                    document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+
+            // Manejo del botón logout superior
+            const logoutBtnTop = document.getElementById('logout-btn-top');
+            if (logoutBtnTop) {
+                logoutBtnTop.addEventListener('click', handleLogout);
+            }
+        }
+
         // --- MANEJO DE BARRA DE NAVEGACIÓN MÓVIL ---
         function setupMobileNavigation() {
             const navItems = document.querySelectorAll('.nav-item-admin');
@@ -686,6 +722,9 @@
 
                 // Setup WebSocket for realtime updates (consume events and others)
                 setupAdminWebSocket();
+
+                // Setup top navigation
+                setupTopNavigation();
 
                 // Setup mobile navigation
                 setupMobileNavigation();

@@ -43,60 +43,141 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     display: flex;
+    flex-direction: column;
 }
 
 /* ============================================
-   SIDEBAR
+   BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
+   ============================================ */
+
+.admin-top-nav {
+    position: sticky;
+    top: 0;
+    background-color: var(--surface-color);
+    box-shadow: var(--shadow-lg);
+    border-bottom: 3px solid var(--primary-color);
+    z-index: 999;
+}
+
+.admin-nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    max-width: 100%;
+    overflow-x: auto;
+    gap: 15px;
+}
+
+.admin-nav-title {
+    color: var(--primary-color);
+    font-size: 1.3em;
+    margin: 0;
+    font-weight: bold;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.admin-nav-items {
+    display: flex;
+    gap: 5px;
+    flex: 1;
+    overflow-x: auto;
+    padding: 5px 0;
+}
+
+.admin-nav-items::-webkit-scrollbar {
+    height: 4px;
+}
+
+.admin-nav-items::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.admin-nav-items::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.admin-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: all 0.3s;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-radius: 12px;
+    min-width: 70px;
+}
+
+.admin-nav-item:hover {
+    background: rgba(255, 215, 0, 0.1);
+    color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.admin-nav-item.active {
+    background: rgba(255, 215, 0, 0.2);
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.admin-nav-icon {
+    font-size: 1.4em;
+    margin-bottom: 4px;
+}
+
+.admin-nav-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.admin-logout-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: all 0.3s;
+    color: var(--error-color);
+    font-weight: 500;
+    border-radius: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.admin-logout-btn:hover {
+    background: rgba(255, 68, 68, 0.1);
+    color: var(--error-color);
+    transform: scale(1.05);
+}
+
+/* ============================================
+   MAIN WRAPPER Y CONTENIDO
+   ============================================ */
+
+.admin-main-wrapper {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* ============================================
+   SIDEBAR (OCULTO)
    ============================================ */
 
 .sidebar {
-    width: 240px;
-    background-color: var(--surface-color);
-    height: 100vh;
-    padding: 20px;
-    box-sizing: border-box;
-    position: fixed;
-    overflow-y: auto;
-    box-shadow: var(--shadow-lg);
-    border-right: 3px solid var(--primary-color);
-}
-
-.sidebar h1 {
-    color: var(--primary-color);
-    font-size: 1.5em;
-    text-align: center;
-    margin-top: 0;
-    margin-bottom: 30px;
-    font-weight: bold;
-}
-
-.sidebar .nav-menu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.sidebar .nav-menu li a {
-    display: block;
-    padding: 12px 15px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    border-radius: 12px;
-    margin-bottom: 5px;
-    transition: all 0.3s;
-    font-weight: 500;
-}
-
-.sidebar .nav-menu li a:hover {
-    background-color: rgba(255, 215, 0, 0.1);
-    color: var(--primary-color);
-    transform: translateX(5px);
-}
-
-.sidebar .nav-menu li a.active {
-    background-color: var(--primary-color);
-    color: var(--bees-black);
-    font-weight: bold;
+    display: none;
 }
 
 /* ============================================
@@ -104,10 +185,9 @@ body {
    ============================================ */
 
 .main-content {
-    margin-left: 240px;
-    flex-grow: 1;
     padding: 30px;
     box-sizing: border-box;
+    min-height: 100%;
 }
 
 .page {
@@ -998,19 +1078,61 @@ input:checked+.slider:before {
    RESPONSIVE
    ============================================ */
 
-@media (max-width: 768px) {
-    /* Mostrar barra móvil, ocultar sidebar */
-    .sidebar {
-        display: none;
+@media (max-width: 1024px) {
+    .admin-nav-container {
+        padding: 10px 15px;
+        gap: 10px;
     }
 
-    .bottom-nav-admin {
-        display: flex;
+    .admin-nav-item {
+        min-width: 65px;
+        padding: 6px 10px;
+    }
+
+    .admin-nav-icon {
+        font-size: 1.2em;
+    }
+
+    .admin-nav-label {
+        font-size: 0.7em;
     }
 
     .main-content {
-        margin-left: 0;
-        margin-bottom: 80px;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-nav-container {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .admin-nav-title {
+        font-size: 1.1em;
+    }
+
+    .admin-nav-item {
+        min-width: 55px;
+        padding: 5px 8px;
+        font-size: 0.8em;
+    }
+
+    .admin-nav-icon {
+        font-size: 1.1em;
+        margin-bottom: 2px;
+    }
+
+    .admin-nav-label {
+        font-size: 0.65em;
+    }
+
+    .admin-logout-btn {
+        min-width: 55px;
+        padding: 5px 8px;
+    }
+
+    .main-content {
         padding: 15px;
     }
 
@@ -1050,27 +1172,39 @@ input:checked+.slider:before {
 }
 
 @media (max-width: 600px) {
-    .bottom-nav-admin {
-        padding: 6px 0;
+    .admin-nav-container {
+        padding: 8px;
+        gap: 6px;
     }
 
-    .nav-item-admin {
-        padding: 4px 4px;
+    .admin-nav-title {
+        font-size: 1em;
+        min-width: auto;
+    }
+
+    .admin-nav-item {
         min-width: 50px;
-        max-width: 70px;
+        padding: 4px 6px;
+        font-size: 0.7em;
     }
 
-    .nav-item-admin .nav-icon {
-        font-size: 1.1em;
-        margin-bottom: 2px;
+    .admin-nav-icon {
+        font-size: 1em;
+        margin-bottom: 1px;
     }
 
-    .nav-item-admin .nav-label {
-        font-size: 0.55em;
+    .admin-nav-label {
+        font-size: 0.6em;
+        line-height: 1;
+    }
+
+    .admin-logout-btn {
+        min-width: 50px;
+        padding: 4px 6px;
+        font-size: 0.7em;
     }
 
     .main-content {
-        margin-bottom: 75px;
         padding: 10px;
     }
 
