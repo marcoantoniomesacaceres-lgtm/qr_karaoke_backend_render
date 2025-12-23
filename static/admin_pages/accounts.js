@@ -305,30 +305,41 @@ async function showAccountDetails(cuentaId) {
 async function handleCreateMesaSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    const nameInput = form.querySelector('#mesa-name');
-    const mesaNombre = nameInput?.value || '';
+    const numeroInput = form.querySelector('#mesa-numero');
+    const nombreInput = form.querySelector('#mesa-nombre');
+    
+    const numeroMesa = numeroInput?.value || '';
+    let nombreMesa = nombreInput?.value || '';
 
-    if (!mesaNombre || mesaNombre.trim() === '') {
-        showNotification('Por favor ingresa un nombre para la mesa.', 'error');
+    if (!numeroMesa || numeroMesa.trim() === '') {
+        showNotification('Por favor ingresa un número para la mesa.', 'error');
         return;
+    }
+
+    // Si no hay nombre personalizado, usar el número como nombre
+    if (!nombreMesa || nombreMesa.trim() === '') {
+        nombreMesa = `Mesa ${numeroMesa}`;
+    } else {
+        nombreMesa = nombreMesa.trim();
     }
 
     try {
         // Llamar al endpoint para crear una nueva mesa
-        const payload = { nombre: mesaNombre.trim() };
+        const payload = { nombre: nombreMesa };
         const result = await apiFetch('/admin/mesas', {
             method: 'POST',
             body: JSON.stringify(payload)
         });
         
-        showNotification(`Mesa "${mesaNombre}" creada exitosamente.`, 'success');
+        showNotification(`Mesa "${nombreMesa}" creada exitosamente.`, 'success');
 
         // Cerrar el modal
         const modal = document.getElementById('create-mesa-modal');
         if (modal) modal.style.display = 'none';
         
         // Limpiar el formulario
-        nameInput.value = '';
+        numeroInput.value = '';
+        nombreInput.value = '';
 
         // Recargar la página de cuentas
         await loadAccountsPage();

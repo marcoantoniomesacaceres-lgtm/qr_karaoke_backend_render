@@ -1699,10 +1699,10 @@ def create_pago_for_mesa(db: Session, pago: schemas.PagoCreate) -> models.Pago:
 
 def get_all_tables_payment_status(db: Session) -> List[dict]:
     """
-    Obtiene un estado de cuenta detallado para todas las mesas, incluyendo
-    consumos, pagos y saldo pendiente.
+    Obtiene un estado de cuenta detallado para todas las mesas ACTIVAS, incluyendo
+    consumos, pagos y saldo pendiente. Solo devuelve mesas que están activas (is_active=True).
     """
-    mesas = db.query(models.Mesa).order_by(models.Mesa.nombre).all()
+    mesas = db.query(models.Mesa).filter(models.Mesa.is_active == True).order_by(models.Mesa.nombre).all()
     
     results = []
     for mesa in mesas:
