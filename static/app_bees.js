@@ -653,6 +653,14 @@ function handleTabClick(event) {
     document.getElementById(activeTabId).classList.add('active');
     state.currentTab = activeTabId;
 
+    // Mostrar/ocultar buscador solo en tab-search
+    const searchContainer = document.querySelector('.search-container');
+    if (activeTabId === 'tab-search') {
+        searchContainer.classList.add('active');
+    } else {
+        searchContainer.classList.remove('active');
+    }
+
     // Cargar contenido según la pestaña
     switch (activeTabId) {
         case 'tab-my-list':

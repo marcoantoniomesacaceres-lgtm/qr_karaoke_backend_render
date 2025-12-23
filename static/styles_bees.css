@@ -224,6 +224,11 @@ body {
     background: var(--bees-yellow);
     padding: 20px;
     box-shadow: var(--shadow);
+    display: none;
+}
+
+.search-container.active {
+    display: block;
 }
 
 .search-box {
