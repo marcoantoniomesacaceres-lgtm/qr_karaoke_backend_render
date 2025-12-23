@@ -15,47 +15,6 @@
 </head>
 
 <body>
-    <!-- BARRA DE NAVEGACIÓN HORIZONTAL SUPERIOR -->
-    <nav class="admin-top-nav">
-        <div class="admin-nav-container">
-            <h1 class="admin-nav-title">LA CANTA QUE RANA</h1>
-            <div class="admin-nav-items">
-                <button class="admin-nav-item" data-page="dashboard" title="Dashboard">
-                    <span class="admin-nav-icon">📊</span>
-                    <span class="admin-nav-label">Dashboard</span>
-                </button>
-                <button class="admin-nav-item" data-page="queue" title="Cola de Canciones">
-                    <span class="admin-nav-icon">🎵</span>
-                    <span class="admin-nav-label">Cola</span>
-                </button>
-                <button class="admin-nav-item" data-page="inventory" title="Inventario">
-                    <span class="admin-nav-icon">📦</span>
-                    <span class="admin-nav-label">Inventario</span>
-                </button>
-                <button class="admin-nav-item" data-page="accounts" title="Cuentas por Mesa">
-                    <span class="admin-nav-icon">💰</span>
-                    <span class="admin-nav-label">Cuentas</span>
-                </button>
-                <button class="admin-nav-item" data-page="reports" title="Reportes">
-                    <span class="admin-nav-icon">📈</span>
-                    <span class="admin-nav-label">Reportes</span>
-                </button>
-                <button class="admin-nav-item" data-page="tables" title="Mesas y QR">
-                    <span class="admin-nav-icon">🪑</span>
-                    <span class="admin-nav-label">Mesas</span>
-                </button>
-                <button class="admin-nav-item" data-page="settings" title="Configuración">
-                    <span class="admin-nav-icon">⚙️</span>
-                    <span class="admin-nav-label">Config</span>
-                </button>
-            </div>
-            <button class="admin-logout-btn" id="logout-btn-top" title="Cerrar sesión">
-                <span class="admin-nav-icon">🚪</span>
-                <span class="admin-nav-label">Salir</span>
-            </button>
-        </div>
-    </nav>
-
     <!-- CONTENIDO PRINCIPAL -->
     <div class="admin-main-wrapper">
         <!-- NAV LINKS OCULTOS PARA COMPATIBILIDAD CON JAVASCRIPT EXISTENTE -->
@@ -135,14 +94,6 @@
                 </div>
             </div>
         </div>
-
-
-        <!-- PÁGINA: REPORTES -->
-        <div id="reports" class="page"></div>
-
-        <!-- PÁGINA: CONFIGURACIÓN -->
-        <div id="settings" class="page"></div>
-    </div>
     </div>
 
     <!-- Input oculto para la subida de archivos -->
@@ -155,6 +106,46 @@
     <audio id="order-notification-sound" src="/static/notification.mp3" preload="auto"></audio>
 
     <div id="notification"></div>
+
+    <!-- BARRA DE NAVEGACIÓN HORIZONTAL INFERIOR -->
+    <nav class="admin-bottom-nav">
+        <div class="admin-nav-container">
+            <div class="admin-nav-items">
+                <button class="admin-nav-item" data-page="dashboard" title="Dashboard">
+                    <span class="admin-nav-icon">📊</span>
+                    <span class="admin-nav-label">Dashboard</span>
+                </button>
+                <button class="admin-nav-item" data-page="queue" title="Cola de Canciones">
+                    <span class="admin-nav-icon">🎵</span>
+                    <span class="admin-nav-label">Cola</span>
+                </button>
+                <button class="admin-nav-item" data-page="inventory" title="Inventario">
+                    <span class="admin-nav-icon">📦</span>
+                    <span class="admin-nav-label">Inventario</span>
+                </button>
+                <button class="admin-nav-item" data-page="accounts" title="Cuentas por Mesa">
+                    <span class="admin-nav-icon">💰</span>
+                    <span class="admin-nav-label">Cuentas</span>
+                </button>
+                <button class="admin-nav-item" data-page="reports" title="Reportes">
+                    <span class="admin-nav-icon">📈</span>
+                    <span class="admin-nav-label">Reportes</span>
+                </button>
+                <button class="admin-nav-item" data-page="tables" title="Mesas y QR">
+                    <span class="admin-nav-icon">🪑</span>
+                    <span class="admin-nav-label">Mesas</span>
+                </button>
+                <button class="admin-nav-item" data-page="settings" title="Configuración">
+                    <span class="admin-nav-icon">⚙️</span>
+                    <span class="admin-nav-label">Config</span>
+                </button>
+            </div>
+            <button class="admin-logout-btn" id="logout-btn-top" title="Cerrar sesión">
+                <span class="admin-nav-icon">🚪</span>
+                <span class="admin-nav-label">Salir</span>
+            </button>
+        </div>
+    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
     <script src="/static/admin_pages/dashboard.js"></script>
