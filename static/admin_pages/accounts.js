@@ -47,7 +47,7 @@ function renderAccounts(accounts, accountsGrid) {
             </div>
             <div class="account-actions">
                 <button class="btn-payment" data-id="${acc.mesa_id}" data-saldo="${deuda}">Registrar Pago</button>
-                <button class="btn-new-account" data-id="${acc.mesa_id}" style="background-color: var(--secondary-color);">Nueva Cuenta</button>
+                <button class="btn-close-session" data-id="${acc.mesa_id}" style="background-color: var(--error-color);">Cerrar Sesión</button>
                 <button class="btn-prev-accounts" data-id="${acc.mesa_id}" style="background-color: var(--background-dark);">Cuentas Anteriores</button>
             </div>
         `;
@@ -205,18 +205,18 @@ async function handleDeleteAccount(event) {
     showNotification('Eliminar cuentas no está soportado por el backend.', 'error');
 }
 
-async function handleNewAccount(event) {
+async function handleCloseSession(event) {
     const button = event.target;
-    if (!button.matches('.btn-new-account')) return;
+    if (!button.matches('.btn-close-session')) return;
     const mesaId = button.dataset.id;
-    if (!confirm('¿Estás seguro de crear una nueva cuenta? La cuenta actual se guardará en el historial.')) return;
+    if (!confirm('¿Estás seguro de cerrar la sesión de esta mesa? Se eliminarán todas las canciones en cola y se desactivará la mesa.')) return;
 
     try {
-        await apiFetch(`/admin/tables/${mesaId}/new-account`, { method: 'POST' });
-        showNotification('Nueva cuenta creada exitosamente.', 'success');
+        await apiFetch(`/admin/tables/${mesaId}/close-session`, { method: 'POST' });
+        showNotification('Sesión cerrada exitosamente.', 'success');
         await loadAccountsPage();
     } catch (e) {
-        showNotification(e.message || 'Error creating new account', 'error');
+        showNotification(e.message || 'Error closing session', 'error');
     }
 }
 
@@ -302,6 +302,70 @@ async function showAccountDetails(cuentaId) {
     }
 }
 
+async function handleCreateMesaSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const nameInput = form.querySelector('#mesa-name');
+    const mesaNombre = nameInput?.value || '';
+
+    if (!mesaNombre || mesaNombre.trim() === '') {
+        showNotification('Por favor ingresa un nombre para la mesa.', 'error');
+        return;
+    }
+
+    try {
+        // Llamar al endpoint para crear una nueva mesa
+        const payload = { nombre: mesaNombre.trim() };
+        const result = await apiFetch('/admin/mesas', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        
+        showNotification(`Mesa "${mesaNombre}" creada exitosamente.`, 'success');
+
+        // Cerrar el modal
+        const modal = document.getElementById('create-mesa-modal');
+        if (modal) modal.style.display = 'none';
+        
+        // Limpiar el formulario
+        nameInput.value = '';
+
+        // Recargar la página de cuentas
+        await loadAccountsPage();
+    } catch (error) {
+        showNotification(error.message || 'Error al crear la mesa', 'error');
+    }
+}
+
+function setupCreateMesaModal() {
+    const createMesaBtn = document.getElementById('btn-create-mesa');
+    const createMesaModal = document.getElementById('create-mesa-modal');
+    const createMesaForm = document.getElementById('create-mesa-form');
+    const closeCreateMesaBtn = document.getElementById('create-mesa-modal-close');
+
+    if (createMesaBtn) {
+        createMesaBtn.addEventListener('click', () => {
+            if (createMesaModal) createMesaModal.style.display = 'flex';
+        });
+    }
+
+    if (createMesaForm) {
+        createMesaForm.addEventListener('submit', handleCreateMesaSubmit);
+    }
+
+    if (closeCreateMesaBtn) {
+        closeCreateMesaBtn.addEventListener('click', () => {
+            if (createMesaModal) createMesaModal.style.display = 'none';
+        });
+    }
+
+    if (createMesaModal) {
+        createMesaModal.addEventListener('click', (e) => {
+            if (e.target === createMesaModal) createMesaModal.style.display = 'none';
+        });
+    }
+}
+
 function setupAccountsListeners() {
     const accountsGrid = document.getElementById('accounts-grid');
     const paymentModal = document.getElementById('payment-modal');
@@ -318,7 +382,7 @@ function setupAccountsListeners() {
     if (accountsGrid) {
         accountsGrid.addEventListener('click', handlePaymentModal);
         accountsGrid.addEventListener('click', handleDeleteAccount);
-        accountsGrid.addEventListener('click', handleNewAccount);
+        accountsGrid.addEventListener('click', handleCloseSession);
         accountsGrid.addEventListener('click', handlePreviousAccounts);
     }
     // Attach submit listener to the form, not the button
@@ -350,4 +414,8 @@ function setupAccountsListeners() {
 
     if (closeDetailsBtn) closeDetailsBtn.onclick = () => { if (detailsModal) detailsModal.style.display = 'none'; };
     if (detailsModal) detailsModal.onclick = (e) => { if (e.target === detailsModal) detailsModal.style.display = 'none'; };
+
+    // Setup create mesa modal
+    setupCreateMesaModal();
 }
+

@@ -1300,3 +1300,25 @@ def get_account_details(cuenta_id: int, db: Session = Depends(get_db)):
     if not status:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
     return status
+
+@router.post("/tables/{mesa_id}/close-session", status_code=200, summary="Cerrar sesión de una mesa")
+def close_table_session(mesa_id: int, db: Session = Depends(get_db)):
+    """
+    **[Admin]** Cierra la sesión de una mesa de forma completa:
+    - Verifica que la cuenta esté a paz y salvo
+    - Elimina todas las canciones pendientes (lazy queue)
+    - Desactiva todos los usuarios de la mesa
+    - Desactiva la mesa
+    - Cierra la cuenta actual
+    
+    Retorna un mensaje de confirmación o error si la mesa tiene saldo pendiente.
+    """
+    result = crud.close_table_session(db, mesa_id=mesa_id)
+    
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("message", "Error al cerrar la sesión."))
+    
+    # Registrar la acción en el log de administración
+    crud.create_admin_log_entry(db, action="CLOSE_TABLE_SESSION", details=f"Sesión cerrada para mesa {mesa_id}. Canciones eliminadas: {result.get('canciones_eliminadas', 0)}")
+    
+    return result

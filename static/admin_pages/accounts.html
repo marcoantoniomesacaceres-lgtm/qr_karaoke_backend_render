@@ -1,4 +1,9 @@
-<h2>Cuentas por Mesa</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Cuentas por Mesa</h2>
+    <button id="btn-create-mesa" class="form-btn" style="background-color: var(--success-color); padding: 10px 20px; cursor: pointer;" title="Crear nueva mesa">
+        ➕ Nueva Mesa
+    </button>
+</div>
 <div class="card">
     <h3>Cuentas Registradas</h3>
     <p style="color: var(--text-secondary); margin-bottom: 15px;">Las cuentas se crean automáticamente al crear una
@@ -37,5 +42,24 @@
             <button type="button" id="details-modal-close" class="form-btn"
                 style="background-color:var(--text-secondary);">Cerrar</button>
         </div>
+    </div>
+</div>
+
+<!-- Create Mesa Modal -->
+<div id="create-mesa-modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2020; align-items:center; justify-content:center;">
+    <div class="card" style="width: 400px;">
+        <h3>Crear Nueva Mesa</h3>
+        <form id="create-mesa-form">
+            <div class="form-group">
+                <label for="mesa-name">Nombre de la Mesa</label>
+                <input type="text" id="mesa-name" name="nombre" placeholder="Ej: Mesa 1, VIP, etc." required>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="submit" class="form-btn" style="flex:1; background-color: var(--success-color);">Crear Mesa</button>
+                <button type="button" id="create-mesa-modal-close" class="form-btn"
+                    style="flex:1; background-color:var(--text-secondary);">Cancelar</button>
+            </div>
+        </form>
     </div>
 </div>

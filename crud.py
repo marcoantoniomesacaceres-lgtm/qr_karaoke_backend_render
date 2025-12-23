@@ -2372,6 +2372,74 @@ def check_and_approve_next_lazy_song(db: Session):
     
     return None
 
+def close_table_session(db: Session, mesa_id: int):
+    """
+    Cierra la sesión de una mesa. Realiza las siguientes acciones:
+    1. Verifica que la cuenta actual esté a paz y salvo
+    2. Elimina todas las canciones pendientes (lazy queue)
+    3. Desactiva todos los usuarios de la mesa
+    4. Desactiva la mesa
+    5. Cierra la cuenta actual
+    
+    Retorna un diccionario con el resultado de la operación.
+    """
+    # 1. Verificar si la mesa existe
+    mesa = db.query(models.Mesa).filter(models.Mesa.id == mesa_id).first()
+    if not mesa:
+        return {"success": False, "message": "Mesa no encontrada."}
+    
+    # 2. Verificar si la cuenta actual está a paz y salvo
+    status_dict = get_table_payment_status(db, mesa_id=mesa_id)
+    
+    if status_dict:
+        saldo_pendiente = status_dict.get("saldo_pendiente", 0)
+        try:
+            saldo_val = float(saldo_pendiente)
+        except:
+            saldo_val = 0.0
+        
+        if saldo_val > 0:
+            return {
+                "success": False,
+                "message": f"No se puede cerrar la sesión. La mesa tiene un saldo pendiente de ${saldo_val:,.0f}."
+            }
+    
+    # 3. Eliminar todas las canciones de la mesa (lazy queue y pendientes)
+    canciones_eliminadas = db.query(models.Cancion).filter(
+        models.Cancion.usuario_id.in_(
+            db.query(models.Usuario.id).filter(models.Usuario.mesa_id == mesa_id)
+        ),
+        models.Cancion.estado.in_(["pendiente", "pendiente_lazy", "aprobado"])
+    ).delete()
+    
+    # 4. Desactivar todos los usuarios de la mesa
+    usuarios = db.query(models.Usuario).filter(models.Usuario.mesa_id == mesa_id).all()
+    for usuario in usuarios:
+        usuario.is_active = False
+    
+    # 5. Desactivar la mesa
+    mesa.is_active = False
+    
+    # 6. Cerrar la cuenta actual
+    cuenta_activa = db.query(models.Cuenta).filter(
+        models.Cuenta.mesa_id == mesa_id,
+        models.Cuenta.is_active == True
+    ).first()
+    
+    if cuenta_activa:
+        cuenta_activa.is_active = False
+        cuenta_activa.closed_at = now_bogota()
+    
+    # Aplicar todos los cambios
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Sesión cerrada exitosamente.",
+        "canciones_eliminadas": canciones_eliminadas,
+        "usuarios_desactivados": len(usuarios)
+    }
+
 
 
 # --- Lazy Approval Queue Functions ---
