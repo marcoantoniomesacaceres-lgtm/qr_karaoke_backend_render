@@ -88,7 +88,7 @@ def startup_event():
     db = SessionLocal()
 
     mesas_a_crear = []
-    for i in range(1, 31):
+    for i in range(1, 2):  # Solo crear la mesa base 1
         mesas_a_crear.append({
             "nombre": f"Mesa {i}",
             "qr_code": f"karaoke-mesa-{i:02d}"

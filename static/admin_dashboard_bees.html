@@ -15,6 +15,22 @@
 </head>
 
 <body>
+    <!-- BARRA SUPERIOR FIJA DE PEDIDOS PENDIENTES -->
+    <div class="admin-top-orders-bar">
+        <div class="admin-orders-container">
+            <div class="admin-orders-header">
+                <span class="admin-orders-icon">📦</span>
+                <div class="admin-orders-info">
+                    <h3>Últimos Pedidos</h3>
+                    <p>Pedidos pendientes por despachar</p>
+                </div>
+            </div>
+            <div class="admin-orders-list" id="top-orders-list">
+                <!-- Los pedidos se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
     <!-- CONTENIDO PRINCIPAL -->
     <div class="admin-main-wrapper">
         <!-- NAV LINKS OCULTOS PARA COMPATIBILIDAD CON JAVASCRIPT EXISTENTE -->
@@ -188,6 +204,64 @@
                 throw new Error(data.detail || `Error ${response.status}`);
             }
             return data;
+        }
+
+        // Cargar pedidos en la barra superior fija
+        async function loadTopOrdersBar() {
+            try {
+                const topOrdersList = document.getElementById('top-orders-list');
+                if (!topOrdersList) return;
+
+                const pedidos = await apiFetch('/admin/recent-consumos?limit=25');
+
+                topOrdersList.innerHTML = '';
+
+                if (!pedidos || pedidos.length === 0) {
+                    topOrdersList.innerHTML = '<div class="admin-orders-empty">📪 Sin pedidos pendientes</div>';
+                    return;
+                }
+
+                // Agrupar por mesa
+                const pedidosPorMesa = pedidos.reduce((acc, pedido) => {
+                    const mesaNombre = pedido.mesa_nombre || 'Sin mesa';
+                    if (!acc[mesaNombre]) {
+                        acc[mesaNombre] = {
+                            items: [],
+                            cantidadTotal: 0,
+                            consumoIds: []
+                        };
+                    }
+                    acc[mesaNombre].items.push(pedido);
+                    acc[mesaNombre].cantidadTotal += pedido.cantidad || 1;
+                    acc[mesaNombre].consumoIds.push(pedido.id);
+                    return acc;
+                }, {});
+
+                // Crear items para cada mesa
+                Object.entries(pedidosPorMesa).forEach(([mesaNombre, grupo]) => {
+                    const div = document.createElement('div');
+                    div.className = 'order-item';
+                    div.setAttribute('data-mesa', mesaNombre);
+                    div.setAttribute('data-ids', grupo.consumoIds.join(','));
+                    div.title = `${mesaNombre}: ${grupo.items.map(i => `${i.cantidad}x ${i.producto_nombre}`).join(', ')}`;
+                    
+                    div.innerHTML = `
+                        <span>${mesaNombre}</span>
+                        <span class="order-item-badge">${grupo.cantidadTotal}</span>
+                    `;
+
+                    div.addEventListener('click', () => {
+                        // Navegar a la página de pedidos/cola si es necesario
+                        // Por ahora solo resalta visualmente
+                        document.querySelectorAll('.order-item').forEach(item => item.style.background = 'rgba(255, 215, 0, 0.1)');
+                        div.style.background = 'rgba(255, 215, 0, 0.3)';
+                    });
+
+                    topOrdersList.appendChild(div);
+                });
+            } catch (error) {
+                console.warn('Error cargando pedidos en barra superior:', error);
+            }
         }
 
         // NEW FUNCTION: Enviar actualización de cuenta a través de WebSocket
@@ -374,6 +448,8 @@
                                 }
                                 // En lugar de añadirlo directamente, recargamos toda la lista para que se agrupe correctamente.
                                 loadRecentOrders();
+                                // Actualizar barra superior de pedidos
+                                loadTopOrdersBar();
                                 break;
                             case 'pedido_created':
                                 // Activar la alerta visual y sonora
@@ -416,6 +492,8 @@
                                     listElPedido.insertBefore(li, listElPedido.firstChild);
                                     while (listElPedido.children.length > 10) listElPedido.removeChild(listElPedido.lastChild);
                                 }
+                                // Actualizar barra superior de pedidos
+                                loadTopOrdersBar();
                                 break;
                             case 'consumo_deleted':
                                 // payload: {id: consumo_id} o {ids: [consumo_id1, ...]}
@@ -434,6 +512,8 @@
                                         }
                                     }
                                 }
+                                // Actualizar barra superior de pedidos
+                                loadTopOrdersBar();
                                 break;
                             case 'song_finished':
                                 const songInfo = data.payload;
@@ -715,6 +795,9 @@
 
                 // Cargar datos de la página inicial
                 loadDashboardPage();
+
+                // Cargar pedidos en la barra superior
+                loadTopOrdersBar();
 
                 // Setup WebSocket for realtime updates (consume events and others)
                 setupAdminWebSocket();
