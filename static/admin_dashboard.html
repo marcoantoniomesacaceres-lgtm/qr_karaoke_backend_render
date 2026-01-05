@@ -337,7 +337,7 @@
                                     document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificación:", e));
                                 }
                                 // En lugar de añadirlo directamente, recargamos toda la lista para que se agrupe correctamente.
-                                loadRecentOrders();
+                                loadRecentOrders(document.getElementById('dashboard'));
                                 break;
                             case 'pedido_created':
                                 // Reproducir sonido solo si está habilitado en localStorage

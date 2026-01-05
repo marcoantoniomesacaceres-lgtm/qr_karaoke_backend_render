@@ -1,46 +1,538 @@
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+﻿        const API_BASE_URL = '/api/v1';
+        const notification = document.getElementById('notification');
+        let apiKey = '';
+        // Variable global para almacenar el estado actual de la cola
+        let currentQueueData = { now_playing: null, upcoming: [] };
 
-function checkFile(filePath) {
-    let code = fs.readFileSync(filePath, 'utf8');
+        // --- UTILS ---
+        function showNotification(message, type = 'success', duration = 4000) {
+            notification.textContent = message;
+            notification.className = ''; // Limpiar clases previas
+            notification.classList.add('show');
+            notification.classList.add(type);
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
 
-    if (filePath.endsWith('.html')) {
-        // Extract script content
-        const scriptRegex = /<script>([\s\S]*?)<\/script>/g;
-        let match;
-        let scriptCount = 0;
-        while ((match = scriptRegex.exec(code)) !== null) {
-            scriptCount++;
-            const scriptContent = match[1];
-            try {
-                new vm.Script(scriptContent);
-                console.log(`✅ ${filePath} (Script ${scriptCount}): OK`);
-            } catch (e) {
-                console.error(`❌ ${filePath} (Script ${scriptCount}): Syntax Error: ${e.message}`);
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { ...options.headers, 'X-API-Key': apiKey };
+            // Solo aÃ±adir Content-Type si hay un body. Evita errores 422 en POSTs vacÃ­os.
+            // FIX: El content-type se debe aÃ±adir si el body no es FormData
+            if (options.body) {
+                headers['Content-Type'] = 'application/json';
+            }
+            options.headers = headers;
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            if (response.status === 204) return null; // No content
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || `Error ${response.status}`);
+            }
+            return data;
+        }
+
+        // NEW FUNCTION: Enviar actualizaciÃ³n de cuenta a travÃ©s de WebSocket
+        function enviarActualizacionCuenta(mesaId, cuenta) {
+            if (adminSocket && adminSocket.readyState === WebSocket.OPEN) {
+                const payload = {
+                    type: 'update_account',
+                    mesa_id: mesaId,
+                    cuenta: cuenta
+                };
+                adminSocket.send(JSON.stringify(payload));
+            } else {
+                console.warn("WebSocket no estÃ¡ conectado para enviar actualizaciÃ³n de cuenta.");
             }
         }
-    } else if (filePath.endsWith('.js')) {
-        try {
-            new vm.Script(code);
-            console.log(`✅ ${filePath}: OK`);
-        } catch (e) {
-            console.error(`❌ ${filePath}: Syntax Error: ${e.message}`);
-        }
-    }
-}
 
-function walkDir(dir) {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-            walkDir(filePath);
-        } else if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
-            checkFile(filePath);
+        // --- AUTOPLAY UTILITIES (shared) ---
+        async function handleToggleAutoplay(event) {
+            // Toggle autoplay on the server (endpoint toggles state)
+            try {
+                const result = await apiFetch('/admin/autoplay/toggle', { method: 'POST' });
+                const status = result && typeof result.autoplay_status !== 'undefined' ? result.autoplay_status : null;
+                if (status !== null) {
+                    updateAutoplayStatus(status);
+                    showNotification(`${status ? 'Activado' : 'Desactivado'}.`, 'info');
+                }
+            } catch (err) {
+                showNotification(err.message || 'Error cambiando autoplay', 'error');
+            }
         }
-    });
-}
 
-walkDir('./static');
+        function updateAutoplayStatus(enabled) {
+            const el = document.getElementById('autoplay-toggle-queue');
+            if (el) el.checked = !!enabled;
+        }
+
+        // startCarousel may be defined in player.html; provide a noop fallback for admin
+        function startCarousel() {
+            // noop for admin dashboard; player.html provides real implementation
+            return;
+        }
+        // --- RENDER FUNCTIONS ---
+
+        // Inventory rendering moved to `static/admin_pages/inventory.js` (renderProducts)
+
+        // Queue rendering moved to `static/admin_pages/queue.js` (renderApprovedSongs)
+
+        // API keys rendering moved to `static/admin_pages/settings.js` (render API keys)
+
+        // Tables rendering moved to `static/admin_pages/tables.js` (renderTablesList)
+
+        function generateQrForTable(canvas, tableQrCode) {
+            let url;
+            // Si el qrCode es una ruta (empieza con '/'), la usamos directamente.
+            // Si no, asumimos que es un cÃ³digo de mesa.
+            if (tableQrCode.startsWith('/')) {
+                url = `${window.location.origin}${tableQrCode}`;
+            } else {
+                // URL para las mesas
+                url = `${window.location.origin}/?table=${tableQrCode}`;
+            }
+
+            QRCode.toCanvas(canvas, url, { width: 256, errorCorrectionLevel: 'H' }, function (error) {
+                if (error) {
+                    console.error(error);
+                    canvas.parentElement.innerHTML = '<p style="color: var(--error-color);">Error al generar el QR.</p>';
+                } else {
+                    // Una vez generado el QR, aÃ±adimos la URL debajo sin borrar el canvas
+                    const urlElement = document.createElement('p');
+                    urlElement.className = 'item-meta';
+                    urlElement.style.wordBreak = 'break-all';
+                    urlElement.textContent = url;
+                    canvas.parentElement.appendChild(urlElement);
+                }
+            });
+        }
+
+        function showTableDetails(tableId, tableName, tableQrCode, isActive) {
+            const container = document.getElementById('qr-code-container');
+            container.innerHTML = ''; // Limpiar contenido anterior
+
+            // Mostrar el nombre de la mesa
+            const nameElement = document.createElement('p');
+            nameElement.style.fontWeight = 'bold';
+            nameElement.textContent = tableName;
+            container.appendChild(nameElement);
+
+            // Mostrar la URL directa (si aplica) y botÃ³n para abrir reproductor
+            try {
+                let url;
+                if (tableQrCode && tableQrCode.startsWith('/')) {
+                    url = `${window.location.origin}${tableQrCode}`;
+                } else if (tableQrCode) {
+                    url = `${window.location.origin}/?table=${tableQrCode}`;
+                }
+
+                if (url) {
+                    const urlWrap = document.createElement('div');
+                    urlWrap.style.marginTop = '10px';
+                    urlWrap.style.display = 'flex';
+                    urlWrap.style.flexDirection = 'column';
+                    urlWrap.style.alignItems = 'center';
+
+                    const urlElement = document.createElement('p');
+                    urlElement.className = 'item-meta';
+                    urlElement.style.wordBreak = 'break-all';
+                    urlElement.style.margin = '6px 0';
+                    urlElement.textContent = url;
+
+                    const openBtn = document.createElement('button');
+                    openBtn.className = 'form-btn';
+                    openBtn.style.marginTop = '8px';
+                    openBtn.style.width = '220px';
+                    openBtn.textContent = tableId === 'player' ? 'Abrir Reproductor' : 'Abrir en nueva pestaÃ±a';
+                    openBtn.onclick = () => {
+                        try {
+                            // Abrir en nueva pestaÃ±a la URL del reproductor
+                            window.open(url, '_blank');
+                        } catch (e) {
+                            // Fallback: navegar en la misma pestaÃ±a
+                            window.location.href = url;
+                        }
+                    };
+
+                    urlWrap.appendChild(urlElement);
+                    urlWrap.appendChild(openBtn);
+                    container.appendChild(urlWrap);
+                }
+            } catch (err) {
+                console.warn('No se pudo construir la URL para la mesa:', err);
+            }
+
+            // Crear el botÃ³n para generar el QR
+            const generateQrBtn = document.createElement('button');
+            generateQrBtn.className = 'form-btn btn-generate-qr';
+            generateQrBtn.textContent = 'Generar CÃ³digo QR';
+            generateQrBtn.onclick = () => {
+                generateQrBtn.style.display = 'none'; // Ocultar el botÃ³n
+                const canvas = document.createElement('canvas');
+                container.appendChild(canvas);
+                generateQrForTable(canvas, tableQrCode);
+            };
+            container.appendChild(generateQrBtn);
+
+            // Solo mostrar botones de activar/desactivar si NO es el reproductor
+            if (tableId !== 'player') {
+                // Crear el botÃ³n para activar/desactivar
+                const actionButton = document.createElement('button');
+                actionButton.className = `form-btn ${isActive ? 'btn-deactivate' : 'btn-activate'}`;
+                actionButton.textContent = isActive ? 'Desactivar Mesa' : 'Activar Mesa';
+                actionButton.dataset.tableId = tableId;
+                container.appendChild(actionButton);
+            }
+        }
+        // --- PAGE LOADERS ---
+
+        // Page loaders and account UI moved to modules:
+        // - Dashboard: `static/admin_pages/dashboard.js` (loadDashboardPage, loadRecentOrders, reactions, broadcast)
+        // - Accounts: `static/admin_pages/accounts.js` (loadAccountsPage, payment modal handlers)
+        // The WebSocket handlers below will call these module functions when messages arrive.
+
+
+        // WEBSOCKET: ConexiÃ³n para actualizaciones en tiempo real (cola, notificaciones, consumos)
+        let adminSocket = null;
+        function setupAdminWebSocket() {
+            try {
+                const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+                const wsUrl = `${wsScheme}://${window.location.host}/ws/cola`;
+                adminSocket = new WebSocket(wsUrl);
+
+                adminSocket.addEventListener('open', () => {
+                    console.info('Admin websocket conectado');
+                });
+
+                adminSocket.addEventListener('message', (evt) => {
+                    try {
+                        const data = JSON.parse(evt.data);
+                        if (!data || !data.type) return;
+                        switch (data.type) {
+                            case 'consumo_created':
+                                // Reproducir sonido solo si estÃ¡ habilitado en localStorage
+                                const soundEnabledConsumo = localStorage.getItem('adminSoundEnabled') !== 'false';
+                                if (soundEnabledConsumo) {
+                                    document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificaciÃ³n:", e));
+                                }
+                                // En lugar de aÃ±adirlo directamente, recargamos toda la lista para que se agrupe correctamente.
+                                loadRecentOrders(document.getElementById('dashboard'));
+                                break;
+                            case 'pedido_created':
+                                // Reproducir sonido solo si estÃ¡ habilitado en localStorage
+                                const soundEnabledPedido = localStorage.getItem('adminSoundEnabled') !== 'false';
+                                if (soundEnabledPedido) {
+                                    document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificaciÃ³n:", e));
+                                }
+
+                                const pedido = data.payload;
+                                const listElPedido = document.getElementById('recent-orders-list');
+                                if (listElPedido) {
+                                    if (listElPedido.querySelector('p')) listElPedido.innerHTML = '';
+
+                                    const li = document.createElement('li');
+                                    li.className = 'item new-order';
+                                    li.dataset.consumoIds = pedido.consumo_ids.join(','); // Guardamos todos los IDs
+
+                                    const itemsHtml = pedido.items.map(item => `<li>${item.cantidad}x ${item.producto_nombre}</li>`).join('');
+                                    const mesaText = pedido.mesa_nombre ? `Mesa ${pedido.mesa_nombre}` : '';
+
+                                    li.innerHTML = `
+                                        <div class="item-details">
+                                            <div class="item-title">
+                                                ${mesaText} pidiÃ³:
+                                                <span class="order-alert-icon shaking">ðŸ””</span>
+                                            </div>
+                                            <ul style="padding-left: 20px; margin: 5px 0; font-size: 0.95em;">${itemsHtml}</ul>
+                                            <div class="item-meta">Por: ${pedido.usuario_nick} â€” ${new Date(pedido.created_at).toLocaleTimeString()}</div>
+                                        </div>
+                                        <div class="item-actions">
+                                            <button class="btn-despachado" data-ids="${pedido.consumo_ids.join(',')}" title="Marcar como despachado">Despachado</button>
+                                            <button class="btn-no-despachado" data-ids="${pedido.consumo_ids.join(',')}" title="Cancelar pedido">No Despachado</button>
+                                        </div>
+                                    `;
+                                    listElPedido.insertBefore(li, listElPedido.firstChild);
+                                    while (listElPedido.children.length > 10) listElPedido.removeChild(listElPedido.lastChild);
+                                }
+                                break;
+                            case 'consumo_deleted':
+                                // payload: {id: consumo_id} o {ids: [consumo_id1, ...]}
+                                const payload = data.payload;
+                                if (payload) {
+                                    const listEl = document.getElementById('recent-orders-list');
+                                    if (listEl) { // Check if the list element exists
+                                        if (payload.id) { // Eliminar un solo consumo
+                                            const child = listEl.querySelector(`li[data-consumo-id="${payload.id}"]`);
+                                            if (child) child.remove();
+                                        } else if (payload.ids && Array.isArray(payload.ids)) { // Eliminar un pedido consolidado
+                                            // FIX: Ensure payload.ids is an array before joining.
+                                            const orderId = Array.isArray(payload.ids) ? payload.ids.join(',') : '';
+                                            const child = listEl.querySelector(`li[data-consumo-ids="${orderId}"], li[data-ids="${orderId}"]`);
+                                            if (child) child.remove();
+                                        }
+                                    }
+                                }
+                                break;
+                            case 'song_finished':
+                                const songInfo = data.payload;
+                                const lastSungContainer = document.getElementById('last-sung-info');
+                                if (lastSungContainer) {
+                                    lastSungContainer.innerHTML = `
+                                        <p style="font-size: 1.2em;"><strong>${songInfo.titulo}</strong></p>
+                                        <p>Cantada por: <strong>${songInfo.usuario_nick}</strong></p>
+                                        <p style="font-size: 1.5em; color: var(--secondary-color);">Puntaje: <strong>${songInfo.puntuacion_ia}</strong></p>
+                                    `;
+                                }
+                                break;
+                            case 'notification':
+                                showNotification(data.payload?.mensaje || 'NotificaciÃ³n', 'info');
+                                break;
+                            case 'product_update':
+                                showNotification('El inventario de productos ha sido actualizado.', 'info');
+                                // Re-fetch products if inventory page is active
+                                if (document.getElementById('inventory').classList.contains('active')) {
+                                    loadInventoryPage();
+                                }
+                                break;
+                            case 'queue_update':
+                                // Almacenar el estado de la cola en la variable global
+                                // Esto permite actualizar la vista aunque no estÃ© activa
+                                currentQueueData = data.payload || { now_playing: null, upcoming: [] };
+                                // Actualizar la lista si la pestaÃ±a de cola estÃ¡ visible
+                                if (document.getElementById('queue').classList.contains('active')) {
+                                    const approvedListEl = document.getElementById('approved-songs-list');
+                                    const pendingListEl = document.getElementById('pending-songs-list');
+                                    if (approvedListEl && typeof renderApprovedSongs === 'function') {
+                                        renderApprovedSongs(currentQueueData, approvedListEl);
+                                    }
+                                    if (pendingListEl && typeof renderPendingSongs === 'function') {
+                                        renderPendingSongs(currentQueueData.pending || [], pendingListEl);
+                                    }
+                                }
+                                break;
+                            case 'pause_playback':
+                                // Sincronizar el estado de pausa en el frontend
+                                if (typeof playerState !== 'undefined') {
+                                    playerState.isPlaying = false;
+                                    // Actualizar la UI si la cola estÃ¡ visible
+                                    if (document.getElementById('queue').classList.contains('active')) {
+                                        const approvedListEl = document.getElementById('approved-songs-list');
+                                        if (approvedListEl && typeof renderApprovedSongs === 'function') {
+                                            renderApprovedSongs(currentQueueData, approvedListEl);
+                                        }
+                                    }
+                                }
+                                break;
+                            case 'resume_playback':
+                                // Sincronizar el estado de reanudaciÃ³n en el frontend
+                                if (typeof playerState !== 'undefined') {
+                                    playerState.isPlaying = true;
+                                    // Actualizar la UI si la cola estÃ¡ visible
+                                    if (document.getElementById('queue').classList.contains('active')) {
+                                        const approvedListEl = document.getElementById('approved-songs-list');
+                                        if (approvedListEl && typeof renderApprovedSongs === 'function') {
+                                            renderApprovedSongs(currentQueueData, approvedListEl);
+                                        }
+                                    }
+                                }
+                                break;
+                            case 'reaction':
+                                const reactionPayload = data.payload;
+                                if (reactionPayload && reactionPayload.reaction) {
+                                    const emoji = document.createElement('div');
+                                    emoji.className = 'reaction-emoji';
+                                    emoji.textContent = reactionPayload.reaction;
+
+                                    // PosiciÃ³n horizontal aleatoria y animaciÃ³n
+                                    emoji.style.left = `${Math.random() * 90 + 5}%`;
+                                    emoji.style.setProperty('--tx', `${(Math.random() - 0.5) * 100}px`);
+
+                                    document.getElementById('reaction-container').appendChild(emoji);
+                                    setTimeout(() => emoji.remove(), 5000); // Limpiar despuÃ©s de la animaciÃ³n
+                                }
+                                break;
+                            default:
+                                // Si el mensaje no tiene un 'type' conocido, podrÃ­a ser la actualizaciÃ³n de la cola.
+                                // Solo procesar si es un objeto con estructura de cola
+                                if (data.now_playing || data.upcoming) {
+                                    const approvedListEl = document.getElementById('approved-songs-list');
+                                    // Prefer module-managed render if available (queue.js defines renderApprovedSongs)
+                                    if (typeof renderApprovedSongs === 'function') {
+                                        try {
+                                            renderApprovedSongs(data, approvedListEl);
+                                        } catch (e) {
+                                            console.error('Error in renderApprovedSongs:', e);
+                                            // Fallback: ask the queue module to reload its data
+                                            if (typeof loadQueuePage === 'function') loadQueuePage();
+                                        }
+                                    } else {
+                                        // If module not loaded yet, trigger the queue page loader to ensure data/rendering
+                                        if (typeof loadQueuePage === 'function') loadQueuePage();
+                                    }
+                                }
+                                break;
+                        }
+                    } catch (err) {
+                        console.error('Error procesando mensaje WS:', err);
+                    }
+                });
+
+                adminSocket.addEventListener('close', () => {
+                    console.warn('Admin websocket desconectado, reintentando en 3s...');
+                    adminSocket = null;
+                    setTimeout(setupAdminWebSocket, 3000);
+                });
+                adminSocket.addEventListener('error', (e) => {
+                    console.error('WebSocket error', e);
+                    try { adminSocket.close(); } catch (er) { }
+                });
+            } catch (e) {
+                console.error('No se pudo establecer websocket:', e);
+            }
+        }
+
+        // Page loaders for queue/inventory/settings/tables/reports moved to per-page modules:
+        // - `static/admin_pages/queue.js` (loadQueuePage)
+        // - `static/admin_pages/inventory.js` (loadInventoryPage)
+        // - `static/admin_pages/settings.js` (loadSettingsPage)
+        // - `static/admin_pages/tables.js` (loadTablesPage)
+        // - `static/admin_pages/reports.js` (loadReportsPage)
+        // The navigation handler calls those module functions via handleNavigation().
+
+        // --- EVENT HANDLERS ---
+
+        function handleNavigation(event) {
+            event.preventDefault();
+            const link = event.target.closest('.nav-link');
+            if (!link) return;
+
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+            link.classList.add('active');
+            const pageId = link.getAttribute('href').substring(1);
+            document.getElementById(pageId).classList.add('active');
+
+            // Cargar datos y configurar listeners de la pÃ¡gina activa
+            switch (pageId) {
+                case 'dashboard':
+                    loadDashboardPage();
+                    setupDashboardListeners();
+                    break;
+                case 'queue':
+                    loadQueuePage();
+                    setupQueueListeners();
+                    break;
+                case 'inventory':
+                    loadInventoryPage();
+                    setupInventoryListeners();
+                    break;
+                case 'settings':
+                    // Ensure settings page is fully rendered before attaching listeners
+                    // loadSettingsPage is async so we chain setupSettingsListeners after it resolves
+                    loadSettingsPage().then(() => setupSettingsListeners());
+                    break;
+                case 'accounts':
+                    loadAccountsPage();
+                    setupAccountsListeners();
+                    break;
+                case 'reports':
+                    loadReportsPage();
+                    setupReportsListeners();
+                    break;
+                case 'tables':
+                    loadTablesPage();
+                    setupTablesListeners();
+                    break;
+            }
+        }
+
+        // Inventory, Tables, Settings, Accounts functions now in respective modules
+
+        // Settings and API functions now in settings.js module
+
+        // Broadcast and reset functions now in dashboard.js module
+
+        // Autoplay toggle now in queue.js module
+
+        // Queue/search logic (add song) moved to per-page module:
+        // see `static/admin_pages/queue.js` -> `handleAdminAddSong` / `loadQueuePage`
+
+        // handleQueueActions moved to the per-page module: static/admin_pages/queue.js
+
+        function handleTableClickForQr(event) {
+            const tableItem = event.target.closest('li.item');
+            if (!tableItem) return;
+
+            // Quitar la clase activa de otros elementos
+            document.querySelectorAll('#tables-list li.item').forEach(li => li.classList.remove('active'));
+            // AÃ±adir clase activa al seleccionado
+            tableItem.classList.add('active');
+
+            const tableId = tableItem.dataset.tableId;
+            const qrCode = tableItem.dataset.qrCode;
+            const tableName = tableItem.dataset.tableName;
+            const isActive = tableItem.dataset.isActive === 'true';
+
+            showTableDetails(tableId, tableName, qrCode, isActive);
+        }
+
+        // Table activation handler moved to per-page module: static/admin_pages/tables.js -> handleToggleTableActive
+
+        // --- NUEVA FUNCIÃ“N PARA ENVIAR REACCIONES ---
+        // Reactions handler moved to per-page module: static/admin_pages/dashboard.js -> handleSendReaction
+
+        function handleLogout() {
+            sessionStorage.removeItem('adminApiKey');
+            window.location.href = '/admin';
+        }
+
+        // --- INITIALIZATION ---
+        // Helpers to load per-page HTML fragments (module separation)
+        function loadFragment(pageId) {
+            const mapping = {
+                'dashboard': '/static/admin_pages/dashboard.html',
+                'queue': '/static/admin_pages/queue.html',
+                'inventory': '/static/admin_pages/inventory.html',
+                'tables': '/static/admin_pages/tables.html',
+                'accounts': '/static/admin_pages/accounts.html',
+                'reports': '/static/admin_pages/reports.html',
+                'settings': '/static/admin_pages/settings.html',
+                'player': '/static/admin_pages/player_dashboard_placeholder.html'
+            };
+            const url = mapping[pageId];
+            if (!url) return Promise.resolve();
+            return fetch(url, { cache: 'no-store' })
+                .then(r => { if (!r.ok) throw new Error('Fragment not found'); return r.text(); })
+                .then(html => { const el = document.getElementById(pageId); if (el) el.innerHTML = html; })
+                .catch(err => { console.warn('Failed to load fragment', pageId, err); });
+        }
+
+        function loadAllFragments() {
+            return Promise.all(['dashboard', 'queue', 'inventory', 'tables', 'accounts', 'reports', 'settings'].map(loadFragment));
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            loadAllFragments().then(() => {
+                apiKey = sessionStorage.getItem('adminApiKey');
+                if (!apiKey) {
+                    window.location.href = '/admin';
+                    return;
+                }
+
+                // Cargar datos de la pÃ¡gina inicial
+                loadDashboardPage();
+
+                // Setup WebSocket for realtime updates (consume events and others)
+                setupAdminWebSocket();
+
+                // Event Listeners - Global only
+                document.querySelector('.nav-menu').addEventListener('click', handleNavigation);
+                document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+                // Page modules handle their own event listeners via setupXxxListeners()
+                // Called automatically when pages load via handleNavigation()
+                setupDashboardListeners(); // Setup initial page listeners
+
+            }).catch(err => { console.warn('Error loading fragments', err); apiKey = sessionStorage.getItem('adminApiKey'); if (!apiKey) { window.location.href = '/admin'; return; } loadDashboardPage(); setupAdminWebSocket(); startCarousel(); });
+        });
+    </script>

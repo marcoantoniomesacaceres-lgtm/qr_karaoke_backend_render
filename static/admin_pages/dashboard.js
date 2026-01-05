@@ -6,6 +6,9 @@ async function loadDashboardPage() {
         const dashboardContainer = document.getElementById('dashboard');
         if (!dashboardContainer) return;
 
+        if (window.isDashboardLoading) return;
+        window.isDashboardLoading = true;
+
         // Limpiar contenedor
         dashboardContainer.innerHTML = '';
 
@@ -85,6 +88,8 @@ async function loadDashboardPage() {
             `;
         }
         showNotification(`Error al cargar resumen: ${error.message}`, 'error');
+    } finally {
+        window.isDashboardLoading = false;
     }
 }
 
@@ -92,8 +97,16 @@ async function loadRecentOrders(dashboardContainer) {
     try {
         const pedidos = await apiFetch('/admin/recent-consumos?limit=25');
         
+        
+        // Remove existing orders card if present (idempotency)
+        const existingCard = document.getElementById('recent-orders-card');
+        if (existingCard) {
+            existingCard.remove();
+        }
+
         // Crear tarjeta de pedidos
         const ordersCard = document.createElement('div');
+        ordersCard.id = 'recent-orders-card';
         ordersCard.className = 'bees-card';
         ordersCard.style.marginTop = '30px';
 
