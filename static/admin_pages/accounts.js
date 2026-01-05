@@ -16,44 +16,90 @@ function renderAccounts(accounts, accountsGrid) {
 
     accounts.forEach(acc => {
         const card = document.createElement('div');
-        card.className = 'account-card card';
+        card.className = 'mesa-card';
+        card.dataset.mesaId = acc.mesa_id;
 
         const titulo = acc.mesa_nombre || `Mesa ${acc.mesa_id}`;
-        const deuda = acc.saldo_pendiente || 0;
-        const consumos = Array.isArray(acc.consumos) ? acc.consumos : [];
-        const pagos = Array.isArray(acc.pagos) ? acc.pagos : [];
+        const saldo = acc.saldo_pendiente || 0;
+        const isActive = acc.activa !== false; // Asumimos activa por defecto
+
+        // Determinar clase de saldo
+        let saldoClass = 'zero';
+        if (saldo > 0) saldoClass = 'negative';
+        else if (saldo < 0) saldoClass = 'positive';
 
         card.innerHTML = `
-            <div class="account-header">
-                <h3>${titulo}</h3>
-                <span class="commission-badge">Saldo: $${deuda}</span>
+            <!-- Header con nombre y estado -->
+            <div class="mesa-card-header">
+                <h3>
+                    ${titulo}
+                    <span class="mesa-status ${isActive ? 'active' : 'inactive'}"></span>
+                </h3>
             </div>
-            <div class="account-details">
-                <div class="account-summary">
-                    <div>Total consumido: $${acc.total_consumido || 0}</div>
-                    <div>Total pagado: $${acc.total_pagado || 0}</div>
-                    <div class="saldo-pendiente ${deuda > 0 ? 'saldo-debe' : 'saldo-ok'}">Pendiente: $${deuda}</div>
+            
+            <!-- Cuerpo con info y QR -->
+            <div class="mesa-card-body">
+                <div class="mesa-info">
+                    <div class="info-row">
+                        <label>Número de Mesa:</label>
+                        <span>${acc.mesa_id}</span>
+                    </div>
+                    <div class="info-row">
+                        <label>Usuario:</label>
+                        <select class="user-selector" data-mesa-id="${acc.mesa_id}">
+                            ${Array.from({ length: 10 }, (_, i) => i + 1).map(num =>
+            `<option value="${num}">Usuario ${num}</option>`
+        ).join('')}
+                        </select>
+                    </div>
+                    <div class="info-row">
+                        <label>Estado:</label>
+                        <span style="color: ${isActive ? '#28a745' : '#dc3545'}; font-weight: 600;">
+                            ${isActive ? '✓ Activa' : '✗ Inactiva'}
+                        </span>
+                    </div>
                 </div>
-                <div class="details-section">
-                    <strong>Consumos:</strong>
-                    <ul>
-                        ${consumos.map(c => `<li>${c.cantidad}x ${c.producto_nombre} — $${c.valor_total} (${new Date(c.created_at).toLocaleString()})</li>`).join('')}
-                    </ul>
-                    <strong>Pagos:</strong>
-                    <ul>
-                        ${pagos.map(p => `<li>$${p.monto} — ${new Date(p.created_at).toLocaleString()}</li>`).join('')}
-                    </ul>
+                
+                <!-- QR Code Container -->
+                <div class="mesa-qr-container">
+                    <div class="mesa-qr" id="qr-mesa-${acc.mesa_id}">
+                        <p class="mesa-qr-placeholder">Selecciona usuario<br>y genera QR</p>
+                    </div>
+                    <a href="#" class="mesa-qr-download hidden" id="qr-download-${acc.mesa_id}" download="mesa-${acc.mesa_id}-qr.png">
+                        ⬇️ Descargar
+                    </a>
                 </div>
             </div>
-            <div class="account-actions">
-                <button class="btn-payment" data-id="${acc.mesa_id}" data-saldo="${deuda}">Registrar Pago</button>
-                <button class="btn-close-session" data-id="${acc.mesa_id}" style="background-color: var(--error-color);">Cerrar Sesión</button>
-                <button class="btn-prev-accounts" data-id="${acc.mesa_id}" style="background-color: var(--background-dark);">Cuentas Anteriores</button>
+            
+            <!-- Botones de acción -->
+            <div class="mesa-actions">
+                <button class="btn-activate" data-mesa-id="${acc.mesa_id}" ${isActive ? 'disabled' : ''}>
+                    ✅ Activar
+                </button>
+                <button class="btn-deactivate" data-mesa-id="${acc.mesa_id}" ${!isActive ? 'disabled' : ''}>
+                    ⏸️ Desactivar
+                </button>
+                <button class="btn-generate-qr" data-mesa-id="${acc.mesa_id}">
+                    🔄 Generar QR
+                </button>
+            </div>
+            
+            <!-- Resumen de cuenta -->
+            <div class="mesa-account-summary">
+                <div class="mesa-saldo ${saldoClass}">
+                    Saldo: $${saldo.toFixed(2)}
+                </div>
+                <button class="btn-view-details" data-mesa-id="${acc.mesa_id}">
+                    Ver Detalles
+                </button>
             </div>
         `;
 
         accountsGrid.appendChild(card);
     });
+
+    // Event listeners are set up once in setupAccountsListeners using delegation
+    // so we don't need to re-attach them here.
 }
 
 async function loadAccountsPage() {
@@ -429,173 +475,112 @@ function setupAccountsListeners() {
     // Setup create mesa modal
     setupCreateMesaModal();
 
-    // Setup integrated tables management (from tables.js functionality)
-    setupIntegratedTablesListeners();
+    // Setup mesa card listeners (delegated)
+    setupMesaCardListeners();
 }
 
-// Integrated Tables Management Functions
-function setupIntegratedTablesListeners() {
-    // QR Generator Form
-    const qrForm = document.getElementById('qr-generator-form');
-    if (qrForm) {
-        qrForm.addEventListener('submit', handleGenerateQR);
-    }
+// ========== MESA CARD LISTENERS & HANDLERS ==========
 
-    // Management Buttons
-    const btnActivate = document.getElementById('btn-activate');
-    const btnDeactivate = document.getElementById('btn-deactivate');
-    const btnDelete = document.getElementById('btn-delete');
+function setupMesaCardListeners() {
+    const accountsGrid = document.getElementById('accounts-grid');
+    if (!accountsGrid) return;
 
-    if (btnActivate) btnActivate.addEventListener('click', () => handleTableAction('activate'));
-    if (btnDeactivate) btnDeactivate.addEventListener('click', () => handleTableAction('deactivate'));
-    if (btnDelete) btnDelete.addEventListener('click', () => handleTableAction('delete'));
+    // Use event delegation for better performance
+    accountsGrid.addEventListener('click', async (e) => {
+        const target = e.target;
+
+        // Generate QR Button
+        if (target.matches('.btn-generate-qr')) {
+            const mesaId = target.dataset.mesaId;
+            handleCardQRGenerate(mesaId);
+        }
+
+        // Activate Button
+        if (target.matches('.btn-activate')) {
+            const mesaId = target.dataset.mesaId;
+            await updateMesaStatus(mesaId, 'activate');
+        }
+
+        // Deactivate Button
+        if (target.matches('.btn-deactivate')) {
+            const mesaId = target.dataset.mesaId;
+            await updateMesaStatus(mesaId, 'deactivate');
+        }
+
+        // View Details Button
+        if (target.matches('.btn-view-details')) {
+            const mesaId = target.dataset.mesaId;
+            // Find account id if needed, or just show details by mesa_id lookup
+            // For now, we reuse showAccountDetails if we have an account ID, 
+            // otherwise we might need to fetch by mesa or show what we have.
+            // The currentAccounts array has the data.
+            const account = currentAccounts.find(a => a.mesa_id == mesaId);
+            if (account && account.id) {
+                showAccountDetails(account.id);
+            } else {
+                showNotification('No hay detalles de cuenta activa para esta mesa.', 'info');
+            }
+        }
+    });
+
+    // Handle user selector change (optional, maybe to auto-update something?)
+    accountsGrid.addEventListener('change', (e) => {
+        if (e.target.matches('.user-selector')) {
+            // Reset QR placeholder if user changes? 
+            // For now we just let them click Generate again.
+        }
+    });
 }
 
-function handleGenerateQR(event) {
-    event.preventDefault();
+function handleCardQRGenerate(mesaId) {
+    const card = document.querySelector(`.mesa-card[data-mesa-id="${mesaId}"]`);
+    if (!card) return;
 
-    const tableNumInput = document.getElementById('qr-table-number');
-    const userSelect = document.getElementById('qr-user-select');
-    const resultArea = document.getElementById('qr-result');
+    const userSelect = card.querySelector('.user-selector');
+    const qrContainer = card.querySelector(`#qr-mesa-${mesaId}`);
+    const downloadLink = card.querySelector(`#qr-download-${mesaId}`);
 
-    if (!tableNumInput.value) {
-        showNotification('Por favor ingresa un número de mesa', 'error');
-        return;
-    }
-
-    const tableNum = tableNumInput.value.toString().padStart(2, '0');
     const userNum = userSelect.value;
+    const tableNum = mesaId.toString().padStart(2, '0');
 
     // Construct QR Code string
     const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
-    const tableName = `Mesa ${parseInt(tableNum)}`;
-    const userNick = `${tableName}-Usuario${userNum}`;
+    const userNick = `Mesa ${mesaId}-User${userNum}`;
 
     // Generate URL
     const appBaseUrl = window.location.origin;
     const appUrl = `${appBaseUrl}/?table=${encodeURIComponent(qrCode)}`;
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appUrl)}`;
 
-    resultArea.innerHTML = `
-        <div class="qr-container" style="animation: fadeIn 0.5s;">
-            <img src="${qrImageUrl}" alt="QR Code" class="qr-image" style="border: 2px solid #333; padding: 8px; border-radius: 8px; max-width: 100%;">
-            <h4 style="margin: 8px 0 4px 0; font-size: 0.9em;">${userNick}</h4>
-            <p style="font-family: monospace; background: #f0f0f0; padding: 4px; border-radius: 4px; font-size: 0.75em; word-break: break-all;">${qrCode}</p>
-            <a href="${qrImageUrl}" download="qr-${qrCode}.png" class="btn-primary" style="display: inline-block; margin-top: 8px; text-decoration: none; font-size: 0.85em; padding: 6px 12px;">
-                ⬇️ Descargar QR
-            </a>
-        </div>
+    // Update UI
+    qrContainer.innerHTML = `
+        <img src="${qrImageUrl}" alt="QR Code" style="width:100%; height:100%; object-fit:contain;">
     `;
+
+    // Update download link
+    downloadLink.href = qrImageUrl;
+    downloadLink.download = `mesa-${mesaId}-usuario${userNum}.png`;
+    downloadLink.classList.remove('hidden');
+    downloadLink.textContent = `⬇️ User ${userNum}`;
 }
 
-async function findTableByNumber(number) {
-    try {
-        const tables = await apiFetch('/mesas/');
-        const targetQR = `karaoke-mesa-${number.toString().padStart(2, '0')}`;
-
-        const found = tables.find(t => {
-            if (t.qr_code === targetQR) return true;
-            if (t.qr_code.startsWith(targetQR) && !t.qr_code.includes('usuario')) return true;
-            return false;
-        });
-
-        return found;
-    } catch (error) {
-        console.error("Error fetching tables:", error);
-        return null;
-    }
-}
-
-async function handleTableAction(action) {
-    const tableNumInput = document.getElementById('manage-table-number');
-    const statusDiv = document.getElementById('management-status');
-
-    if (!tableNumInput.value) {
-        showNotification('Por favor ingresa un número de mesa para gestionar', 'error');
+async function updateMesaStatus(mesaId, action) {
+    if (!confirm(`¿Estás seguro de ${action === 'activate' ? 'ACTIVAR' : 'DESACTIVAR'} la Mesa ${mesaId}?`)) {
         return;
     }
 
-    const tableNum = tableNumInput.value.toString().padStart(2, '0');
-    statusDiv.innerHTML = '<p>Buscando mesa...</p>';
-
     try {
-        const table = await findTableByNumber(tableNum);
+        const endpoint = `/admin/tables/${mesaId}/${action}`;
+        await apiFetch(endpoint, { method: 'POST' });
 
-        if (!table) {
-            statusDiv.innerHTML = `<p style="color: var(--error-color);">❌ No se encontró la Mesa ${parseInt(tableNum)}.</p>`;
-            if (action !== 'create') {
-                showNotification(`La Mesa ${parseInt(tableNum)} no existe. Créala primero.`, 'warning');
-            }
-            return;
-        }
+        showNotification(`Mesa ${mesaId} ${action === 'activate' ? 'activada' : 'desactivada'} exitosamente.`, 'success');
 
-        let endpoint;
-        let method = 'POST';
-        let successMsg;
-
-        if (action === 'activate') {
-            endpoint = `/admin/tables/${table.id}/activate`;
-            successMsg = `✅ Mesa ${parseInt(tableNum)} activada correctamente.`;
-        } else if (action === 'deactivate') {
-            endpoint = `/admin/tables/${table.id}/deactivate`;
-            successMsg = `⏸️ Mesa ${parseInt(tableNum)} desactivada.`;
-        } else if (action === 'delete') {
-            if (!confirm(`¿Estás seguro de ELIMINAR la Mesa ${parseInt(tableNum)}? Esta acción es irreversible.`)) {
-                statusDiv.innerHTML = '';
-                return;
-            }
-            endpoint = `/admin/tables/${table.id}`;
-            method = 'DELETE';
-            successMsg = `🗑️ Mesa ${parseInt(tableNum)} eliminada del sistema.`;
-        }
-
-        await apiFetch(endpoint, { method: method });
-        statusDiv.innerHTML = `<p style="color: var(--success-color); font-weight: bold;">${successMsg}</p>`;
-        showNotification(successMsg, 'success');
-
-        // Reload accounts page to reflect changes
-        setTimeout(() => loadAccountsPage(), 500);
-
+        // Reload to update UI state
+        await loadAccountsPage();
     } catch (error) {
-        statusDiv.innerHTML = `<p style="color: var(--error-color);">Error: ${error.message}</p>`;
+        console.error(`Error ${action} table:`, error);
+        showNotification(error.message || `Error al ${action} la mesa`, 'error');
     }
 }
 
-async function handleCreateTableDirect() {
-    const tableNumInput = document.getElementById('manage-table-number');
-    const statusDiv = document.getElementById('management-status');
-
-    if (!tableNumInput.value) {
-        showNotification('Ingresa un número para crear la mesa', 'error');
-        return;
-    }
-
-    const tableNum = parseInt(tableNumInput.value);
-    const qrCode = `karaoke-mesa-${tableNum.toString().padStart(2, '0')}`;
-    const nombre = `Mesa ${tableNum}`;
-
-    try {
-        // Check if exists first
-        const existing = await findTableByNumber(tableNum);
-        if (existing) {
-            statusDiv.innerHTML = `<p style="color: var(--warning-color);">⚠️ La Mesa ${tableNum} ya existe.</p>`;
-            return;
-        }
-
-        const payload = {
-            nombre: nombre,
-            qr_code: qrCode
-        };
-
-        await apiFetch('/mesas/', { method: 'POST', body: JSON.stringify(payload) });
-        statusDiv.innerHTML = `<p style="color: var(--success-color);">✅ Mesa ${tableNum} creada exitosamente.</p>`;
-        showNotification(`Mesa ${tableNum} creada.`, 'success');
-
-        // Reload accounts page to show new table
-        setTimeout(() => loadAccountsPage(), 500);
-
-    } catch (error) {
-        statusDiv.innerHTML = `<p style="color: var(--error-color);">Error al crear: ${error.message}</p>`;
-    }
-}
 
