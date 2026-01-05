@@ -149,7 +149,9 @@ function handlePaymentModal(event) {
     if (paymentInput) paymentInput.value = '';
     if (mesaIdInput) mesaIdInput.value = accountId;
 
-    modal.style.display = 'flex';
+    // modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
 }
 
 async function handlePaymentSubmit(event) {
@@ -203,7 +205,9 @@ function showOverpaymentConfirmation(mesaId, amount, metodo, saldoPendiente) {
         ¿Deseas registrarlo como un pago adelantado?
     `;
 
-    overpaymentModal.style.display = 'flex';
+    // overpaymentModal.style.display = 'flex';
+    overpaymentModal.classList.remove('hidden');
+    overpaymentModal.classList.add('active');
 
     // Configurar los botones de confirmación
     const confirmBtn = document.getElementById('confirm-overpayment-btn');
@@ -217,12 +221,14 @@ function showOverpaymentConfirmation(mesaId, amount, metodo, saldoPendiente) {
 
     // Agregar nuevos listeners
     newConfirmBtn.addEventListener('click', async () => {
-        overpaymentModal.style.display = 'none';
+        overpaymentModal.classList.remove('active');
+        overpaymentModal.classList.add('hidden');
         await processPayment(mesaId, amount, metodo);
     });
 
     newCancelBtn.addEventListener('click', () => {
-        overpaymentModal.style.display = 'none';
+        overpaymentModal.classList.remove('active');
+        overpaymentModal.classList.add('hidden');
         showNotification('Pago cancelado. Por favor ingresa un monto correcto.', 'info');
     });
 }
@@ -239,7 +245,10 @@ async function processPayment(mesaId, amount, metodo) {
 
         // Close payment modal
         const modal = document.getElementById('payment-modal');
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal.classList.remove('active');
+            modal.classList.add('hidden');
+        }
 
         // Reload accounts page
         await loadAccountsPage();
@@ -318,7 +327,9 @@ function showHistoryModal(history) {
             list.appendChild(item);
         });
     }
-    modal.style.display = 'flex';
+    // modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
 }
 
 async function showAccountDetails(cuentaId) {
@@ -347,7 +358,9 @@ async function showAccountDetails(cuentaId) {
                 ${pagos.length ? pagos.map(p => `<li>$${p.monto} — <small>${new Date(p.created_at).toLocaleString()}</small></li>`).join('') : '<li>Sin pagos</li>'}
             </ul>
         `;
-        modal.style.display = 'flex';
+        // modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        modal.classList.add('active');
 
     } catch (e) {
         showNotification(e.message, 'error');
@@ -392,7 +405,10 @@ async function handleCreateMesaSubmit(event) {
 
         // Cerrar el modal
         const modal = document.getElementById('create-mesa-modal');
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal.classList.remove('active');
+            modal.classList.add('hidden');
+        }
 
         // Limpiar el formulario
         numeroInput.value = '';
@@ -413,7 +429,10 @@ function setupCreateMesaModal() {
 
     if (createMesaBtn) {
         createMesaBtn.addEventListener('click', () => {
-            if (createMesaModal) createMesaModal.style.display = 'flex';
+            if (createMesaModal) {
+                createMesaModal.classList.remove('hidden');
+                createMesaModal.classList.add('active');
+            }
         });
     }
 
@@ -423,13 +442,19 @@ function setupCreateMesaModal() {
 
     if (closeCreateMesaBtn) {
         closeCreateMesaBtn.addEventListener('click', () => {
-            if (createMesaModal) createMesaModal.style.display = 'none';
+            if (createMesaModal) {
+                createMesaModal.classList.remove('active');
+                createMesaModal.classList.add('hidden');
+            }
         });
     }
 
     if (createMesaModal) {
         createMesaModal.addEventListener('click', (e) => {
-            if (e.target === createMesaModal) createMesaModal.style.display = 'none';
+            if (e.target === createMesaModal) {
+                createMesaModal.classList.remove('active');
+                createMesaModal.classList.add('hidden');
+            }
         });
     }
 }
@@ -458,30 +483,37 @@ function setupAccountsListeners() {
 
     if (closePaymentModalBtn) {
         closePaymentModalBtn.addEventListener('click', () => {
-            if (paymentModal) paymentModal.style.display = 'none';
+            if (paymentModal) {
+                paymentModal.classList.remove('active');
+                paymentModal.classList.add('hidden');
+            }
         });
     }
     if (paymentModal) {
         paymentModal.addEventListener('click', (e) => {
-            if (e.target === paymentModal) paymentModal.style.display = 'none';
+            if (e.target === paymentModal) {
+                paymentModal.classList.remove('active');
+                paymentModal.classList.add('hidden');
+            }
         });
     }
 
     if (overpaymentModal) {
         overpaymentModal.addEventListener('click', (e) => {
             if (e.target === overpaymentModal) {
-                overpaymentModal.style.display = 'none';
+                overpaymentModal.classList.remove('active');
+                overpaymentModal.classList.add('hidden');
                 showNotification('Pago cancelado.', 'info');
             }
         });
     }
 
     // Listeners for new modals
-    if (closeHistoryBtn) closeHistoryBtn.onclick = () => { if (historyModal) historyModal.style.display = 'none'; };
-    if (historyModal) historyModal.onclick = (e) => { if (e.target === historyModal) historyModal.style.display = 'none'; };
+    if (closeHistoryBtn) closeHistoryBtn.onclick = () => { if (historyModal) { historyModal.classList.remove('active'); historyModal.classList.add('hidden'); } };
+    if (historyModal) historyModal.onclick = (e) => { if (e.target === historyModal) { historyModal.classList.remove('active'); historyModal.classList.add('hidden'); } };
 
-    if (closeDetailsBtn) closeDetailsBtn.onclick = () => { if (detailsModal) detailsModal.style.display = 'none'; };
-    if (detailsModal) detailsModal.onclick = (e) => { if (e.target === detailsModal) detailsModal.style.display = 'none'; };
+    if (closeDetailsBtn) closeDetailsBtn.onclick = () => { if (detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
+    if (detailsModal) detailsModal.onclick = (e) => { if (e.target === detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
 
     // Setup create mesa modal
     setupCreateMesaModal();
