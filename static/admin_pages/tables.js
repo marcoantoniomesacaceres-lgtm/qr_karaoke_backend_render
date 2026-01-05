@@ -119,17 +119,17 @@ async function handleTableAction(action) {
         let successMsg;
 
         if (action === 'activate') {
-            endpoint = `/mesas/${table.id}/activate`;
+            endpoint = `/admin/tables/${table.id}/activate`;
             successMsg = `✅ Mesa ${parseInt(tableNum)} activada correctamente.`;
         } else if (action === 'deactivate') {
-            endpoint = `/mesas/${table.id}/deactivate`;
+            endpoint = `/admin/tables/${table.id}/deactivate`;
             successMsg = `⏸️ Mesa ${parseInt(tableNum)} desactivada.`;
         } else if (action === 'delete') {
             if (!confirm(`¿Estás seguro de ELIMINAR la Mesa ${parseInt(tableNum)}? Esta acción es irreversible.`)) {
                 statusDiv.innerHTML = '';
                 return;
             }
-            endpoint = `/mesas/${table.id}`;
+            endpoint = `/admin/tables/${table.id}`;
             method = 'DELETE';
             successMsg = `🗑️ Mesa ${parseInt(tableNum)} eliminada del sistema.`;
         }
