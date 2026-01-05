@@ -87,23 +87,23 @@ async def add_referrer_policy_header(request: Request, call_next):
 def startup_event():
     db = SessionLocal()
 
-    mesas_a_crear = []
-    for i in range(1, 2):  # Solo crear la mesa base 1
-        mesas_a_crear.append({
-            "nombre": f"Mesa {i}",
-            "qr_code": f"karaoke-mesa-{i:02d}"
-        })
+    # mesas_a_crear = []
+    # for i in range(1, 2):  # Solo crear la mesa base 1
+    #     mesas_a_crear.append({
+    #         "nombre": f"Mesa {i}",
+    #         "qr_code": f"karaoke-mesa-{i:02d}"
+    #     })
 
-    for mesa_data in mesas_a_crear:
-        mesa_existente = crud.get_mesa_by_qr(db, mesa_data["qr_code"])
-        if not mesa_existente:
-            crud.create_mesa(
-                db=db,
-                mesa=schemas.MesaCreate(**mesa_data)
-            )
-            print(f"[OK] Mesa creada: {mesa_data['nombre']}")
-        else:
-            print(f"[INFO] Mesa ya existente: {mesa_data['nombre']}")
+    # for mesa_data in mesas_a_crear:
+    #     mesa_existente = crud.get_mesa_by_qr(db, mesa_data["qr_code"])
+    #     if not mesa_existente:
+    #         crud.create_mesa(
+    #             db=db,
+    #             mesa=schemas.MesaCreate(**mesa_data)
+    #         )
+    #         print(f"[OK] Mesa creada: {mesa_data['nombre']}")
+    #     else:
+    #         print(f"[INFO] Mesa ya existente: {mesa_data['nombre']}")
 
     db.close()
 
