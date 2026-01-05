@@ -1,13 +1,93 @@
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<div class="page-header-row">
     <h2>Cuentas por Mesa</h2>
-    <button id="btn-create-mesa" class="form-btn" style="background-color: var(--success-color); padding: 10px 20px; cursor: pointer;" title="Crear nueva mesa">
+    <button id="btn-create-mesa" class="form-btn create-button" title="Crear nueva mesa">
         ➕ Nueva Mesa
     </button>
 </div>
+
+<!-- SECCIÓN DE GESTIÓN DE MESAS (INTEGRADA) -->
+<div class="card tables-management-section">
+    <h3 class="tables-management-title">🏷️ Gestión de Mesas y QR</h3>
+    <div class="tables-grid">
+
+        <!-- PANEL 1: GENERADOR DE QR (COMPACTO) -->
+        <div class="tables-panel">
+            <h4 class="tables-panel-header">
+                <span class="tables-panel-icon">🖨️</span> Generador de QR
+            </h4>
+
+            <form id="qr-generator-form">
+                <div class="compact-form-group">
+                    <label for="qr-table-number" class="compact-label">Número de Mesa:</label>
+                    <input type="number" id="qr-table-number" min="1" placeholder="Ej: 5" required
+                        class="compact-input">
+                </div>
+
+                <div class="compact-form-group">
+                    <label for="qr-user-select" class="compact-label">Usuario:</label>
+                    <select id="qr-user-select" class="compact-input">
+                        <option value="1">Usuario 1</option>
+                        <option value="2">Usuario 2</option>
+                        <option value="3">Usuario 3</option>
+                        <option value="4">Usuario 4</option>
+                        <option value="5">Usuario 5</option>
+                        <option value="6">Usuario 6</option>
+                        <option value="7">Usuario 7</option>
+                        <option value="8">Usuario 8</option>
+                        <option value="9">Usuario 9</option>
+                        <option value="10">Usuario 10</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary compact-button">
+                    Generar QR
+                </button>
+            </form>
+
+            <div id="qr-result" class="qr-result-area">
+                <p class="qr-result-placeholder">El código QR aparecerá aquí</p>
+            </div>
+        </div>
+
+        <!-- PANEL 2: GESTIÓN (COMPACTO) -->
+        <div class="tables-panel">
+            <h4 class="tables-panel-header">
+                <span class="tables-panel-icon">⚙️</span> Gestión de Mesa
+            </h4>
+
+            <form id="table-management-form">
+                <div class="compact-form-group">
+                    <label for="manage-table-number" class="compact-label">Número de Mesa:</label>
+                    <input type="number" id="manage-table-number" min="1" placeholder="Ej: 5" required
+                        class="compact-input">
+                </div>
+
+                <div class="table-actions-container">
+                    <button type="button" id="btn-activate" class="btn-activate table-action-button">
+                        ✅ Activar Mesa
+                    </button>
+
+                    <button type="button" id="btn-deactivate" class="btn-deactivate table-action-button">
+                        ⏸️ Desactivar Mesa
+                    </button>
+
+                    <button type="button" id="btn-delete" class="btn-delete table-action-button">
+                        🗑️ Eliminar Mesa
+                    </button>
+
+                    <button type="button" id="btn-create" class="btn-primary table-action-button">
+                        ➕ Crear Mesa (Si no existe)
+                    </button>
+                </div>
+
+                <div id="management-status" class="table-status-area"></div>
+            </form>
+        </div>
+    </div>
+</div>
 <div class="card">
     <h3>Cuentas Registradas</h3>
-    <p style="color: var(--text-secondary); margin-bottom: 15px;">Las cuentas se crean automáticamente al crear una
-        nueva mesa.</p>
+    <p class="text-secondary">Las cuentas se crean automáticamente al crear una nueva mesa.</p>
     <div id="accounts-grid" class="grid grid-3">
         <!-- Las tarjetas de estado de cuenta se generarán aquí -->
     </div>
@@ -16,39 +96,34 @@
 <!-- Payment Modal (manejado por admin_dashboard.html) -->
 
 <!-- Account History Modal -->
-<div id="account-history-modal"
-    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center;">
-    <div class="card" style="width: 500px; max-height: 80vh; display: flex; flex-direction: column;">
+<div id="account-history-modal" class="modal-overlay">
+    <div class="card modal-card-large modal-card-scrollable">
         <h3>Historial de Cuentas</h3>
-        <div id="history-list" style="overflow-y: auto; flex: 1; margin: 15px 0;">
+        <div id="history-list" class="modal-content-scroll">
             <!-- Historical accounts list -->
         </div>
-        <div style="text-align: right;">
-            <button type="button" id="history-modal-close" class="form-btn"
-                style="background-color:var(--text-secondary);">Cerrar</button>
+        <div class="text-right">
+            <button type="button" id="history-modal-close" class="form-btn modal-button-secondary">Cerrar</button>
         </div>
     </div>
 </div>
 
 <!-- Account Details Modal (Reusable for history details) -->
-<div id="account-details-modal"
-    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2010; align-items:center; justify-content:center;">
-    <div class="card" style="width: 600px; max-height: 85vh; display: flex; flex-direction: column;">
+<div id="account-details-modal" class="modal-overlay modal-overlay-higher">
+    <div class="card modal-card-xlarge modal-card-scrollable-high">
         <h3 id="details-title">Detalles de Cuenta</h3>
-        <div id="details-content" style="overflow-y: auto; flex: 1; margin: 15px 0;">
+        <div id="details-content" class="modal-content-scroll">
             <!-- Content -->
         </div>
-        <div style="text-align: right;">
-            <button type="button" id="details-modal-close" class="form-btn"
-                style="background-color:var(--text-secondary);">Cerrar</button>
+        <div class="text-right">
+            <button type="button" id="details-modal-close" class="form-btn modal-button-secondary">Cerrar</button>
         </div>
     </div>
 </div>
 
 <!-- Create Mesa Modal -->
-<div id="create-mesa-modal"
-    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2020; align-items:center; justify-content:center;">
-    <div class="card" style="width: 450px;">
+<div id="create-mesa-modal" class="modal-overlay modal-overlay-highest">
+    <div class="card modal-card-medium">
         <h3>Crear Nueva Mesa</h3>
         <form id="create-mesa-form">
             <div class="form-group">
@@ -59,10 +134,10 @@
                 <label for="mesa-nombre">Nombre Personalizado (Opcional)</label>
                 <input type="text" id="mesa-nombre" name="nombre" placeholder="Ej: Toscana, VIP, Rincón, etc.">
             </div>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button type="submit" class="form-btn" style="flex:1; background-color: var(--success-color);">Crear Mesa</button>
-                <button type="button" id="create-mesa-modal-close" class="form-btn"
-                    style="flex:1; background-color:var(--text-secondary);">Cancelar</button>
+            <div class="modal-buttons-row">
+                <button type="submit" class="form-btn modal-button-flex modal-button-success">Crear Mesa</button>
+                <button type="button" id="create-mesa-modal-close"
+                    class="form-btn modal-button-flex modal-button-secondary">Cancelar</button>
             </div>
         </form>
     </div>

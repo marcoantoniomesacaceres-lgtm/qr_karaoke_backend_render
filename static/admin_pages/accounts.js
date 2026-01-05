@@ -307,7 +307,7 @@ async function handleCreateMesaSubmit(event) {
     const form = event.target;
     const numeroInput = form.querySelector('#mesa-numero');
     const nombreInput = form.querySelector('#mesa-nombre');
-    
+
     const numeroMesa = numeroInput?.value || '';
     let nombreMesa = nombreInput?.value || '';
 
@@ -330,13 +330,13 @@ async function handleCreateMesaSubmit(event) {
             method: 'POST',
             body: JSON.stringify(payload)
         });
-        
+
         showNotification(`Mesa "${nombreMesa}" creada exitosamente.`, 'success');
 
         // Cerrar el modal
         const modal = document.getElementById('create-mesa-modal');
         if (modal) modal.style.display = 'none';
-        
+
         // Limpiar el formulario
         numeroInput.value = '';
         nombreInput.value = '';
@@ -428,5 +428,176 @@ function setupAccountsListeners() {
 
     // Setup create mesa modal
     setupCreateMesaModal();
+
+    // Setup integrated tables management (from tables.js functionality)
+    setupIntegratedTablesListeners();
+}
+
+// Integrated Tables Management Functions
+function setupIntegratedTablesListeners() {
+    // QR Generator Form
+    const qrForm = document.getElementById('qr-generator-form');
+    if (qrForm) {
+        qrForm.addEventListener('submit', handleGenerateQR);
+    }
+
+    // Management Buttons
+    const btnActivate = document.getElementById('btn-activate');
+    const btnDeactivate = document.getElementById('btn-deactivate');
+    const btnDelete = document.getElementById('btn-delete');
+    const btnCreate = document.getElementById('btn-create');
+
+    if (btnActivate) btnActivate.addEventListener('click', () => handleTableAction('activate'));
+    if (btnDeactivate) btnDeactivate.addEventListener('click', () => handleTableAction('deactivate'));
+    if (btnDelete) btnDelete.addEventListener('click', () => handleTableAction('delete'));
+    if (btnCreate) btnCreate.addEventListener('click', handleCreateTableDirect);
+}
+
+function handleGenerateQR(event) {
+    event.preventDefault();
+
+    const tableNumInput = document.getElementById('qr-table-number');
+    const userSelect = document.getElementById('qr-user-select');
+    const resultArea = document.getElementById('qr-result');
+
+    if (!tableNumInput.value) {
+        showNotification('Por favor ingresa un número de mesa', 'error');
+        return;
+    }
+
+    const tableNum = tableNumInput.value.toString().padStart(2, '0');
+    const userNum = userSelect.value;
+
+    // Construct QR Code string
+    const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
+    const tableName = `Mesa ${parseInt(tableNum)}`;
+    const userNick = `${tableName}-Usuario${userNum}`;
+
+    // Generate URL
+    const appBaseUrl = window.location.origin;
+    const appUrl = `${appBaseUrl}/?table=${encodeURIComponent(qrCode)}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appUrl)}`;
+
+    resultArea.innerHTML = `
+        <div class="qr-container" style="animation: fadeIn 0.5s;">
+            <img src="${qrImageUrl}" alt="QR Code" class="qr-image" style="border: 2px solid #333; padding: 8px; border-radius: 8px; max-width: 100%;">
+            <h4 style="margin: 8px 0 4px 0; font-size: 0.9em;">${userNick}</h4>
+            <p style="font-family: monospace; background: #f0f0f0; padding: 4px; border-radius: 4px; font-size: 0.75em; word-break: break-all;">${qrCode}</p>
+            <a href="${qrImageUrl}" download="qr-${qrCode}.png" class="btn-primary" style="display: inline-block; margin-top: 8px; text-decoration: none; font-size: 0.85em; padding: 6px 12px;">
+                ⬇️ Descargar QR
+            </a>
+        </div>
+    `;
+}
+
+async function findTableByNumber(number) {
+    try {
+        const tables = await apiFetch('/mesas/');
+        const targetQR = `karaoke-mesa-${number.toString().padStart(2, '0')}`;
+
+        const found = tables.find(t => {
+            if (t.qr_code === targetQR) return true;
+            if (t.qr_code.startsWith(targetQR) && !t.qr_code.includes('usuario')) return true;
+            return false;
+        });
+
+        return found;
+    } catch (error) {
+        console.error("Error fetching tables:", error);
+        return null;
+    }
+}
+
+async function handleTableAction(action) {
+    const tableNumInput = document.getElementById('manage-table-number');
+    const statusDiv = document.getElementById('management-status');
+
+    if (!tableNumInput.value) {
+        showNotification('Por favor ingresa un número de mesa para gestionar', 'error');
+        return;
+    }
+
+    const tableNum = tableNumInput.value.toString().padStart(2, '0');
+    statusDiv.innerHTML = '<p>Buscando mesa...</p>';
+
+    try {
+        const table = await findTableByNumber(tableNum);
+
+        if (!table) {
+            statusDiv.innerHTML = `<p style="color: var(--error-color);">❌ No se encontró la Mesa ${parseInt(tableNum)}.</p>`;
+            if (action !== 'create') {
+                showNotification(`La Mesa ${parseInt(tableNum)} no existe. Créala primero.`, 'warning');
+            }
+            return;
+        }
+
+        let endpoint;
+        let method = 'POST';
+        let successMsg;
+
+        if (action === 'activate') {
+            endpoint = `/admin/tables/${table.id}/activate`;
+            successMsg = `✅ Mesa ${parseInt(tableNum)} activada correctamente.`;
+        } else if (action === 'deactivate') {
+            endpoint = `/admin/tables/${table.id}/deactivate`;
+            successMsg = `⏸️ Mesa ${parseInt(tableNum)} desactivada.`;
+        } else if (action === 'delete') {
+            if (!confirm(`¿Estás seguro de ELIMINAR la Mesa ${parseInt(tableNum)}? Esta acción es irreversible.`)) {
+                statusDiv.innerHTML = '';
+                return;
+            }
+            endpoint = `/admin/tables/${table.id}`;
+            method = 'DELETE';
+            successMsg = `🗑️ Mesa ${parseInt(tableNum)} eliminada del sistema.`;
+        }
+
+        await apiFetch(endpoint, { method: method });
+        statusDiv.innerHTML = `<p style="color: var(--success-color); font-weight: bold;">${successMsg}</p>`;
+        showNotification(successMsg, 'success');
+
+        // Reload accounts page to reflect changes
+        setTimeout(() => loadAccountsPage(), 500);
+
+    } catch (error) {
+        statusDiv.innerHTML = `<p style="color: var(--error-color);">Error: ${error.message}</p>`;
+    }
+}
+
+async function handleCreateTableDirect() {
+    const tableNumInput = document.getElementById('manage-table-number');
+    const statusDiv = document.getElementById('management-status');
+
+    if (!tableNumInput.value) {
+        showNotification('Ingresa un número para crear la mesa', 'error');
+        return;
+    }
+
+    const tableNum = parseInt(tableNumInput.value);
+    const qrCode = `karaoke-mesa-${tableNum.toString().padStart(2, '0')}`;
+    const nombre = `Mesa ${tableNum}`;
+
+    try {
+        // Check if exists first
+        const existing = await findTableByNumber(tableNum);
+        if (existing) {
+            statusDiv.innerHTML = `<p style="color: var(--warning-color);">⚠️ La Mesa ${tableNum} ya existe.</p>`;
+            return;
+        }
+
+        const payload = {
+            nombre: nombre,
+            qr_code: qrCode
+        };
+
+        await apiFetch('/mesas/', { method: 'POST', body: JSON.stringify(payload) });
+        statusDiv.innerHTML = `<p style="color: var(--success-color);">✅ Mesa ${tableNum} creada exitosamente.</p>`;
+        showNotification(`Mesa ${tableNum} creada.`, 'success');
+
+        // Reload accounts page to show new table
+        setTimeout(() => loadAccountsPage(), 500);
+
+    } catch (error) {
+        statusDiv.innerHTML = `<p style="color: var(--error-color);">Error al crear: ${error.message}</p>`;
+    }
 }
 
