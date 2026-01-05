@@ -7,7 +7,13 @@ let currentAccounts = [];
 function renderAccounts(accounts, accountsGrid) {
     accountsGrid.innerHTML = '';
     if (accounts.length === 0) {
-        accountsGrid.innerHTML = '<p>No hay mesas ni estados de cuenta disponibles.</p>';
+        accountsGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary);">
+                <p style="font-size: 2em; margin-bottom: 10px;">📭</p>
+                <p style="font-size: 1.1em; font-weight: bold;">No hay mesas registradas</p>
+                <p>Crea una nueva mesa para comenzar a gestionar pedidos.</p>
+            </div>
+        `;
         return;
     }
 
@@ -370,9 +376,14 @@ async function handleCreateMesaSubmit(event) {
     }
 
     try {
-        // Llamar al endpoint para crear una nueva mesa
-        const payload = { nombre: nombreMesa };
-        const result = await apiFetch('/admin/mesas', {
+        // Generar el código QR basado en el número de mesa
+        const qrCode = `karaoke-mesa-${numeroMesa.toString().padStart(2, '0')}`;
+
+        const payload = {
+            nombre: nombreMesa,
+            qr_code: qrCode
+        };
+        const result = await apiFetch('/mesas/', {
             method: 'POST',
             body: JSON.stringify(payload)
         });

@@ -34,442 +34,438 @@
     <!-- CONTENIDO PRINCIPAL -->
     <div class="admin-main-wrapper">
         <!-- NAV LINKS OCULTOS PARA COMPATIBILIDAD CON JAVASCRIPT EXISTENTE -->
-        <div class="nav-menu" style="display: none;">
-            <a href="#dashboard" class="nav-link active"></a>
-            <a href="#queue" class="nav-link"></a>
-            <a href="#inventory" class="nav-link"></a>
-            <a href="#accounts" class="nav-link"></a>
-            <a href="#reports" class="nav-link"></a>
-            <a href="#tables" class="nav-link"></a>
-            <a href="#settings" class="nav-link"></a>
+        <div class="nav-menu nav-menu-legacy">
+            <a href="#dashboard" class="nav-link active" aria-label="Dashboard"></a>
+            <a href="#queue" class="nav-link" aria-label="Queue"></a>
+            <a href="#inventory" class="nav-link" aria-label="Inventory"></a>
+            <a href="#accounts" class="nav-link" aria-label="Accounts"></a>
+            <a href="#reports" class="nav-link" aria-label="Reports"></a>
+
+            <a href="#settings" class="nav-link" aria-label="Settings"></a>
         </div>
 
-    <div class="main-content">
-        <!-- PÁGINA: DASHBOARD -->
-        <div id="dashboard" class="page active"></div>
+        <div class="main-content">
+            <!-- PÁGINA: DASHBOARD -->
+            <div id="dashboard" class="page active"></div>
 
-        <!-- PÁGINA: COLA DE CANCIONES -->
-        <div id="queue" class="page"></div>
+            <!-- PÁGINA: COLA DE CANCIONES -->
+            <div id="queue" class="page"></div>
 
-        <!-- PÁGINA: INVENTARIO -->
-        <div id="inventory" class="page"></div>
+            <!-- PÁGINA: INVENTARIO -->
+            <div id="inventory" class="page"></div>
 
-        <!-- PÁGINA: MESAS Y QR -->
-        <div id="tables" class="page"></div>
 
-        <!-- PÁGINA: CUENTAS POR MESA -->
-        <div id="accounts" class="page"></div>
 
-        <!-- PÁGINA: REPORTES -->
-        <div id="reports" class="page"></div>
+            <!-- PÁGINA: CUENTAS POR MESA -->
+            <div id="accounts" class="page"></div>
 
-        <!-- PÁGINA: CONFIGURACIÓN -->
-        <div id="settings" class="page"></div>
+            <!-- PÁGINA: REPORTES -->
+            <div id="reports" class="page"></div>
 
-        <!-- MODAL PARA REGISTRAR PAGO -->
-        <div id="payment-modal"
-            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center;">
-            <div class="card" style="width: 400px;">
-                <h3 id="payment-modal-title">Registrar Pago</h3>
-                <form id="payment-form">
-                    <input type="hidden" id="payment-mesa-id" name="mesa_id">
-                    <div class="form-group">
-                        <label for="payment-amount">Monto a Pagar ($)</label>
-                        <input type="number" id="payment-amount" name="monto" step="0.01" min="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="payment-method">Método de Pago</label>
-                        <select id="payment-method" name="metodo_pago">
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Tarjeta">Tarjeta</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:20px;">
-                        <button type="submit" class="form-btn" style="flex:1;">Registrar Pago</button>
-                        <button type="button" id="payment-modal-close" class="form-btn"
-                            style="flex:1; background-color:var(--text-secondary);">Cancelar</button>
-                    </div>
-                </form>
+            <!-- PÁGINA: CONFIGURACIÓN -->
+            <div id="settings" class="page"></div>
+
+            <!-- MODAL PARA REGISTRAR PAGO -->
+            <div id="payment-modal" class="modal-overlay" style="display: none;">
+                <div class="card modal-card modal-card-sm">
+                    <h3 id="payment-modal-title">Registrar Pago</h3>
+                    <form id="payment-form">
+                        <input type="hidden" id="payment-mesa-id" name="mesa_id">
+                        <div class="form-group">
+                            <label for="payment-amount">Monto a Pagar ($)</label>
+                            <input type="number" id="payment-amount" name="monto" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="payment-method">Método de Pago</label>
+                            <select id="payment-method" name="metodo_pago">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="submit" class="form-btn btn-flex-1">Registrar Pago</button>
+                            <button type="button" id="payment-modal-close"
+                                class="form-btn btn-flex-1 btn-secondary-action">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
 
-        <!-- MODAL PARA CONFIRMAR SOBREPAGO -->
-        <div id="confirm-overpayment-modal"
-            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2001; align-items:center; justify-content:center;">
-            <div class="card" id="overpayment-card" style="width: 450px;">
-                <h3>Confirmación de Sobrepago</h3>
-                <p id="overpayment-message">El monto ingresado es mayor que la deuda actual. ¿Deseas registrarlo como un
-                    pago adelantado?</p>
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button type="button" id="confirm-overpayment-btn" class="form-btn"
-                        style="flex:1; background-color: var(--success-color);">Sí, continuar</button>
-                    <button type="button" id="cancel-overpayment-btn" class="form-btn"
-                        style="flex:1; background-color:var(--text-secondary);">No, cancelar</button>
+            <!-- MODAL PARA CONFIRMAR SOBREPAGO -->
+            <div id="confirm-overpayment-modal" class="modal-overlay" style="display: none;">
+                <div class="card modal-card modal-card-md" id="overpayment-card">
+                    <h3>Confirmación de Sobrepago</h3>
+                    <p id="overpayment-message">El monto ingresado es mayor que la deuda actual. ¿Deseas registrarlo
+                        como un
+                        pago adelantado?</p>
+                    <div class="modal-actions">
+                        <button type="button" id="confirm-overpayment-btn" class="form-btn btn-flex-1 btn-approve">Sí,
+                            continuar</button>
+                        <button type="button" id="cancel-overpayment-btn"
+                            class="form-btn btn-flex-1 btn-secondary-action">No, cancelar</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Input oculto para la subida de archivos -->
-    <input type="file" id="product-image-upload" accept="image/png, image/jpeg, image/webp" style="display: none;">
+        <!-- Input oculto para la subida de archivos -->
+        <input type="file" id="product-image-upload" accept="image/png, image/jpeg, image/webp"
+            class="file-input-hidden" aria-label="Upload product image">
 
-    <!-- Contenedor para mostrar las reacciones flotantes -->
-    <div id="reaction-container" class="reaction-container"></div>
+        <!-- Contenedor para mostrar las reacciones flotantes -->
+        <div id="reaction-container" class="reaction-container"></div>
 
-    <!-- Elemento de audio para la notificación de pedido -->
-    <audio id="order-notification-sound" src="/static/notification.mp3" preload="auto"></audio>
+        <!-- Elemento de audio para la notificación de pedido -->
+        <audio id="order-notification-sound" src="/static/notification.mp3" preload="auto"></audio>
 
-    <div id="notification"></div>
+        <div id="notification"></div>
 
-    <!-- BARRA DE NAVEGACIÓN HORIZONTAL INFERIOR -->
-    <nav class="admin-bottom-nav">
-        <div class="admin-nav-container">
-            <div class="admin-nav-items">
-                <button class="admin-nav-item" data-page="dashboard" title="Dashboard">
-                    <span class="admin-nav-icon">📊</span>
-                    <span class="admin-nav-label">Dashboard</span>
-                </button>
-                <button class="admin-nav-item" data-page="queue" title="Cola de Canciones">
-                    <span class="admin-nav-icon">🎵</span>
-                    <span class="admin-nav-label">Cola</span>
-                </button>
-                <button class="admin-nav-item" data-page="inventory" title="Inventario">
-                    <span class="admin-nav-icon">📦</span>
-                    <span class="admin-nav-label">Inventario</span>
-                </button>
-                <button class="admin-nav-item" data-page="accounts" title="Cuentas por Mesa">
-                    <span class="admin-nav-icon">💰</span>
-                    <span class="admin-nav-label">Cuentas</span>
-                </button>
-                <button class="admin-nav-item" data-page="reports" title="Reportes">
-                    <span class="admin-nav-icon">📈</span>
-                    <span class="admin-nav-label">Reportes</span>
-                </button>
-                <button class="admin-nav-item" data-page="tables" title="Mesas y QR">
-                    <span class="admin-nav-icon">🪑</span>
-                    <span class="admin-nav-label">Mesas</span>
-                </button>
-                <button class="admin-nav-item" data-page="settings" title="Configuración">
-                    <span class="admin-nav-icon">⚙️</span>
-                    <span class="admin-nav-label">Config</span>
+        <!-- BARRA DE NAVEGACIÓN HORIZONTAL INFERIOR -->
+        <nav class="admin-bottom-nav">
+            <div class="admin-nav-container">
+                <div class="admin-nav-items">
+                    <button class="admin-nav-item" data-page="dashboard" title="Dashboard">
+                        <span class="admin-nav-icon">📊</span>
+                        <span class="admin-nav-label">Dashboard</span>
+                    </button>
+                    <button class="admin-nav-item" data-page="queue" title="Cola de Canciones">
+                        <span class="admin-nav-icon">🎵</span>
+                        <span class="admin-nav-label">Cola</span>
+                    </button>
+                    <button class="admin-nav-item" data-page="inventory" title="Inventario">
+                        <span class="admin-nav-icon">📦</span>
+                        <span class="admin-nav-label">Inventario</span>
+                    </button>
+                    <button class="admin-nav-item" data-page="accounts" title="Cuentas por Mesa">
+                        <span class="admin-nav-icon">💰</span>
+                        <span class="admin-nav-label">Cuentas</span>
+                    </button>
+                    <button class="admin-nav-item" data-page="reports" title="Reportes">
+                        <span class="admin-nav-icon">📈</span>
+                        <span class="admin-nav-label">Reportes</span>
+                    </button>
+
+                    <button class="admin-nav-item" data-page="settings" title="Configuración">
+                        <span class="admin-nav-icon">⚙️</span>
+                        <span class="admin-nav-label">Config</span>
+                    </button>
+                </div>
+                <button class="admin-logout-btn" id="logout-btn-top" title="Cerrar sesión">
+                    <span class="admin-nav-icon">🚪</span>
+                    <span class="admin-nav-label">Salir</span>
                 </button>
             </div>
-            <button class="admin-logout-btn" id="logout-btn-top" title="Cerrar sesión">
-                <span class="admin-nav-icon">🚪</span>
-                <span class="admin-nav-label">Salir</span>
-            </button>
-        </div>
-    </nav>
+        </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
-    <script src="/static/admin_pages/dashboard.js"></script>
-    <script src="/static/admin_pages/queue.js"></script>
-    <script src="/static/admin_pages/inventory.js"></script>
-    <script src="/static/admin_pages/accounts.js"></script>
-    <script src="/static/admin_pages/tables.js"></script>
-    <script src="/static/admin_pages/reports.js"></script>
-    <script src="/static/admin_pages/settings.js"></script>
-    <script>
-        const API_BASE_URL = '/api/v1';
-        const notification = document.getElementById('notification');
-        let apiKey = '';
-        // Variable global para almacenar el estado actual de la cola
-        let currentQueueData = { now_playing: null, upcoming: [] };
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+        <script src="/static/admin_pages/dashboard.js"></script>
+        <script src="/static/admin_pages/queue.js"></script>
+        <script src="/static/admin_pages/inventory.js"></script>
+        <script src="/static/admin_pages/accounts.js"></script>
 
-        // --- UTILS ---
-        function showNotification(message, type = 'success', duration = 4000) {
-            notification.textContent = message;
-            notification.className = ''; // Limpiar clases previas
-            notification.classList.add('show');
-            notification.classList.add(type);
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, duration);
-        }
+        <script src="/static/admin_pages/reports.js"></script>
+        <script src="/static/admin_pages/settings.js"></script>
+        <script>
+            const API_BASE_URL = '/api/v1';
+            const notification = document.getElementById('notification');
+            let apiKey = '';
+            // Variable global para almacenar el estado actual de la cola
+            let currentQueueData = { now_playing: null, upcoming: [] };
 
-        async function apiFetch(endpoint, options = {}) {
-            const headers = { ...options.headers, 'X-API-Key': apiKey };
-            // Solo añadir Content-Type si hay un body. Evita errores 422 en POSTs vacíos.
-            // FIX: El content-type se debe añadir si el body no es FormData
-            if (options.body) {
-                headers['Content-Type'] = 'application/json';
+            // --- UTILS ---
+            function showNotification(message, type = 'success', duration = 4000) {
+                notification.textContent = message;
+                notification.className = ''; // Limpiar clases previas
+                notification.classList.add('show');
+                notification.classList.add(type);
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, duration);
             }
-            options.headers = headers;
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-            if (response.status === 204) return null; // No content
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.detail || `Error ${response.status}`);
-            }
-            return data;
-        }
 
-        // Cargar pedidos en la barra superior fija
-        async function loadTopOrdersBar() {
-            try {
-                const topOrdersList = document.getElementById('top-orders-list');
-                if (!topOrdersList) return;
-
-                const pedidos = await apiFetch('/admin/recent-consumos?limit=25');
-
-                topOrdersList.innerHTML = '';
-
-                if (!pedidos || pedidos.length === 0) {
-                    topOrdersList.innerHTML = '<div class="admin-orders-empty">📪 Sin pedidos pendientes</div>';
-                    return;
+            async function apiFetch(endpoint, options = {}) {
+                const headers = { ...options.headers, 'X-API-Key': apiKey };
+                // Solo añadir Content-Type si hay un body. Evita errores 422 en POSTs vacíos.
+                // FIX: El content-type se debe añadir si el body no es FormData
+                if (options.body) {
+                    headers['Content-Type'] = 'application/json';
                 }
+                options.headers = headers;
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                if (response.status === 204) return null; // No content
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || `Error ${response.status}`);
+                }
+                return data;
+            }
 
-                // Agrupar por mesa
-                const pedidosPorMesa = pedidos.reduce((acc, pedido) => {
-                    const mesaNombre = pedido.mesa_nombre || 'Sin mesa';
-                    if (!acc[mesaNombre]) {
-                        acc[mesaNombre] = {
-                            items: [],
-                            cantidadTotal: 0,
-                            consumoIds: []
-                        };
+            // Cargar pedidos en la barra superior fija
+            async function loadTopOrdersBar() {
+                try {
+                    const topOrdersList = document.getElementById('top-orders-list');
+                    if (!topOrdersList) return;
+
+                    const pedidos = await apiFetch('/admin/recent-consumos?limit=25');
+
+                    topOrdersList.innerHTML = '';
+
+                    if (!pedidos || pedidos.length === 0) {
+                        topOrdersList.innerHTML = '<div class="admin-orders-empty">📪 Sin pedidos pendientes</div>';
+                        return;
                     }
-                    acc[mesaNombre].items.push(pedido);
-                    acc[mesaNombre].cantidadTotal += pedido.cantidad || 1;
-                    acc[mesaNombre].consumoIds.push(pedido.id);
-                    return acc;
-                }, {});
 
-                // Crear items para cada mesa
-                Object.entries(pedidosPorMesa).forEach(([mesaNombre, grupo]) => {
-                    const div = document.createElement('div');
-                    div.className = 'order-item';
-                    div.setAttribute('data-mesa', mesaNombre);
-                    div.setAttribute('data-ids', grupo.consumoIds.join(','));
-                    div.title = `${mesaNombre}: ${grupo.items.map(i => `${i.cantidad}x ${i.producto_nombre}`).join(', ')}`;
-                    
-                    div.innerHTML = `
+                    // Agrupar por mesa
+                    const pedidosPorMesa = pedidos.reduce((acc, pedido) => {
+                        const mesaNombre = pedido.mesa_nombre || 'Sin mesa';
+                        if (!acc[mesaNombre]) {
+                            acc[mesaNombre] = {
+                                items: [],
+                                cantidadTotal: 0,
+                                consumoIds: []
+                            };
+                        }
+                        acc[mesaNombre].items.push(pedido);
+                        acc[mesaNombre].cantidadTotal += pedido.cantidad || 1;
+                        acc[mesaNombre].consumoIds.push(pedido.id);
+                        return acc;
+                    }, {});
+
+                    // Crear items para cada mesa
+                    Object.entries(pedidosPorMesa).forEach(([mesaNombre, grupo]) => {
+                        const div = document.createElement('div');
+                        div.className = 'order-item';
+                        div.setAttribute('data-mesa', mesaNombre);
+                        div.setAttribute('data-ids', grupo.consumoIds.join(','));
+                        div.title = `${mesaNombre}: ${grupo.items.map(i => `${i.cantidad}x ${i.producto_nombre}`).join(', ')}`;
+
+                        div.innerHTML = `
                         <span>${mesaNombre}</span>
                         <span class="order-item-badge">${grupo.cantidadTotal}</span>
                     `;
 
-                    div.addEventListener('click', () => {
-                        // Navegar a la página de pedidos/cola si es necesario
-                        // Por ahora solo resalta visualmente
-                        document.querySelectorAll('.order-item').forEach(item => item.style.background = 'rgba(255, 215, 0, 0.1)');
-                        div.style.background = 'rgba(255, 215, 0, 0.3)';
+                        div.addEventListener('click', () => {
+                            // Navegar a la página de pedidos/cola si es necesario
+                            // Por ahora solo resalta visualmente
+                            document.querySelectorAll('.order-item').forEach(item => item.style.background = 'rgba(255, 215, 0, 0.1)');
+                            div.style.background = 'rgba(255, 215, 0, 0.3)';
+                        });
+
+                        topOrdersList.appendChild(div);
                     });
-
-                    topOrdersList.appendChild(div);
-                });
-            } catch (error) {
-                console.warn('Error cargando pedidos en barra superior:', error);
-            }
-        }
-
-        // NEW FUNCTION: Enviar actualización de cuenta a través de WebSocket
-        function enviarActualizacionCuenta(mesaId, cuenta) {
-            if (adminSocket && adminSocket.readyState === WebSocket.OPEN) {
-                const payload = {
-                    type: 'update_account',
-                    mesa_id: mesaId,
-                    cuenta: cuenta
-                };
-                adminSocket.send(JSON.stringify(payload));
-            } else {
-                console.warn("WebSocket no está conectado para enviar actualización de cuenta.");
-            }
-        }
-
-        // --- AUTOPLAY UTILITIES (shared) ---
-        async function handleToggleAutoplay(event) {
-            // Toggle autoplay on the server (endpoint toggles state)
-            try {
-                const result = await apiFetch('/admin/autoplay/toggle', { method: 'POST' });
-                const status = result && typeof result.autoplay_status !== 'undefined' ? result.autoplay_status : null;
-                if (status !== null) {
-                    updateAutoplayStatus(status);
-                    showNotification(`${status ? 'Activado' : 'Desactivado'}.`, 'info');
+                } catch (error) {
+                    console.warn('Error cargando pedidos en barra superior:', error);
                 }
-            } catch (err) {
-                showNotification(err.message || 'Error cambiando autoplay', 'error');
-            }
-        }
-
-        function updateAutoplayStatus(enabled) {
-            const el = document.getElementById('autoplay-toggle-queue');
-            if (el) el.checked = !!enabled;
-        }
-
-        // startCarousel may be defined in player.html; provide a noop fallback for admin
-        function startCarousel() {
-            // noop for admin dashboard; player.html provides real implementation
-            return;
-        }
-        // --- RENDER FUNCTIONS ---
-
-        // Inventory rendering moved to `static/admin_pages/inventory.js` (renderProducts)
-
-        // Queue rendering moved to `static/admin_pages/queue.js` (renderApprovedSongs)
-
-        // API keys rendering moved to `static/admin_pages/settings.js` (render API keys)
-
-        // Tables rendering moved to `static/admin_pages/tables.js` (renderTablesList)
-
-        function generateQrForTable(canvas, tableQrCode) {
-            let url;
-            // Si el qrCode es una ruta (empieza con '/'), la usamos directamente.
-            // Si no, asumimos que es un código de mesa.
-            if (tableQrCode.startsWith('/')) {
-                url = `${window.location.origin}${tableQrCode}`;
-            } else {
-                // URL para las mesas
-                url = `${window.location.origin}/?table=${tableQrCode}`;
             }
 
-            QRCode.toCanvas(canvas, url, { width: 256, errorCorrectionLevel: 'H' }, function (error) {
-                if (error) {
-                    console.error(error);
-                    canvas.parentElement.innerHTML = '<p style="color: var(--error-color);">Error al generar el QR.</p>';
+            // NEW FUNCTION: Enviar actualización de cuenta a través de WebSocket
+            function enviarActualizacionCuenta(mesaId, cuenta) {
+                if (adminSocket && adminSocket.readyState === WebSocket.OPEN) {
+                    const payload = {
+                        type: 'update_account',
+                        mesa_id: mesaId,
+                        cuenta: cuenta
+                    };
+                    adminSocket.send(JSON.stringify(payload));
                 } else {
-                    // Una vez generado el QR, añadimos la URL debajo sin borrar el canvas
-                    const urlElement = document.createElement('p');
-                    urlElement.className = 'item-meta';
-                    urlElement.style.wordBreak = 'break-all';
-                    urlElement.textContent = url;
-                    canvas.parentElement.appendChild(urlElement);
+                    console.warn("WebSocket no está conectado para enviar actualización de cuenta.");
                 }
-            });
-        }
+            }
 
-        function showTableDetails(tableId, tableName, tableQrCode, isActive) {
-            const container = document.getElementById('qr-code-container');
-            container.innerHTML = ''; // Limpiar contenido anterior
+            // --- AUTOPLAY UTILITIES (shared) ---
+            async function handleToggleAutoplay(event) {
+                // Toggle autoplay on the server (endpoint toggles state)
+                try {
+                    const result = await apiFetch('/admin/autoplay/toggle', { method: 'POST' });
+                    const status = result && typeof result.autoplay_status !== 'undefined' ? result.autoplay_status : null;
+                    if (status !== null) {
+                        updateAutoplayStatus(status);
+                        showNotification(`${status ? 'Activado' : 'Desactivado'}.`, 'info');
+                    }
+                } catch (err) {
+                    showNotification(err.message || 'Error cambiando autoplay', 'error');
+                }
+            }
 
-            // Mostrar el nombre de la mesa
-            const nameElement = document.createElement('p');
-            nameElement.style.fontWeight = 'bold';
-            nameElement.textContent = tableName;
-            container.appendChild(nameElement);
+            function updateAutoplayStatus(enabled) {
+                const el = document.getElementById('autoplay-toggle-queue');
+                if (el) el.checked = !!enabled;
+            }
 
-            // Mostrar la URL directa (si aplica) y botón para abrir reproductor
-            try {
+            // startCarousel may be defined in player.html; provide a noop fallback for admin
+            function startCarousel() {
+                // noop for admin dashboard; player.html provides real implementation
+                return;
+            }
+            // --- RENDER FUNCTIONS ---
+
+            // Inventory rendering moved to `static/admin_pages/inventory.js` (renderProducts)
+
+            // Queue rendering moved to `static/admin_pages/queue.js` (renderApprovedSongs)
+
+            // API keys rendering moved to `static/admin_pages/settings.js` (render API keys)
+
+            // Tables rendering moved to `static/admin_pages/tables.js` (renderTablesList)
+
+            function generateQrForTable(canvas, tableQrCode) {
                 let url;
-                if (tableQrCode && tableQrCode.startsWith('/')) {
+                // Si el qrCode es una ruta (empieza con '/'), la usamos directamente.
+                // Si no, asumimos que es un código de mesa.
+                if (tableQrCode.startsWith('/')) {
                     url = `${window.location.origin}${tableQrCode}`;
-                } else if (tableQrCode) {
+                } else {
+                    // URL para las mesas
                     url = `${window.location.origin}/?table=${tableQrCode}`;
                 }
 
-                if (url) {
-                    const urlWrap = document.createElement('div');
-                    urlWrap.style.marginTop = '10px';
-                    urlWrap.style.display = 'flex';
-                    urlWrap.style.flexDirection = 'column';
-                    urlWrap.style.alignItems = 'center';
-
-                    const urlElement = document.createElement('p');
-                    urlElement.className = 'item-meta';
-                    urlElement.style.wordBreak = 'break-all';
-                    urlElement.style.margin = '6px 0';
-                    urlElement.textContent = url;
-
-                    const openBtn = document.createElement('button');
-                    openBtn.className = 'form-btn';
-                    openBtn.style.marginTop = '8px';
-                    openBtn.style.width = '220px';
-                    openBtn.textContent = tableId === 'player' ? 'Abrir Reproductor' : 'Abrir en nueva pestaña';
-                    openBtn.onclick = () => {
-                        try {
-                            // Abrir en nueva pestaña la URL del reproductor
-                            window.open(url, '_blank');
-                        } catch (e) {
-                            // Fallback: navegar en la misma pestaña
-                            window.location.href = url;
-                        }
-                    };
-
-                    urlWrap.appendChild(urlElement);
-                    urlWrap.appendChild(openBtn);
-                    container.appendChild(urlWrap);
-                }
-            } catch (err) {
-                console.warn('No se pudo construir la URL para la mesa:', err);
-            }
-
-            // Crear el botón para generar el QR
-            const generateQrBtn = document.createElement('button');
-            generateQrBtn.className = 'form-btn btn-generate-qr';
-            generateQrBtn.textContent = 'Generar Código QR';
-            generateQrBtn.onclick = () => {
-                generateQrBtn.style.display = 'none'; // Ocultar el botón
-                const canvas = document.createElement('canvas');
-                container.appendChild(canvas);
-                generateQrForTable(canvas, tableQrCode);
-            };
-            container.appendChild(generateQrBtn);
-
-            // Solo mostrar botones de activar/desactivar si NO es el reproductor
-            if (tableId !== 'player') {
-                // Crear el botón para activar/desactivar
-                const actionButton = document.createElement('button');
-                actionButton.className = `form-btn ${isActive ? 'btn-deactivate' : 'btn-activate'}`;
-                actionButton.textContent = isActive ? 'Desactivar Mesa' : 'Activar Mesa';
-                actionButton.dataset.tableId = tableId;
-                container.appendChild(actionButton);
-            }
-        }
-        // --- PAGE LOADERS ---
-
-        // Page loaders and account UI moved to modules:
-        // - Dashboard: `static/admin_pages/dashboard.js` (loadDashboardPage, loadRecentOrders, reactions, broadcast)
-        // - Accounts: `static/admin_pages/accounts.js` (loadAccountsPage, payment modal handlers)
-        // The WebSocket handlers below will call these module functions when messages arrive.
-
-
-        // WEBSOCKET: Conexión para actualizaciones en tiempo real (cola, notificaciones, consumos)
-        let adminSocket = null;
-        function setupAdminWebSocket() {
-            try {
-                const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-                const wsUrl = `${wsScheme}://${window.location.host}/ws/cola`;
-                adminSocket = new WebSocket(wsUrl);
-
-                adminSocket.addEventListener('open', () => {
-                    console.info('Admin websocket conectado');
+                QRCode.toCanvas(canvas, url, { width: 256, errorCorrectionLevel: 'H' }, function (error) {
+                    if (error) {
+                        console.error(error);
+                        canvas.parentElement.innerHTML = '<p style="color: var(--error-color);">Error al generar el QR.</p>';
+                    } else {
+                        // Una vez generado el QR, añadimos la URL debajo sin borrar el canvas
+                        const urlElement = document.createElement('p');
+                        urlElement.className = 'item-meta';
+                        urlElement.style.wordBreak = 'break-all';
+                        urlElement.textContent = url;
+                        canvas.parentElement.appendChild(urlElement);
+                    }
                 });
+            }
 
-                adminSocket.addEventListener('message', (evt) => {
-                    try {
-                        const data = JSON.parse(evt.data);
-                        if (!data || !data.type) return;
-                        switch (data.type) {
-                            case 'consumo_created':
-                                // Activar la alerta visual y sonora
-                                if (localStorage.getItem('adminSoundEnabled') !== 'false') {
-                                    document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificación:", e));
-                                }
-                                // En lugar de añadirlo directamente, recargamos toda la lista para que se agrupe correctamente.
-                                loadRecentOrders();
-                                // Actualizar barra superior de pedidos
-                                loadTopOrdersBar();
-                                break;
-                            case 'pedido_created':
-                                // Activar la alerta visual y sonora
-                                if (localStorage.getItem('adminSoundEnabled') !== 'false') {
-                                    document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificación:", e));
-                                }
+            function showTableDetails(tableId, tableName, tableQrCode, isActive) {
+                const container = document.getElementById('qr-code-container');
+                container.innerHTML = ''; // Limpiar contenido anterior
 
-                                const pedido = data.payload;
-                                const listElPedido = document.getElementById('recent-orders-list');
-                                if (listElPedido) {
-                                    if (listElPedido.querySelector('p')) listElPedido.innerHTML = '';
+                // Mostrar el nombre de la mesa
+                const nameElement = document.createElement('p');
+                nameElement.style.fontWeight = 'bold';
+                nameElement.textContent = tableName;
+                container.appendChild(nameElement);
 
-                                    const li = document.createElement('li');
-                                    li.className = 'item new-order';
-                                    li.dataset.consumoIds = pedido.consumo_ids.join(','); // Guardamos todos los IDs
+                // Mostrar la URL directa (si aplica) y botón para abrir reproductor
+                try {
+                    let url;
+                    if (tableQrCode && tableQrCode.startsWith('/')) {
+                        url = `${window.location.origin}${tableQrCode}`;
+                    } else if (tableQrCode) {
+                        url = `${window.location.origin}/?table=${tableQrCode}`;
+                    }
 
-                                    const itemsHtml = pedido.items.map(item => `<li>${item.cantidad}x ${item.producto_nombre}</li>`).join('');
-                                    const mesaText = pedido.mesa_nombre ? `Mesa ${pedido.mesa_nombre}` : '';
+                    if (url) {
+                        const urlWrap = document.createElement('div');
+                        urlWrap.style.marginTop = '10px';
+                        urlWrap.style.display = 'flex';
+                        urlWrap.style.flexDirection = 'column';
+                        urlWrap.style.alignItems = 'center';
 
-                                    li.innerHTML = `
+                        const urlElement = document.createElement('p');
+                        urlElement.className = 'item-meta';
+                        urlElement.style.wordBreak = 'break-all';
+                        urlElement.style.margin = '6px 0';
+                        urlElement.textContent = url;
+
+                        const openBtn = document.createElement('button');
+                        openBtn.className = 'form-btn';
+                        openBtn.style.marginTop = '8px';
+                        openBtn.style.width = '220px';
+                        openBtn.textContent = tableId === 'player' ? 'Abrir Reproductor' : 'Abrir en nueva pestaña';
+                        openBtn.onclick = () => {
+                            try {
+                                // Abrir en nueva pestaña la URL del reproductor
+                                window.open(url, '_blank');
+                            } catch (e) {
+                                // Fallback: navegar en la misma pestaña
+                                window.location.href = url;
+                            }
+                        };
+
+                        urlWrap.appendChild(urlElement);
+                        urlWrap.appendChild(openBtn);
+                        container.appendChild(urlWrap);
+                    }
+                } catch (err) {
+                    console.warn('No se pudo construir la URL para la mesa:', err);
+                }
+
+                // Crear el botón para generar el QR
+                const generateQrBtn = document.createElement('button');
+                generateQrBtn.className = 'form-btn btn-generate-qr';
+                generateQrBtn.textContent = 'Generar Código QR';
+                generateQrBtn.onclick = () => {
+                    generateQrBtn.style.display = 'none'; // Ocultar el botón
+                    const canvas = document.createElement('canvas');
+                    container.appendChild(canvas);
+                    generateQrForTable(canvas, tableQrCode);
+                };
+                container.appendChild(generateQrBtn);
+
+                // Solo mostrar botones de activar/desactivar si NO es el reproductor
+                if (tableId !== 'player') {
+                    // Crear el botón para activar/desactivar
+                    const actionButton = document.createElement('button');
+                    actionButton.className = `form-btn ${isActive ? 'btn-deactivate' : 'btn-activate'}`;
+                    actionButton.textContent = isActive ? 'Desactivar Mesa' : 'Activar Mesa';
+                    actionButton.dataset.tableId = tableId;
+                    container.appendChild(actionButton);
+                }
+            }
+            // --- PAGE LOADERS ---
+
+            // Page loaders and account UI moved to modules:
+            // - Dashboard: `static/admin_pages/dashboard.js` (loadDashboardPage, loadRecentOrders, reactions, broadcast)
+            // - Accounts: `static/admin_pages/accounts.js` (loadAccountsPage, payment modal handlers)
+            // The WebSocket handlers below will call these module functions when messages arrive.
+
+
+            // WEBSOCKET: Conexión para actualizaciones en tiempo real (cola, notificaciones, consumos)
+            let adminSocket = null;
+            function setupAdminWebSocket() {
+                try {
+                    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+                    const wsUrl = `${wsScheme}://${window.location.host}/ws/cola`;
+                    adminSocket = new WebSocket(wsUrl);
+
+                    adminSocket.addEventListener('open', () => {
+                        console.info('Admin websocket conectado');
+                    });
+
+                    adminSocket.addEventListener('message', (evt) => {
+                        try {
+                            const data = JSON.parse(evt.data);
+                            if (!data || !data.type) return;
+                            switch (data.type) {
+                                case 'consumo_created':
+                                    // Activar la alerta visual y sonora
+                                    if (localStorage.getItem('adminSoundEnabled') !== 'false') {
+                                        document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificación:", e));
+                                    }
+                                    // En lugar de añadirlo directamente, recargamos toda la lista para que se agrupe correctamente.
+                                    loadRecentOrders();
+                                    // Actualizar barra superior de pedidos
+                                    loadTopOrdersBar();
+                                    break;
+                                case 'pedido_created':
+                                    // Activar la alerta visual y sonora
+                                    if (localStorage.getItem('adminSoundEnabled') !== 'false') {
+                                        document.getElementById('order-notification-sound').play().catch(e => console.warn("No se pudo reproducir el sonido de notificación:", e));
+                                    }
+
+                                    const pedido = data.payload;
+                                    const listElPedido = document.getElementById('recent-orders-list');
+                                    if (listElPedido) {
+                                        if (listElPedido.querySelector('p')) listElPedido.innerHTML = '';
+
+                                        const li = document.createElement('li');
+                                        li.className = 'item new-order';
+                                        li.dataset.consumoIds = pedido.consumo_ids.join(','); // Guardamos todos los IDs
+
+                                        const itemsHtml = pedido.items.map(item => `<li>${item.cantidad}x ${item.producto_nombre}</li>`).join('');
+                                        const mesaText = pedido.mesa_nombre ? `Mesa ${pedido.mesa_nombre}` : '';
+
+                                        li.innerHTML = `
                                         <div class="item-details">
                                             <div class="item-title">
                                                 ${mesaText} pidió:
@@ -489,336 +485,333 @@
                                             <button class="btn-no-despachado" data-ids="${pedido.consumo_ids.join(',')}" title="Cancelar pedido">No Despachado</button>
                                         </div>
                                     `;
-                                    listElPedido.insertBefore(li, listElPedido.firstChild);
-                                    while (listElPedido.children.length > 10) listElPedido.removeChild(listElPedido.lastChild);
-                                }
-                                // Actualizar barra superior de pedidos
-                                loadTopOrdersBar();
-                                break;
-                            case 'consumo_deleted':
-                                // payload: {id: consumo_id} o {ids: [consumo_id1, ...]}
-                                const payload = data.payload;
-                                if (payload) {
-                                    const listEl = document.getElementById('recent-orders-list');
-                                    if (listEl) { // Check if the list element exists
-                                        if (payload.id) { // Eliminar un solo consumo
-                                            const child = listEl.querySelector(`li[data-consumo-id="${payload.id}"]`);
-                                            if (child) child.remove();
-                                        } else if (payload.ids && Array.isArray(payload.ids)) { // Eliminar un pedido consolidado
-                                            // FIX: Ensure payload.ids is an array before joining.
-                                            const orderId = Array.isArray(payload.ids) ? payload.ids.join(',') : '';
-                                            const child = listEl.querySelector(`li[data-consumo-ids="${orderId}"], li[data-ids="${orderId}"]`);
-                                            if (child) child.remove();
+                                        listElPedido.insertBefore(li, listElPedido.firstChild);
+                                        while (listElPedido.children.length > 10) listElPedido.removeChild(listElPedido.lastChild);
+                                    }
+                                    // Actualizar barra superior de pedidos
+                                    loadTopOrdersBar();
+                                    break;
+                                case 'consumo_deleted':
+                                    // payload: {id: consumo_id} o {ids: [consumo_id1, ...]}
+                                    const payload = data.payload;
+                                    if (payload) {
+                                        const listEl = document.getElementById('recent-orders-list');
+                                        if (listEl) { // Check if the list element exists
+                                            if (payload.id) { // Eliminar un solo consumo
+                                                const child = listEl.querySelector(`li[data-consumo-id="${payload.id}"]`);
+                                                if (child) child.remove();
+                                            } else if (payload.ids && Array.isArray(payload.ids)) { // Eliminar un pedido consolidado
+                                                // FIX: Ensure payload.ids is an array before joining.
+                                                const orderId = Array.isArray(payload.ids) ? payload.ids.join(',') : '';
+                                                const child = listEl.querySelector(`li[data-consumo-ids="${orderId}"], li[data-ids="${orderId}"]`);
+                                                if (child) child.remove();
+                                            }
                                         }
                                     }
-                                }
-                                // Actualizar barra superior de pedidos
-                                loadTopOrdersBar();
-                                break;
-                            case 'song_finished':
-                                const songInfo = data.payload;
-                                const lastSungContainer = document.getElementById('last-sung-info');
-                                if (lastSungContainer) {
-                                    lastSungContainer.innerHTML = `
+                                    // Actualizar barra superior de pedidos
+                                    loadTopOrdersBar();
+                                    break;
+                                case 'song_finished':
+                                    const songInfo = data.payload;
+                                    const lastSungContainer = document.getElementById('last-sung-info');
+                                    if (lastSungContainer) {
+                                        lastSungContainer.innerHTML = `
                                         <p style="font-size: 1.2em;"><strong>${songInfo.titulo}</strong></p>
                                         <p>Cantada por: <strong>${songInfo.usuario_nick}</strong></p>
                                         <p style="font-size: 1.5em; color: var(--secondary-color);">Puntaje: <strong>${songInfo.puntuacion_ia}</strong></p>
                                     `;
-                                }
-                                break;
-                            case 'notification':
-                                showNotification(data.payload?.mensaje || 'Notificación', 'info');
-                                break;
-                            case 'product_update':
-                                showNotification('El inventario de productos ha sido actualizado.', 'info');
-                                // Re-fetch products if inventory page is active
-                                if (document.getElementById('inventory').classList.contains('active')) {
-                                    loadInventoryPage();
-                                }
-                                break;
-                            case 'queue_update':
-                                // Almacenar el estado de la cola en la variable global
-                                // Esto permite actualizar la vista aunque no esté activa
-                                currentQueueData = data.payload || { now_playing: null, upcoming: [] };
-                                // Actualizar la lista si la pestaña de cola está visible
-                                if (document.getElementById('queue').classList.contains('active')) {
-                                    const approvedListEl = document.getElementById('approved-songs-list');
-                                    if (approvedListEl && typeof renderApprovedSongs === 'function') {
-                                        renderApprovedSongs(currentQueueData, approvedListEl);
                                     }
-                                }
-                                break;
-                            case 'reaction':
-                                const reactionPayload = data.payload;
-                                if (reactionPayload && reactionPayload.reaction) {
-                                    const emoji = document.createElement('div');
-                                    emoji.className = 'reaction-emoji';
-                                    emoji.textContent = reactionPayload.reaction;
+                                    break;
+                                case 'notification':
+                                    showNotification(data.payload?.mensaje || 'Notificación', 'info');
+                                    break;
+                                case 'product_update':
+                                    showNotification('El inventario de productos ha sido actualizado.', 'info');
+                                    // Re-fetch products if inventory page is active
+                                    if (document.getElementById('inventory').classList.contains('active')) {
+                                        loadInventoryPage();
+                                    }
+                                    break;
+                                case 'queue_update':
+                                    // Almacenar el estado de la cola en la variable global
+                                    // Esto permite actualizar la vista aunque no esté activa
+                                    currentQueueData = data.payload || { now_playing: null, upcoming: [] };
+                                    // Actualizar la lista si la pestaña de cola está visible
+                                    if (document.getElementById('queue').classList.contains('active')) {
+                                        const approvedListEl = document.getElementById('approved-songs-list');
+                                        if (approvedListEl && typeof renderApprovedSongs === 'function') {
+                                            renderApprovedSongs(currentQueueData, approvedListEl);
+                                        }
+                                    }
+                                    break;
+                                case 'reaction':
+                                    const reactionPayload = data.payload;
+                                    if (reactionPayload && reactionPayload.reaction) {
+                                        const emoji = document.createElement('div');
+                                        emoji.className = 'reaction-emoji';
+                                        emoji.textContent = reactionPayload.reaction;
 
-                                    // Posición horizontal aleatoria y animación
-                                    emoji.style.left = `${Math.random() * 90 + 5}%`;
-                                    emoji.style.setProperty('--tx', `${(Math.random() - 0.5) * 100}px`);
+                                        // Posición horizontal aleatoria y animación
+                                        emoji.style.left = `${Math.random() * 90 + 5}%`;
+                                        emoji.style.setProperty('--tx', `${(Math.random() - 0.5) * 100}px`);
 
-                                    document.getElementById('reaction-container').appendChild(emoji);
-                                    setTimeout(() => emoji.remove(), 5000); // Limpiar después de la animación
-                                }
-                                break;
-                            default:
-                                // Si el mensaje no tiene un 'type' conocido, podría ser la actualización de la cola.
-                                // Solo procesar si es un objeto con estructura de cola
-                                if (data.now_playing || data.upcoming) {
-                                    const approvedListEl = document.getElementById('approved-songs-list');
-                                    const lazySongsListEl = document.getElementById('lazy-songs-list');
+                                        document.getElementById('reaction-container').appendChild(emoji);
+                                        setTimeout(() => emoji.remove(), 5000); // Limpiar después de la animación
+                                    }
+                                    break;
+                                default:
+                                    // Si el mensaje no tiene un 'type' conocido, podría ser la actualización de la cola.
+                                    // Solo procesar si es un objeto con estructura de cola
+                                    if (data.now_playing || data.upcoming) {
+                                        const approvedListEl = document.getElementById('approved-songs-list');
+                                        const lazySongsListEl = document.getElementById('lazy-songs-list');
 
-                                    // Prefer module-managed render if available (queue.js defines renderApprovedSongs)
-                                    if (typeof renderApprovedSongs === 'function') {
-                                        try {
-                                            renderApprovedSongs(data, approvedListEl);
-                                            // Fix: Also render lazy songs if present in the payload
-                                            if (data.lazy_queue || data.upcoming) {
-                                                // Assuming renderLazySongs is also global or we can access it
-                                                if (typeof renderLazySongs === 'function') {
-                                                    renderLazySongs(data.lazy_queue || [], lazySongsListEl);
+                                        // Prefer module-managed render if available (queue.js defines renderApprovedSongs)
+                                        if (typeof renderApprovedSongs === 'function') {
+                                            try {
+                                                renderApprovedSongs(data, approvedListEl);
+                                                // Fix: Also render lazy songs if present in the payload
+                                                if (data.lazy_queue || data.upcoming) {
+                                                    // Assuming renderLazySongs is also global or we can access it
+                                                    if (typeof renderLazySongs === 'function') {
+                                                        renderLazySongs(data.lazy_queue || [], lazySongsListEl);
+                                                    }
                                                 }
+                                            } catch (e) {
+                                                console.error('Error in renderApprovedSongs:', e);
+                                                // Fallback: ask the queue module to reload its data
+                                                if (typeof loadQueuePage === 'function') loadQueuePage();
                                             }
-                                        } catch (e) {
-                                            console.error('Error in renderApprovedSongs:', e);
-                                            // Fallback: ask the queue module to reload its data
+                                        } else {
+                                            // If module not loaded yet, trigger the queue page loader to ensure data/rendering
                                             if (typeof loadQueuePage === 'function') loadQueuePage();
                                         }
-                                    } else {
-                                        // If module not loaded yet, trigger the queue page loader to ensure data/rendering
-                                        if (typeof loadQueuePage === 'function') loadQueuePage();
                                     }
-                                }
-                                break;
+                                    break;
+                            }
+                        } catch (err) {
+                            console.error('Error procesando mensaje WS:', err);
                         }
-                    } catch (err) {
-                        console.error('Error procesando mensaje WS:', err);
-                    }
-                });
+                    });
 
-                adminSocket.addEventListener('close', () => {
-                    console.warn('Admin websocket desconectado, reintentando en 3s...');
-                    adminSocket = null;
-                    setTimeout(setupAdminWebSocket, 3000);
-                });
-                adminSocket.addEventListener('error', (e) => {
-                    console.error('WebSocket error', e);
-                    try { adminSocket.close(); } catch (er) { }
-                });
-            } catch (e) {
-                console.error('No se pudo establecer websocket:', e);
-            }
-        }
-
-        // Page loaders for queue/inventory/settings/tables/reports moved to per-page modules:
-        // - `static/admin_pages/queue.js` (loadQueuePage)
-        // - `static/admin_pages/inventory.js` (loadInventoryPage)
-        // - `static/admin_pages/settings.js` (loadSettingsPage)
-        // - `static/admin_pages/tables.js` (loadTablesPage)
-        // - `static/admin_pages/reports.js` (loadReportsPage)
-        // The navigation handler calls those module functions via handleNavigation().
-
-        // --- EVENT HANDLERS ---
-
-        function handleNavigation(event) {
-            event.preventDefault();
-            const link = event.target.closest('.nav-link');
-            if (!link) return;
-
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-
-            link.classList.add('active');
-            const pageId = link.getAttribute('href').substring(1);
-            document.getElementById(pageId).classList.add('active');
-
-            // Cargar datos y configurar listeners de la página activa
-            switch (pageId) {
-                case 'dashboard':
-                    loadDashboardPage();
-                    setupDashboardListeners();
-                    break;
-                case 'queue':
-                    loadQueuePage();
-                    setupQueueListeners();
-                    break;
-                case 'inventory':
-                    loadInventoryPage();
-                    setupInventoryListeners();
-                    break;
-                case 'settings':
-                    // Ensure settings page is fully rendered before attaching listeners
-                    loadSettingsPage().then(() => setupSettingsListeners());
-                    break;
-                case 'accounts':
-                    loadAccountsPage();
-                    setupAccountsListeners();
-                    break;
-                case 'reports':
-                    loadReportsPage();
-                    setupReportsListeners();
-                    break;
-                case 'tables':
-                    loadTablesPage();
-                    setupTablesListeners();
-                    break;
-            }
-        }
-
-        // Inventory, Tables, Settings, Accounts functions now in respective modules
-
-        // Settings and API functions now in settings.js module
-
-        // Broadcast and reset functions now in dashboard.js module
-
-        // Autoplay toggle now in queue.js module
-
-        // Queue/search logic (add song) moved to per-page module:
-        // see `static/admin_pages/queue.js` -> `handleAdminAddSong` / `loadQueuePage`
-
-        // handleQueueActions moved to the per-page module: static/admin_pages/queue.js
-
-        function handleTableClickForQr(event) {
-            const tableItem = event.target.closest('li.item');
-            if (!tableItem) return;
-
-            // Quitar la clase activa de otros elementos
-            document.querySelectorAll('#tables-list li.item').forEach(li => li.classList.remove('active'));
-            // Añadir clase activa al seleccionado
-            tableItem.classList.add('active');
-
-            const tableId = tableItem.dataset.tableId;
-            const qrCode = tableItem.dataset.qrCode;
-            const tableName = tableItem.dataset.tableName;
-            const isActive = tableItem.dataset.isActive === 'true';
-
-            showTableDetails(tableId, tableName, qrCode, isActive);
-        }
-
-        // Table activation handler moved to per-page module: static/admin_pages/tables.js -> handleToggleTableActive
-
-        // --- NUEVA FUNCIÓN PARA ENVIAR REACCIONES ---
-        // Reactions handler moved to per-page module: static/admin_pages/dashboard.js -> handleSendReaction
-
-        function handleLogout() {
-            sessionStorage.removeItem('adminApiKey');
-            window.location.href = '/admin';
-        }
-
-        // --- MANEJO DE BARRA DE NAVEGACIÓN HORIZONTAL ---
-        function setupTopNavigation() {
-            const navItems = document.querySelectorAll('.admin-nav-item');
-            navItems.forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const pageName = item.dataset.page;
-                    if (pageName === undefined) return;
-
-                    // Simular click en nav-link de antigua estructura
-                    const navLink = document.querySelector(`.nav-link[href="#${pageName}"]`);
-                    if (navLink) {
-                        navLink.click();
-                    }
-
-                    // Actualizar estado activo en la barra superior
-                    document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
-                    item.classList.add('active');
-                });
-            });
-
-            // Manejo del botón logout superior
-            const logoutBtnTop = document.getElementById('logout-btn-top');
-            if (logoutBtnTop) {
-                logoutBtnTop.addEventListener('click', handleLogout);
-            }
-        }
-
-        // --- MANEJO DE BARRA DE NAVEGACIÓN MÓVIL ---
-        function setupMobileNavigation() {
-            const navItems = document.querySelectorAll('.nav-item-admin');
-            navItems.forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const pageName = item.dataset.page;
-                    if (pageName === undefined) return;
-
-                    // Crear un evento sintético para simular el click en el nav-link de sidebar
-                    const navLink = document.querySelector(`.nav-link[href="#${pageName}"]`);
-                    if (navLink) {
-                        navLink.click();
-                    }
-
-                    // Actualizar estado activo en la barra móvil
-                    document.querySelectorAll('.nav-item-admin').forEach(n => n.classList.remove('active'));
-                    item.classList.add('active');
-                });
-            });
-
-            // Manejo del botón logout móvil
-            const logoutBtnMobile = document.getElementById('logout-btn-mobile');
-            if (logoutBtnMobile) {
-                logoutBtnMobile.addEventListener('click', handleLogout);
-            }
-        }
-
-        // --- INITIALIZATION ---
-        // Helpers to load per-page HTML fragments (module separation)
-        function loadFragment(pageId) {
-            const mapping = {
-                'dashboard': '/static/admin_pages/dashboard.html',
-                'queue': '/static/admin_pages/queue.html',
-                'inventory': '/static/admin_pages/inventory.html',
-                'tables': '/static/admin_pages/tables.html',
-                'accounts': '/static/admin_pages/accounts.html',
-                'reports': '/static/admin_pages/reports.html',
-                'settings': '/static/admin_pages/settings.html',
-                'player': '/static/admin_pages/player_dashboard_placeholder.html'
-            };
-            const url = mapping[pageId];
-            if (!url) return Promise.resolve();
-            return fetch(url, { cache: 'no-store' })
-                .then(r => { if (!r.ok) throw new Error('Fragment not found'); return r.text(); })
-                .then(html => { const el = document.getElementById(pageId); if (el) el.innerHTML = html; })
-                .catch(err => { console.warn('Failed to load fragment', pageId, err); });
-        }
-
-        function loadAllFragments() {
-            return Promise.all(['dashboard', 'queue', 'inventory', 'tables', 'accounts', 'reports', 'settings'].map(loadFragment));
-        }
-        window.addEventListener('DOMContentLoaded', () => {
-            loadAllFragments().then(() => {
-                apiKey = sessionStorage.getItem('adminApiKey');
-                if (!apiKey) {
-                    window.location.href = '/admin';
-                    return;
+                    adminSocket.addEventListener('close', () => {
+                        console.warn('Admin websocket desconectado, reintentando en 3s...');
+                        adminSocket = null;
+                        setTimeout(setupAdminWebSocket, 3000);
+                    });
+                    adminSocket.addEventListener('error', (e) => {
+                        console.error('WebSocket error', e);
+                        try { adminSocket.close(); } catch (er) { }
+                    });
+                } catch (e) {
+                    console.error('No se pudo establecer websocket:', e);
                 }
+            }
 
-                // Cargar datos de la página inicial
-                loadDashboardPage();
+            // Page loaders for queue/inventory/settings/tables/reports moved to per-page modules:
+            // - `static/admin_pages/queue.js` (loadQueuePage)
+            // - `static/admin_pages/inventory.js` (loadInventoryPage)
+            // - `static/admin_pages/settings.js` (loadSettingsPage)
+            // - `static/admin_pages/tables.js` (loadTablesPage)
+            // - `static/admin_pages/reports.js` (loadReportsPage)
+            // The navigation handler calls those module functions via handleNavigation().
 
-                // Cargar pedidos en la barra superior
-                loadTopOrdersBar();
+            // --- EVENT HANDLERS ---
 
-                // Setup WebSocket for realtime updates (consume events and others)
-                setupAdminWebSocket();
+            function handleNavigation(event) {
+                event.preventDefault();
+                const link = event.target.closest('.nav-link');
+                if (!link) return;
 
-                // Setup top navigation
-                setupTopNavigation();
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
 
-                // Setup mobile navigation
-                setupMobileNavigation();
+                link.classList.add('active');
+                const pageId = link.getAttribute('href').substring(1);
+                document.getElementById(pageId).classList.add('active');
 
-                // Event Listeners - Global only
-                document.querySelector('.nav-menu').addEventListener('click', handleNavigation);
-                document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                // Cargar datos y configurar listeners de la página activa
+                switch (pageId) {
+                    case 'dashboard':
+                        loadDashboardPage();
+                        setupDashboardListeners();
+                        break;
+                    case 'queue':
+                        loadQueuePage();
+                        setupQueueListeners();
+                        break;
+                    case 'inventory':
+                        loadInventoryPage();
+                        setupInventoryListeners();
+                        break;
+                    case 'settings':
+                        // Ensure settings page is fully rendered before attaching listeners
+                        loadSettingsPage().then(() => setupSettingsListeners());
+                        break;
+                    case 'accounts':
+                        loadAccountsPage();
+                        setupAccountsListeners();
+                        break;
+                    case 'reports':
+                        loadReportsPage();
+                        setupReportsListeners();
+                        break;
 
-                // Page modules handle their own event listeners via setupXxxListeners()
-                // Called automatically when pages load via handleNavigation()
-                setupDashboardListeners(); // Setup initial page listeners
+                }
+            }
 
-            }).catch(err => { console.warn('Error loading fragments', err); apiKey = sessionStorage.getItem('adminApiKey'); if (!apiKey) { window.location.href = '/admin'; return; } loadDashboardPage(); setupAdminWebSocket(); startCarousel(); });
-        });
-    </script>
+            // Inventory, Tables, Settings, Accounts functions now in respective modules
+
+            // Settings and API functions now in settings.js module
+
+            // Broadcast and reset functions now in dashboard.js module
+
+            // Autoplay toggle now in queue.js module
+
+            // Queue/search logic (add song) moved to per-page module:
+            // see `static/admin_pages/queue.js` -> `handleAdminAddSong` / `loadQueuePage`
+
+            // handleQueueActions moved to the per-page module: static/admin_pages/queue.js
+
+            function handleTableClickForQr(event) {
+                const tableItem = event.target.closest('li.item');
+                if (!tableItem) return;
+
+                // Quitar la clase activa de otros elementos
+                document.querySelectorAll('#tables-list li.item').forEach(li => li.classList.remove('active'));
+                // Añadir clase activa al seleccionado
+                tableItem.classList.add('active');
+
+                const tableId = tableItem.dataset.tableId;
+                const qrCode = tableItem.dataset.qrCode;
+                const tableName = tableItem.dataset.tableName;
+                const isActive = tableItem.dataset.isActive === 'true';
+
+                showTableDetails(tableId, tableName, qrCode, isActive);
+            }
+
+            // Table activation handler moved to per-page module: static/admin_pages/tables.js -> handleToggleTableActive
+
+            // --- NUEVA FUNCIÓN PARA ENVIAR REACCIONES ---
+            // Reactions handler moved to per-page module: static/admin_pages/dashboard.js -> handleSendReaction
+
+            function handleLogout() {
+                sessionStorage.removeItem('adminApiKey');
+                window.location.href = '/admin';
+            }
+
+            // --- MANEJO DE BARRA DE NAVEGACIÓN HORIZONTAL ---
+            function setupTopNavigation() {
+                const navItems = document.querySelectorAll('.admin-nav-item');
+                navItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const pageName = item.dataset.page;
+                        if (pageName === undefined) return;
+
+                        // Simular click en nav-link de antigua estructura
+                        const navLink = document.querySelector(`.nav-link[href="#${pageName}"]`);
+                        if (navLink) {
+                            navLink.click();
+                        }
+
+                        // Actualizar estado activo en la barra superior
+                        document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
+                        item.classList.add('active');
+                    });
+                });
+
+                // Manejo del botón logout superior
+                const logoutBtnTop = document.getElementById('logout-btn-top');
+                if (logoutBtnTop) {
+                    logoutBtnTop.addEventListener('click', handleLogout);
+                }
+            }
+
+            // --- MANEJO DE BARRA DE NAVEGACIÓN MÓVIL ---
+            function setupMobileNavigation() {
+                const navItems = document.querySelectorAll('.nav-item-admin');
+                navItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const pageName = item.dataset.page;
+                        if (pageName === undefined) return;
+
+                        // Crear un evento sintético para simular el click en el nav-link de sidebar
+                        const navLink = document.querySelector(`.nav-link[href="#${pageName}"]`);
+                        if (navLink) {
+                            navLink.click();
+                        }
+
+                        // Actualizar estado activo en la barra móvil
+                        document.querySelectorAll('.nav-item-admin').forEach(n => n.classList.remove('active'));
+                        item.classList.add('active');
+                    });
+                });
+
+                // Manejo del botón logout móvil
+                const logoutBtnMobile = document.getElementById('logout-btn-mobile');
+                if (logoutBtnMobile) {
+                    logoutBtnMobile.addEventListener('click', handleLogout);
+                }
+            }
+
+            // --- INITIALIZATION ---
+            // Helpers to load per-page HTML fragments (module separation)
+            function loadFragment(pageId) {
+                const mapping = {
+                    'dashboard': '/static/admin_pages/dashboard.html',
+                    'queue': '/static/admin_pages/queue.html',
+                    'inventory': '/static/admin_pages/inventory.html',
+
+                    'accounts': '/static/admin_pages/accounts.html',
+                    'reports': '/static/admin_pages/reports.html',
+                    'settings': '/static/admin_pages/settings.html',
+                    'player': '/static/admin_pages/player_dashboard_placeholder.html'
+                };
+                const url = mapping[pageId];
+                if (!url) return Promise.resolve();
+                return fetch(url, { cache: 'no-store' })
+                    .then(r => { if (!r.ok) throw new Error('Fragment not found'); return r.text(); })
+                    .then(html => { const el = document.getElementById(pageId); if (el) el.innerHTML = html; })
+                    .catch(err => { console.warn('Failed to load fragment', pageId, err); });
+            }
+
+            function loadAllFragments() {
+                return Promise.all(['dashboard', 'queue', 'inventory', 'accounts', 'reports', 'settings'].map(loadFragment));
+            }
+            window.addEventListener('DOMContentLoaded', () => {
+                loadAllFragments().then(() => {
+                    apiKey = sessionStorage.getItem('adminApiKey');
+                    if (!apiKey) {
+                        window.location.href = '/admin';
+                        return;
+                    }
+
+                    // Cargar datos de la página inicial
+                    loadDashboardPage();
+
+                    // Cargar pedidos en la barra superior
+                    loadTopOrdersBar();
+
+                    // Setup WebSocket for realtime updates (consume events and others)
+                    setupAdminWebSocket();
+
+                    // Setup top navigation
+                    setupTopNavigation();
+
+                    // Setup mobile navigation
+                    setupMobileNavigation();
+
+                    // Event Listeners - Global only
+                    document.querySelector('.nav-menu').addEventListener('click', handleNavigation);
+                    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+                    // Page modules handle their own event listeners via setupXxxListeners()
+                    // Called automatically when pages load via handleNavigation()
+                    setupDashboardListeners(); // Setup initial page listeners
+
+                }).catch(err => { console.warn('Error loading fragments', err); apiKey = sessionStorage.getItem('adminApiKey'); if (!apiKey) { window.location.href = '/admin'; return; } loadDashboardPage(); setupAdminWebSocket(); startCarousel(); });
+            });
+        </script>
 </body>
 
 </html>
