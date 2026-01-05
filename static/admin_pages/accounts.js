@@ -94,9 +94,14 @@ function renderAccounts(accounts, accountsGrid) {
                 <div class="mesa-saldo ${saldoClass}">
                     Saldo: $${saldo.toFixed(2)}
                 </div>
-                <button class="btn-view-details" data-mesa-id="${acc.mesa_id}">
-                    Ver Detalles
-                </button>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <button class="btn-payment" data-id="${acc.mesa_id}" style="flex: 1; background: var(--bees-primary); color: #333333; font-weight: 600; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">
+                        💵 Registrar Pago
+                    </button>
+                    <button class="btn-view-details" data-mesa-id="${acc.mesa_id}" style="flex: 1;">
+                        Ver Detalles
+                    </button>
+                </div>
             </div>
         `;
 
