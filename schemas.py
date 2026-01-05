@@ -395,6 +395,7 @@ class CompraProducto(BaseModel):
 class MesaEstadoPago(BaseModel):
     """Schema completo para el estado de cuenta de una mesa."""
     mesa_id: int
+    cuenta_id: Optional[int] = None # Added field
     mesa_nombre: str
     total_consumido: Decimal
     total_pagado: Decimal

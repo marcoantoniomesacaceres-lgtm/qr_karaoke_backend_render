@@ -1768,7 +1768,7 @@ def get_table_payment_status(db: Session, mesa_id: int) -> Optional[dict]:
          mesa = get_mesa_by_id(db, mesa_id)
          if not mesa: return None
          return schemas.MesaEstadoPago(
-             mesa_id=mesa.id, mesa_nombre=mesa.nombre, 
+             mesa_id=mesa.id, cuenta_id=None, mesa_nombre=mesa.nombre, 
              total_consumido=Decimal(0), total_pagado=Decimal(0), saldo_pendiente=Decimal(0), consumos=[], pagos=[]
          ).dict()
          
@@ -2045,6 +2045,7 @@ def get_cuenta_payment_status(db: Session, cuenta_id: int) -> Optional[dict]:
 
     return schemas.MesaEstadoPago(
         mesa_id=mesa.id, 
+        cuenta_id=cuenta.id,
         mesa_nombre=mesa.nombre, 
         total_consumido=total_consumido, 
         total_pagado=total_pagado, 

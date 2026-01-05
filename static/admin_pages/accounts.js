@@ -562,8 +562,8 @@ function setupMesaCardListeners() {
             // otherwise we might need to fetch by mesa or show what we have.
             // The currentAccounts array has the data.
             const account = currentAccounts.find(a => a.mesa_id == mesaId);
-            if (account && account.id) {
-                showAccountDetails(account.id);
+            if (account && account.cuenta_id) {
+                showAccountDetails(account.cuenta_id);
             } else {
                 showNotification('No hay detalles de cuenta activa para esta mesa.', 'info');
             }
