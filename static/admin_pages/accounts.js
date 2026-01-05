@@ -445,12 +445,10 @@ function setupIntegratedTablesListeners() {
     const btnActivate = document.getElementById('btn-activate');
     const btnDeactivate = document.getElementById('btn-deactivate');
     const btnDelete = document.getElementById('btn-delete');
-    const btnCreate = document.getElementById('btn-create');
 
     if (btnActivate) btnActivate.addEventListener('click', () => handleTableAction('activate'));
     if (btnDeactivate) btnDeactivate.addEventListener('click', () => handleTableAction('deactivate'));
     if (btnDelete) btnDelete.addEventListener('click', () => handleTableAction('delete'));
-    if (btnCreate) btnCreate.addEventListener('click', handleCreateTableDirect);
 }
 
 function handleGenerateQR(event) {
