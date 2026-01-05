@@ -26,7 +26,7 @@ function renderAccounts(accounts, accountsGrid) {
         card.dataset.mesaId = acc.mesa_id;
 
         const titulo = acc.mesa_nombre || `Mesa ${acc.mesa_id}`;
-        const saldo = acc.saldo_pendiente || 0;
+        const saldo = Number(acc.saldo_pendiente) || 0;
         const isActive = acc.activa !== false; // Asumimos activa por defecto
 
         // Determinar clase de saldo
@@ -69,11 +69,10 @@ function renderAccounts(accounts, accountsGrid) {
                 <!-- QR Code Container -->
                 <div class="mesa-qr-container">
                     <div class="mesa-qr" id="qr-mesa-${acc.mesa_id}">
-                        <p class="mesa-qr-placeholder">Selecciona usuario<br>y genera QR</p>
+                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/?table=karaoke-mesa-' + acc.mesa_id.toString().padStart(2, '0') + '-usuario1')}" 
+                              alt="QR Code" 
+                              style="width: 100px; height: 100px; object-fit: contain;">
                     </div>
-                    <a href="#" class="mesa-qr-download hidden" id="qr-download-${acc.mesa_id}" download="mesa-${acc.mesa_id}-qr.png">
-                        ⬇️ Descargar
-                    </a>
                 </div>
             </div>
             
@@ -85,7 +84,7 @@ function renderAccounts(accounts, accountsGrid) {
                 <button class="btn-deactivate" data-mesa-id="${acc.mesa_id}" ${!isActive ? 'disabled' : ''}>
                     ⏸️ Desactivar
                 </button>
-                <button class="btn-generate-qr" data-mesa-id="${acc.mesa_id}">
+                <button class="btn-generate-qr" data-mesa-id="${acc.mesa_id}" style="display: none;">
                     🔄 Generar QR
                 </button>
             </div>
