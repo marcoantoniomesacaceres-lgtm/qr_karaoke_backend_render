@@ -39,9 +39,6 @@
         <!-- PÁGINA: INVENTARIO -->
         <div id="inventory" class="page"></div>
 
-        <!-- PÁGINA: MESAS Y QR -->
-        <div id="tables" class="page"></div>
-
         <!-- PÁGINA: CUENTAS POR MESA -->
         <div id="accounts" class="page"></div>
 
@@ -114,7 +111,6 @@
     <script src="/static/admin_pages/queue.js"></script>
     <script src="/static/admin_pages/inventory.js"></script>
     <script src="/static/admin_pages/accounts.js"></script>
-    <script src="/static/admin_pages/tables.js"></script>
     <script src="/static/admin_pages/reports.js"></script>
     <script src="/static/admin_pages/settings.js"></script>
     <script>
@@ -625,7 +621,7 @@
         }
 
         function loadAllFragments() {
-            return Promise.all(['dashboard', 'queue', 'inventory', 'tables', 'accounts', 'reports', 'settings'].map(loadFragment));
+            return Promise.all(['dashboard', 'queue', 'inventory', 'accounts', 'reports', 'settings'].map(loadFragment));
         }
         window.addEventListener('DOMContentLoaded', () => {
             loadAllFragments().then(() => {
