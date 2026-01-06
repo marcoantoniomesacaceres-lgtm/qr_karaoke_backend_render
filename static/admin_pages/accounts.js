@@ -24,7 +24,9 @@ function renderAccounts(accounts, accountsGrid) {
 
     accounts.forEach(acc => {
         const card = document.createElement('div');
-        card.className = 'mesa-card';
+        // Add level class for styling border
+        const nivel = acc.nivel || 'bronce';
+        card.className = `mesa-card card level-${nivel}`;
         card.dataset.mesaId = acc.mesa_id;
 
         const titulo = acc.mesa_nombre || `Mesa ${acc.mesa_id}`;

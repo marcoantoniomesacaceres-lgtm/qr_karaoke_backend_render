@@ -50,10 +50,19 @@ def create_mesa_endpoint(
     """
     db_mesa = crud.get_mesa_by_qr(db, qr_code=mesa.qr_code)
     if db_mesa:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"El código QR '{mesa.qr_code}' ya está registrado para la mesa '{db_mesa.nombre}'. Por favor, usa un código QR diferente."
-        )
+        if not db_mesa.is_active:
+            # Reactivar mesa si existe pero está inactiva
+            db_mesa.is_active = True
+            if mesa.nombre and db_mesa.nombre != mesa.nombre:
+                db_mesa.nombre = mesa.nombre
+            db.commit()
+            db.refresh(db_mesa)
+            return db_mesa
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"El código QR '{mesa.qr_code}' ya está registrado para la mesa '{db_mesa.nombre}'. Por favor, usa un código QR diferente."
+            )
     try:
         return crud.create_mesa(db=db, mesa=mesa)
     except Exception as e:

@@ -402,6 +402,7 @@ class MesaEstadoPago(BaseModel):
     saldo_pendiente: Decimal
     consumos: List[ConsumoItemDetalle] = []
     pagos: List[PagoView] = []
+    nivel: str = "bronce" # Added field
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 # --- Schemas para Login Admin ---

@@ -163,9 +163,74 @@
     margin-bottom: 20px;
 }
 
-.qr-download-btn {
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+text-decoration: none;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+/* =========================================
+   Level Borders
+   ========================================= */
+
+.mesa-card {
+    border-width: 3px !important;
+    /* Force visible border width */
+    position: relative;
+    overflow: hidden;
+}
+
+.level-oro {
+    border-color: var(--bees-yellow) !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
+}
+
+/* Add a badge for Gold */
+.level-oro::after {
+    content: '👑 ORO';
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--bees-yellow);
+    color: black;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.level-plata {
+    border-color: #C0C0C0 !important;
+    box-shadow: 0 0 10px rgba(192, 192, 192, 0.3) !important;
+}
+
+.level-plata::after {
+    content: '🥈 PLATA';
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #C0C0C0;
+    color: black;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.level-bronce {
+    border-color: #CD7F32 !important;
+    box-shadow: 0 0 5px rgba(205, 127, 50, 0.2) !important;
+}
+
+.level-bronce::after {
+    content: '🥉 BRONCE';
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #CD7F32;
+    color: white;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-bottom-left-radius: 8px;
 }

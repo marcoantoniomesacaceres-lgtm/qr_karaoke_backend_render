@@ -1742,6 +1742,17 @@ def get_all_tables_payment_status(db: Session) -> List[dict]:
         active_account = get_active_cuenta(db, mesa.id)
         cuenta_id = active_account.id if active_account else None
 
+        # 6. Calcular Nivel (Oro/Plata/Bronce)
+        nivel_mesa = "bronce"
+        try:
+             total_val = float(total_consumido)
+             if total_val >= 150000:
+                 nivel_mesa = "oro"
+             elif total_val >= 50000:
+                 nivel_mesa = "plata"
+        except:
+             pass
+
         results.append({
             "mesa_id": mesa.id,
             "cuenta_id": cuenta_id,
@@ -1750,7 +1761,8 @@ def get_all_tables_payment_status(db: Session) -> List[dict]:
             "total_pagado": total_pagado,
             "saldo_pendiente": saldo_pendiente,
             "consumos": consumos_items,
-            "pagos": pagos_detalle
+            "pagos": pagos_detalle,
+            "nivel": nivel_mesa
         })
         
     return results
@@ -2056,7 +2068,8 @@ def get_cuenta_payment_status(db: Session, cuenta_id: int) -> Optional[dict]:
         total_pagado=total_pagado, 
         saldo_pendiente=saldo_pendiente, 
         consumos=consumos_items, 
-        pagos=pagos_detalle
+        pagos=pagos_detalle,
+        nivel=("oro" if total_consumido >= 150000 else "plata" if total_consumido >= 50000 else "bronce")
     ).dict()# CÃÂ³digo para agregar al final de crud.py
 
 
