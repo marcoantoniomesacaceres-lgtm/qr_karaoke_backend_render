@@ -1,0 +1,171 @@
+/* Accounts Page Styles */
+
+/* =========================================
+   Mesa Card Styles (moved from JS)
+   ========================================= */
+
+.mesa-status-text {
+    font-weight: 600;
+}
+
+.mesa-status-text.active {
+    color: #28a745;
+}
+
+.mesa-status-text.inactive {
+    color: #dc3545;
+}
+
+.mesa-qr-container {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.btn-manage-qr {
+    width: 100%;
+    padding: 10px;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.btn-manage-qr:hover {
+    background: #34495e;
+}
+
+.mesa-account-actions-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.btn-payment {
+    flex: 1;
+    background: var(--bees-primary);
+    color: #333333;
+    font-weight: 600;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.btn-payment:hover {
+    filter: brightness(1.1);
+}
+
+.btn-view-details {
+    flex: 1;
+}
+
+/* =========================================
+   QR Modal Styles (moved from accounts.html)
+   ========================================= */
+
+.qr-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.qr-modal-header h3 {
+    margin: 0;
+}
+
+.qr-modal-close-x {
+    padding: 5px 10px;
+}
+
+.qr-modal-form-group {
+    margin-bottom: 20px;
+}
+
+.qr-modal-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.qr-modal-select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #444;
+    background: #222;
+    color: white;
+}
+
+.qr-modal-content-wrapper {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.qr-image-container {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    display: inline-block;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.qr-image {
+    width: 250px;
+    height: 250px;
+    object-fit: contain;
+}
+
+.qr-url-text {
+    margin-top: 15px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    word-break: break-all;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+    color: #ccc;
+}
+
+.qr-modal-buttons-row {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* =========================================
+   History & Details Modal Styles (moved from JS)
+   ========================================= */
+
+.history-item {
+    padding: 10px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.account-summary-box {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.details-consumos-list {
+    margin-bottom: 20px;
+}
+
+.qr-download-btn {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

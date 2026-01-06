@@ -58,3 +58,49 @@
         </form>
     </div>
 </div>
+
+<!-- QR Management Modal -->
+<div id="qr-management-modal" class="modal-overlay modal-overlay-highest hidden">
+    <div class="card modal-card-medium">
+        <div class="qr-modal-header">
+            <h3 id="qr-modal-title">Gestionar QR</h3>
+            <button type="button" id="qr-modal-close-x" class="form-btn red qr-modal-close-x">&times;</button>
+        </div>
+
+        <div class="form-group qr-modal-form-group">
+            <label for="qr-modal-user-select" class="qr-modal-label">Seleccionar
+                Usuario:</label>
+            <select id="qr-modal-user-select" class="form-control qr-modal-select">
+                <option value="1">Usuario 1 (Principal)</option>
+                <option value="2">Usuario 2</option>
+                <option value="3">Usuario 3</option>
+                <option value="4">Usuario 4</option>
+                <option value="5">Usuario 5</option>
+                <option value="6">Usuario 6</option>
+                <option value="7">Usuario 7</option>
+                <option value="8">Usuario 8</option>
+                <option value="9">Usuario 9</option>
+                <option value="10">Usuario 10</option>
+            </select>
+        </div>
+
+        <div id="qr-modal-content" class="qr-modal-content-wrapper">
+            <div id="qr-modal-image-container" class="qr-image-container">
+                <!-- QR Image injected here -->
+                <img id="qr-modal-img" src="" alt="QR Code" class="qr-image">
+            </div>
+            <p id="qr-modal-url" class="qr-url-text">
+            </p>
+        </div>
+
+        <div class="modal-buttons-row qr-modal-buttons-row">
+            <a id="qr-modal-download-btn" href="#" download="qr-code.png"
+                class="form-btn modal-button-primary qr-download-btn">
+                ⬇️ Descargar
+            </a>
+            <button type="button" id="qr-modal-close" class="form-btn modal-button-secondary">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>

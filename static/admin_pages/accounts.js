@@ -3,6 +3,8 @@
 
 // Variable global para almacenar las cuentas actuales
 let currentAccounts = [];
+// Variable para trackear la mesa seleccionada en el modal de QR
+let currentQRTableId = null;
 
 function renderAccounts(accounts, accountsGrid) {
     accountsGrid.innerHTML = '';
@@ -43,36 +45,27 @@ function renderAccounts(accounts, accountsGrid) {
                 </h3>
             </div>
             
-            <!-- Cuerpo con info y QR -->
+            <!-- Cuerpo con info -->
             <div class="mesa-card-body">
                 <div class="mesa-info">
                     <div class="info-row">
                         <label>Número de Mesa:</label>
                         <span>${acc.mesa_id}</span>
                     </div>
-                    <div class="info-row">
-                        <label>Usuario:</label>
-                        <select class="user-selector" data-mesa-id="${acc.mesa_id}">
-                            ${Array.from({ length: 10 }, (_, i) => i + 1).map(num =>
-            `<option value="${num}">Usuario ${num}</option>`
-        ).join('')}
-                        </select>
-                    </div>
+                    <!-- user logic moved to modal -->
                     <div class="info-row">
                         <label>Estado:</label>
-                        <span style="color: ${isActive ? '#28a745' : '#dc3545'}; font-weight: 600;">
+                        <span class="mesa-status-text ${isActive ? 'active' : 'inactive'}">
                             ${isActive ? '✓ Activa' : '✗ Inactiva'}
                         </span>
                     </div>
                 </div>
                 
-                <!-- QR Code Container -->
+                <!-- Gestión de QR (Botón en lugar de imagen directa) -->
                 <div class="mesa-qr-container">
-                    <div class="mesa-qr" id="qr-mesa-${acc.mesa_id}">
-                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/?table=karaoke-mesa-' + acc.mesa_id.toString().padStart(2, '0') + '-usuario1')}" 
-                              alt="QR Code" 
-                              style="width: 100px; height: 100px; object-fit: contain;">
-                    </div>
+                    <button class="btn-manage-qr" data-mesa-id="${acc.mesa_id}">
+                        📱 Gestionar QR
+                    </button>
                 </div>
             </div>
             
@@ -84,9 +77,6 @@ function renderAccounts(accounts, accountsGrid) {
                 <button class="btn-deactivate" data-mesa-id="${acc.mesa_id}" ${!isActive ? 'disabled' : ''}>
                     ⏸️ Desactivar
                 </button>
-                <button class="btn-generate-qr" data-mesa-id="${acc.mesa_id}" style="display: none;">
-                    🔄 Generar QR
-                </button>
             </div>
             
             <!-- Resumen de cuenta -->
@@ -94,11 +84,11 @@ function renderAccounts(accounts, accountsGrid) {
                 <div class="mesa-saldo ${saldoClass}">
                     Saldo: $${saldo.toFixed(2)}
                 </div>
-                <div style="display: flex; gap: 8px; width: 100%;">
-                    <button class="btn-payment" data-id="${acc.mesa_id}" style="flex: 1; background: var(--bees-primary); color: #333333; font-weight: 600; border: none; padding: 8px; border-radius: 4px; cursor: pointer;">
+                <div class="mesa-account-actions-row">
+                    <button class="btn-payment" data-id="${acc.mesa_id}">
                         💵 Registrar Pago
                     </button>
-                    <button class="btn-view-details" data-mesa-id="${acc.mesa_id}" style="flex: 1;">
+                    <button class="btn-view-details" data-mesa-id="${acc.mesa_id}">
                         Ver Detalles
                     </button>
                 </div>
@@ -107,9 +97,12 @@ function renderAccounts(accounts, accountsGrid) {
 
         accountsGrid.appendChild(card);
     });
+}
 
-    // Event listeners are set up once in setupAccountsListeners using delegation
-    // so we don't need to re-attach them here.
+function handleCardQRGenerate(mesaId) {
+    // This function is no longer used for direct generation on card, 
+    // but kept or refactored for the modal logic.
+    // We'll use openQRModal instead.
 }
 
 async function loadAccountsPage() {
@@ -310,11 +303,7 @@ function showHistoryModal(history) {
         history.forEach(acc => {
             const item = document.createElement('div');
             item.className = 'history-item';
-            item.style.padding = '10px';
-            item.style.borderBottom = '1px solid #444';
-            item.style.display = 'flex';
-            item.style.justifyContent = 'space-between';
-            item.style.alignItems = 'center';
+            item.className = 'history-item';
 
             const closedDate = new Date(acc.closed_at || acc.created_at).toLocaleString();
 
@@ -347,14 +336,14 @@ async function showAccountDetails(cuentaId) {
         const pagos = details.pagos || [];
 
         content.innerHTML = `
-            <div class="account-summary" style="margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <div class="account-summary account-summary-box">
                 <p><strong>Mesa:</strong> ${details.mesa_nombre}</p>
                 <p><strong>Total Consumido:</strong> $${details.total_consumido}</p>
                 <p><strong>Total Pagado:</strong> $${details.total_pagado}</p>
                 <p><strong>Saldo Pendiente:</strong> $${details.saldo_pendiente}</p>
             </div>
             <h4>Consumos</h4>
-            <ul style="margin-bottom: 20px;">
+            <ul class="details-consumos-list">
                 ${consumos.length ? consumos.map(c => `<li>${c.cantidad}x ${c.producto_nombre} — $${c.valor_total} <small>(${new Date(c.created_at).toLocaleString()})</small></li>`).join('') : '<li>Sin consumos</li>'}
             </ul>
              <h4>Pagos</h4>
@@ -463,6 +452,85 @@ function setupCreateMesaModal() {
     }
 }
 
+function setupQRModal() {
+    const qrModal = document.getElementById('qr-management-modal');
+    const closeBtn = document.getElementById('qr-modal-close');
+    const closeXBtn = document.getElementById('qr-modal-close-x');
+    const userSelect = document.getElementById('qr-modal-user-select');
+
+    if (closeBtn) closeBtn.onclick = () => closeQRModal();
+    if (closeXBtn) closeXBtn.onclick = () => closeQRModal();
+    if (qrModal) qrModal.onclick = (e) => { if (e.target === qrModal) closeQRModal(); };
+
+    if (userSelect) {
+        userSelect.addEventListener('change', () => {
+            if (currentQRTableId) {
+                updateQRForTable(currentQRTableId, userSelect.value);
+            }
+        });
+    }
+}
+
+function closeQRModal() {
+    const qrModal = document.getElementById('qr-management-modal');
+    if (qrModal) {
+        qrModal.classList.remove('active');
+        qrModal.classList.add('hidden');
+    }
+    currentQRTableId = null;
+}
+
+function openQRModal(mesaId) {
+    const qrModal = document.getElementById('qr-management-modal');
+    const userSelect = document.getElementById('qr-modal-user-select');
+    const modalTitle = document.getElementById('qr-modal-title');
+
+    if (!qrModal) return;
+
+    currentQRTableId = mesaId;
+
+    // Find mesa name
+    const account = currentAccounts.find(a => a.mesa_id == mesaId);
+    if (account) {
+        modalTitle.textContent = `Gestionar QR - ${account.mesa_nombre || 'Mesa ' + mesaId}`;
+    } else {
+        modalTitle.textContent = `Gestionar QR - Mesa ${mesaId}`;
+    }
+
+    // Reset user select to 1
+    if (userSelect) userSelect.value = "1";
+
+    // Generate initial QR for User 1
+    updateQRForTable(mesaId, "1");
+
+    qrModal.classList.remove('hidden');
+    qrModal.classList.add('active');
+}
+
+function updateQRForTable(mesaId, userNum) {
+    const img = document.getElementById('qr-modal-img');
+    const urlText = document.getElementById('qr-modal-url');
+    const downloadBtn = document.getElementById('qr-modal-download-btn');
+
+    const tableNum = mesaId.toString().padStart(2, '0');
+    // Construct QR Code string
+    const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
+
+    // Generate URL
+    const appBaseUrl = window.location.origin;
+    const appUrl = `${appBaseUrl}/?table=${encodeURIComponent(qrCode)}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
+
+    if (img) img.src = qrImageUrl;
+    if (urlText) urlText.textContent = appUrl;
+
+    if (downloadBtn) {
+        downloadBtn.href = qrImageUrl;
+        downloadBtn.download = `mesa-${mesaId}-usuario${userNum}.png`;
+    }
+}
+
+
 function setupAccountsListeners() {
     const accountsGrid = document.getElementById('accounts-grid');
     const paymentModal = document.getElementById('payment-modal');
@@ -522,6 +590,9 @@ function setupAccountsListeners() {
     // Setup create mesa modal
     setupCreateMesaModal();
 
+    // Setup QR modal
+    setupQRModal();
+
     // Setup mesa card listeners (delegated)
     setupMesaCardListeners();
 }
@@ -536,10 +607,11 @@ function setupMesaCardListeners() {
     accountsGrid.addEventListener('click', async (e) => {
         const target = e.target;
 
-        // Generate QR Button
-        if (target.matches('.btn-generate-qr')) {
-            const mesaId = target.dataset.mesaId;
-            handleCardQRGenerate(mesaId);
+        // NEW: Manage QR Button
+        if (target.matches('.btn-manage-qr') || target.closest('.btn-manage-qr')) {
+            const btn = target.matches('.btn-manage-qr') ? target : target.closest('.btn-manage-qr');
+            const mesaId = btn.dataset.mesaId;
+            openQRModal(mesaId);
         }
 
         // Activate Button
@@ -569,46 +641,6 @@ function setupMesaCardListeners() {
             }
         }
     });
-
-    // Handle user selector change (optional, maybe to auto-update something?)
-    accountsGrid.addEventListener('change', (e) => {
-        if (e.target.matches('.user-selector')) {
-            // Reset QR placeholder if user changes? 
-            // For now we just let them click Generate again.
-        }
-    });
-}
-
-function handleCardQRGenerate(mesaId) {
-    const card = document.querySelector(`.mesa-card[data-mesa-id="${mesaId}"]`);
-    if (!card) return;
-
-    const userSelect = card.querySelector('.user-selector');
-    const qrContainer = card.querySelector(`#qr-mesa-${mesaId}`);
-    const downloadLink = card.querySelector(`#qr-download-${mesaId}`);
-
-    const userNum = userSelect.value;
-    const tableNum = mesaId.toString().padStart(2, '0');
-
-    // Construct QR Code string
-    const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
-    const userNick = `Mesa ${mesaId}-User${userNum}`;
-
-    // Generate URL
-    const appBaseUrl = window.location.origin;
-    const appUrl = `${appBaseUrl}/?table=${encodeURIComponent(qrCode)}`;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appUrl)}`;
-
-    // Update UI
-    qrContainer.innerHTML = `
-        <img src="${qrImageUrl}" alt="QR Code" style="width:100%; height:100%; object-fit:contain;">
-    `;
-
-    // Update download link
-    downloadLink.href = qrImageUrl;
-    downloadLink.download = `mesa-${mesaId}-usuario${userNum}.png`;
-    downloadLink.classList.remove('hidden');
-    downloadLink.textContent = `⬇️ User ${userNum}`;
 }
 
 async function updateMesaStatus(mesaId, action) {
@@ -629,5 +661,3 @@ async function updateMesaStatus(mesaId, action) {
         showNotification(error.message || `Error al ${action} la mesa`, 'error');
     }
 }
-
-
