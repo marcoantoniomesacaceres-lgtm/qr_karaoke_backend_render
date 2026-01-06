@@ -1738,8 +1738,13 @@ def get_all_tables_payment_status(db: Session) -> List[dict]:
             ) for c in consumos_detalle
         ]
 
+        # 5. Obtener ID de cuenta activa
+        active_account = get_active_cuenta(db, mesa.id)
+        cuenta_id = active_account.id if active_account else None
+
         results.append({
             "mesa_id": mesa.id,
+            "cuenta_id": cuenta_id,
             "mesa_nombre": mesa.nombre,
             "total_consumido": total_consumido,
             "total_pagado": total_pagado,
