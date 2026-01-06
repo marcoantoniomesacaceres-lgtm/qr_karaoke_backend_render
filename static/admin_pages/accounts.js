@@ -615,29 +615,51 @@ function setupMesaCardListeners() {
         }
 
         // Activate Button
-        if (target.matches('.btn-activate')) {
-            const mesaId = target.dataset.mesaId;
+        if (target.matches('.btn-activate') || target.closest('.btn-activate')) {
+            const btn = target.matches('.btn-activate') ? target : target.closest('.btn-activate');
+            const mesaId = btn.dataset.mesaId;
             await updateMesaStatus(mesaId, 'activate');
         }
 
         // Deactivate Button
-        if (target.matches('.btn-deactivate')) {
-            const mesaId = target.dataset.mesaId;
+        if (target.matches('.btn-deactivate') || target.closest('.btn-deactivate')) {
+            const btn = target.matches('.btn-deactivate') ? target : target.closest('.btn-deactivate');
+            const mesaId = btn.dataset.mesaId;
+
+            // Check for outstanding balance before deactivating
+            const account = currentAccounts.find(a => a.mesa_id == mesaId);
+            if (account && Number(account.saldo_pendiente) > 0) {
+                showNotification(`⚠️ No se puede desactivar la Mesa ${mesaId} porque tiene una deuda pendiente de $${account.saldo_pendiente}. Por favor registre el pago primero.`, 'error');
+                return;
+            }
+
             await updateMesaStatus(mesaId, 'deactivate');
         }
 
         // View Details Button
-        if (target.matches('.btn-view-details')) {
-            const mesaId = target.dataset.mesaId;
-            // Find account id if needed, or just show details by mesa_id lookup
-            // For now, we reuse showAccountDetails if we have an account ID, 
-            // otherwise we might need to fetch by mesa or show what we have.
-            // The currentAccounts array has the data.
+        if (target.matches('.btn-view-details') || target.closest('.btn-view-details')) {
+            const btn = target.matches('.btn-view-details') ? target : target.closest('.btn-view-details');
+            const mesaId = btn.dataset.mesaId;
+
+            console.log(`[DEBUG] View Details clicked for Mesa ${mesaId}`);
+
             const account = currentAccounts.find(a => a.mesa_id == mesaId);
-            if (account && account.cuenta_id) {
-                showAccountDetails(account.cuenta_id);
+
+            if (account) {
+                if (account.cuenta_id) {
+                    try {
+                        await showAccountDetails(account.cuenta_id);
+                    } catch (err) {
+                        console.error("Error showing details:", err);
+                        showNotification("Error al mostrar detalles: " + err.message, "error");
+                    }
+                } else {
+                    console.warn(`[DEBUG] Account found for Mesa ${mesaId} but no cuenta_id`);
+                    showNotification('No hay detalles de cuenta activa para esta mesa.', 'info');
+                }
             } else {
-                showNotification('No hay detalles de cuenta activa para esta mesa.', 'info');
+                console.warn(`[DEBUG] No active account found in local state for Mesa ${mesaId}`);
+                showNotification('No se encontró información de la cuenta localmente.', 'error');
             }
         }
     });
