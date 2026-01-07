@@ -3,6 +3,8 @@
 
 // Variable global para almacenar las cuentas actuales
 let currentAccounts = [];
+// Variable global para almacenar productos (cache simple)
+let availableProducts = [];
 // Variable para trackear la mesa seleccionada en el modal de QR
 let currentQRTableId = null;
 
@@ -40,11 +42,12 @@ function renderAccounts(accounts, accountsGrid) {
 
         card.innerHTML = `
             <!-- Header con nombre y estado -->
-            <div class="mesa-card-header">
+            <div class="mesa-card-header" style="position: relative; padding-right: 30px;">
                 <h3>
                     ${titulo}
                     <span class="mesa-status ${isActive ? 'active' : 'inactive'}"></span>
                 </h3>
+                ${isActive ? `<button class="btn-close-table" data-mesa-id="${acc.mesa_id}" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); line-height: 1;" title="Desactivar Mesa">&times;</button>` : ''}
             </div>
             
             <!-- Cuerpo con info -->
@@ -54,12 +57,9 @@ function renderAccounts(accounts, accountsGrid) {
                         <label>Número de Mesa:</label>
                         <span>${acc.mesa_id}</span>
                     </div>
-                    <!-- user logic moved to modal -->
                     <div class="info-row">
-                        <label>Estado:</label>
-                        <span class="mesa-status-text ${isActive ? 'active' : 'inactive'}">
-                            ${isActive ? '✓ Activa' : '✗ Inactiva'}
-                        </span>
+                        <label>Saldo:</label>
+                        <span class="mesa-saldo-text ${saldoClass}" style="font-size: 1.4em; font-weight: bold;">$${saldo.toFixed(2)}</span>
                     </div>
                 </div>
                 
@@ -71,27 +71,14 @@ function renderAccounts(accounts, accountsGrid) {
                 </div>
             </div>
             
-            <!-- Botones de acción -->
-            <div class="mesa-actions">
-                <button class="btn-activate" data-mesa-id="${acc.mesa_id}" ${isActive ? 'disabled' : ''}>
-                    ✅ Activar
-                </button>
-                <button class="btn-deactivate" data-mesa-id="${acc.mesa_id}" ${!isActive ? 'disabled' : ''}>
-                    ⏸️ Desactivar
-                </button>
-            </div>
-            
             <!-- Resumen de cuenta -->
             <div class="mesa-account-summary">
-                <div class="mesa-saldo ${saldoClass}">
-                    Saldo: $${saldo.toFixed(2)}
-                </div>
                 <div class="mesa-account-actions-row">
                     <button class="btn-payment" data-id="${acc.mesa_id}">
                         💵 Registrar Pago
                     </button>
                     <button class="btn-view-details" data-mesa-id="${acc.mesa_id}">
-                        Ver Detalles
+                        Pedidos
                     </button>
                 </div>
             </div>
@@ -105,6 +92,167 @@ function handleCardQRGenerate(mesaId) {
     // This function is no longer used for direct generation on card, 
     // but kept or refactored for the modal logic.
     // We'll use openQRModal instead.
+}
+
+// ========== ORDER CREATION MODULE ==========
+
+function injectOrderModal() {
+    if (document.getElementById('admin-create-order-modal')) return;
+
+    const modalHtml = `
+    <div id="admin-create-order-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="order-modal-title">Crear Pedido Manual</h2>
+                <button id="order-modal-close-x" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="admin-create-order-form">
+                    <input type="hidden" id="order-mesa-id">
+                    
+                    <div class="form-group">
+                        <label for="order-user-select">Usuario</label>
+                        <select id="order-user-select" class="form-select" required>
+                            <option value="">Cargando usuarios...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-product-select">Producto</label>
+                        <select id="order-product-select" class="form-select" required>
+                            <option value="">Cargando productos...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-quantity">Cantidad</label>
+                        <input type="number" id="order-quantity" class="form-input" value="1" min="1" required>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" id="order-modal-cancel" class="form-btn btn-cancel">Cancelar</button>
+                        <button type="submit" class="form-btn btn-confirm">Crear Pedido</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+async function loadProductsForOrder() {
+    if (availableProducts.length > 0) return; // Already loaded
+    try {
+        const products = await apiFetch('/productos/?limit=1000'); // Get all active products
+        availableProducts = products.filter(p => p.is_active && p.stock > 0);
+    } catch (e) {
+        console.error("Error loading products:", e);
+        showNotification("Error cargando productos", "error");
+    }
+}
+
+async function openOrderModal(mesaId) {
+    const modal = document.getElementById('admin-create-order-modal');
+    if (!modal) return;
+
+    // Set mesa ID
+    const mesaIdInput = document.getElementById('order-mesa-id');
+    if (mesaIdInput) mesaIdInput.value = mesaId;
+
+    // Update Title
+    const modalTitle = document.getElementById('order-modal-title');
+    const account = currentAccounts.find(a => a.mesa_id == mesaId);
+    if (modalTitle) modalTitle.textContent = `Pedido para ${account ? (account.mesa_nombre || 'Mesa ' + mesaId) : 'Mesa ' + mesaId}`;
+
+    // Load Products
+    await loadProductsForOrder();
+    const productSelect = document.getElementById('order-product-select');
+    if (productSelect) {
+        productSelect.innerHTML = '<option value="">Seleccione un producto...</option>';
+        availableProducts.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = `${p.nombre} - $${p.valor}`;
+            productSelect.appendChild(option);
+        });
+    }
+
+    // Load Users
+    const userSelect = document.getElementById('order-user-select');
+    if (userSelect) {
+        userSelect.innerHTML = '<option value="">Cargando...</option>';
+        try {
+            const users = await apiFetch(`/mesas/${mesaId}/usuarios-conectados`);
+            userSelect.innerHTML = '';
+            if (users.length === 0) {
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "No hay usuarios conectados";
+                userSelect.appendChild(option);
+            } else {
+                users.forEach(u => {
+                    const option = document.createElement('option');
+                    option.value = u.id;
+                    option.textContent = `${u.nick} (Nivel ${u.nivel})`;
+                    userSelect.appendChild(option);
+                });
+            }
+        } catch (e) {
+            userSelect.innerHTML = '<option value="">Error cargando usuarios</option>';
+            console.error(e);
+        }
+    }
+
+    // Reset quantity
+    const qtyInput = document.getElementById('order-quantity');
+    if (qtyInput) qtyInput.value = 1;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
+}
+
+async function handleOrderSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const usuarioId = form.querySelector('#order-user-select').value;
+    const productoId = form.querySelector('#order-product-select').value;
+    const cantidad = form.querySelector('#order-quantity').value;
+
+    if (!usuarioId) {
+        showNotification("Debe seleccionar un usuario.", "error");
+        return;
+    }
+    if (!productoId) {
+        showNotification("Debe seleccionar un producto.", "error");
+        return;
+    }
+
+    try {
+        const payload = {
+            producto_id: parseInt(productoId),
+            cantidad: parseInt(cantidad)
+        };
+        await apiFetch(`/consumos/${usuarioId}`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        showNotification("Pedido creado exitosamente.", "success");
+        
+        // Close modal
+        const modal = document.getElementById('admin-create-order-modal');
+        if (modal) {
+            modal.classList.remove('active');
+            modal.classList.add('hidden');
+        }
+
+        // Refresh accounts to show new balance
+        await loadAccountsPage();
+
+    } catch (e) {
+        showNotification(e.message || "Error creando el pedido", "error");
+    }
 }
 
 async function loadAccountsPage() {
@@ -343,6 +491,9 @@ async function showAccountDetails(cuentaId) {
                 <p><strong>Total Consumido:</strong> $${details.total_consumido}</p>
                 <p><strong>Total Pagado:</strong> $${details.total_pagado}</p>
                 <p><strong>Saldo Pendiente:</strong> $${details.saldo_pendiente}</p>
+                <div style="margin-top: 15px;">
+                    <button id="btn-details-create-order" class="form-btn" style="width: 100%; background-color: var(--accent-color); color: white;">🛒 Crear Pedido</button>
+                </div>
             </div>
             <h4>Consumos</h4>
             <ul class="details-consumos-list">
@@ -353,6 +504,17 @@ async function showAccountDetails(cuentaId) {
                 ${pagos.length ? pagos.map(p => `<li>$${p.monto} — <small>${new Date(p.created_at).toLocaleString()}</small></li>`).join('') : '<li>Sin pagos</li>'}
             </ul>
         `;
+        
+        // Add listener for the new button
+        const btnCreateOrder = document.getElementById('btn-details-create-order');
+        if (btnCreateOrder) {
+            btnCreateOrder.onclick = () => {
+                modal.classList.remove('active');
+                modal.classList.add('hidden');
+                openOrderModal(details.mesa_id);
+            };
+        }
+
         // modal.style.display = 'flex';
         modal.classList.remove('hidden');
         modal.classList.add('active');
@@ -589,6 +751,26 @@ function setupAccountsListeners() {
     if (closeDetailsBtn) closeDetailsBtn.onclick = () => { if (detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
     if (detailsModal) detailsModal.onclick = (e) => { if (e.target === detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
 
+    // Setup Order Modal
+    injectOrderModal();
+    const orderModal = document.getElementById('admin-create-order-modal');
+    const orderForm = document.getElementById('admin-create-order-form');
+    const closeOrderX = document.getElementById('order-modal-close-x');
+    const cancelOrderBtn = document.getElementById('order-modal-cancel');
+
+    if (orderForm) orderForm.addEventListener('submit', handleOrderSubmit);
+    
+    const closeOrderModal = () => {
+        if (orderModal) {
+            orderModal.classList.remove('active');
+            orderModal.classList.add('hidden');
+        }
+    };
+
+    if (closeOrderX) closeOrderX.onclick = closeOrderModal;
+    if (cancelOrderBtn) cancelOrderBtn.onclick = closeOrderModal;
+    if (orderModal) orderModal.onclick = (e) => { if (e.target === orderModal) closeOrderModal(); };
+
     // Setup create mesa modal
     setupCreateMesaModal();
 
@@ -616,6 +798,13 @@ function setupMesaCardListeners() {
             openQRModal(mesaId);
         }
 
+        // Create Order Button
+        if (target.matches('.btn-create-order') || target.closest('.btn-create-order')) {
+            const btn = target.matches('.btn-create-order') ? target : target.closest('.btn-create-order');
+            const mesaId = btn.dataset.mesaId;
+            openOrderModal(mesaId);
+        }
+
         // Activate Button
         if (target.matches('.btn-activate') || target.closest('.btn-activate')) {
             const btn = target.matches('.btn-activate') ? target : target.closest('.btn-activate');
@@ -623,18 +812,17 @@ function setupMesaCardListeners() {
             await updateMesaStatus(mesaId, 'activate');
         }
 
-        // Deactivate Button
-        if (target.matches('.btn-deactivate') || target.closest('.btn-deactivate')) {
-            const btn = target.matches('.btn-deactivate') ? target : target.closest('.btn-deactivate');
+        // Close Table Button (X) - Replaces Deactivate
+        if (target.matches('.btn-close-table') || target.closest('.btn-close-table')) {
+            const btn = target.matches('.btn-close-table') ? target : target.closest('.btn-close-table');
             const mesaId = btn.dataset.mesaId;
-
+            
             // Check for outstanding balance before deactivating
             const account = currentAccounts.find(a => a.mesa_id == mesaId);
             if (account && Number(account.saldo_pendiente) > 0) {
                 showNotification(`⚠️ No se puede desactivar la Mesa ${mesaId} porque tiene una deuda pendiente de $${account.saldo_pendiente}. Por favor registre el pago primero.`, 'error');
                 return;
             }
-
             await updateMesaStatus(mesaId, 'deactivate');
         }
 
