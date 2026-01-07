@@ -147,22 +147,27 @@ function injectOrderModal() {
         }
     </style>
     <div id="admin-create-order-modal" class="modal hidden">
-        <div t5="or id="order-modal-title">Crear Pedido</h2>
+        <div class="modal-content" id="order-modal-content" style="width: 90%; max-width: 1000px; height: 80vh; display: flex; flex-direction: column; border: 1px solid var(--border-color, #555); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <div class="modal-header" id="order-modal-header" style="cursor: move;">
+                <h2 id="order-modal-title">Crear Pedido</h2>
                 <button id="order-modal-close-x" class="modal-close">&times;</button>
             </div>
             <div class="modal-body" style="flex: 1; overflow: hidden; padding: 0;">
                 <div class="order-modal-layout">
-                    <!-- Left: Product Catalog -->-l"
+                    <!-- Left: Product Catalog -->
+                    <div class="order-products-col">
                         <input type="text" id="order-product-search" placeholder="🔍 Buscar producto..." class="form-input" style="margin-bottom: 15px;">
                         <div id="order-products-grid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; align-content: start;">
-                         v>
+                            <!-- Products will be injected here -->
+                        </div>
                     </div>
 
                     <div class="order-cart-col">
                         <input type="hidden" id="order-mesa-id">
                         <div class="form-group">
                             <label for="order-user-select" style="color: var(--text-color, #fff);">Usuario Destino</label>
-                            <select id="ogp
+                            <select id="order-user-select" class="form-select">
+                                <option value="">Cargando usuarios...</option>
                             </select>
                         </div>
                         
