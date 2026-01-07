@@ -5,6 +5,8 @@
 let currentAccounts = [];
 // Variable global para almacenar productos (cache simple)
 let availableProducts = [];
+// Variable global para el carrito de pedidos
+let orderCart = {};
 // Variable para trackear la mesa seleccionada en el modal de QR
 let currentQRTableId = null;
 
@@ -100,45 +102,113 @@ function injectOrderModal() {
     if (document.getElementById('admin-create-order-modal')) return;
 
     const modalHtml = `
+    <style>
+        /* Estilos específicos para el modal de pedidos */
+        .order-modal-layout {
+            display: flex;
+            height: 100%;
+            flex-direction: row;
+        }
+        .order-products-col {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color, #444);
+            padding: 15px;
+            background: var(--page-bg, #1a1a1a);
+        }
+        .order-cart-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            background: var(--page-input-bg, #2a2a2a);
+            min-width: 300px;
+        }
+        
+        /* Responsividad para móviles */
+        @media (max-width: 768px) {
+            .order-modal-layout {
+                flex-direction: column;
+            }
+            .order-products-col {
+                flex: 1.5 !important;
+                border-right: none !important;
+                border-bottom: 1px solid #444;
+            }
+            .order-cart-col {
+                flex: 1 !important;
+                min-width: auto !important;
+            }
+            #order-modal-content {
+                width: 98% !important;
+                height: 95vh !important;
+            }
+        }
+    </style>
     <div id="admin-create-order-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="order-modal-title">Crear Pedido Manual</h2>
+        <div t5="or id="order-modal-title">Crear Pedido</h2>
                 <button id="order-modal-close-x" class="modal-close">&times;</button>
             </div>
-            <div class="modal-body">
-                <form id="admin-create-order-form">
-                    <input type="hidden" id="order-mesa-id">
-                    
-                    <div class="form-group">
-                        <label for="order-user-select">Usuario</label>
-                        <select id="order-user-select" class="form-select" required>
-                            <option value="">Cargando usuarios...</option>
-                        </select>
+            <div class="modal-body" style="flex: 1; overflow: hidden; padding: 0;">
+                <div class="order-modal-layout">
+                    <!-- Left: Product Catalog -->-l"
+                        <input type="text" id="order-product-search" placeholder="🔍 Buscar producto..." class="form-input" style="margin-bottom: 15px;">
+                        <div id="order-products-grid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; align-content: start;">
+                         v>
                     </div>
 
-                    <div class="form-group">
-                        <label for="order-product-select">Producto</label>
-                        <select id="order-product-select" class="form-select" required>
-                            <option value="">Cargando productos...</option>
-                        </select>
-                    </div>
+                    <div class="order-cart-col">
+                        <input type="hidden" id="order-mesa-id">
+                        <div class="form-group">
+                            <label for="order-user-select" style="color: var(--text-color, #fff);">Usuario Destino</label>
+                            <select id="ogp
+                            </select>
+                        </div>
+                        
+                        <h4 style="margin-bottom: 10px; color: var(--text-color, #fff); border-bottom: 1px solid #444; padding-bottom: 5px;">Carrito</h4>
+                        <div style="flex: 1; overflow-y: auto; margin-bottom: 15px;">
+                            <ul id="order-cart-list" style="list-style: none; padding: 0;">
+                                <!-- Cart items -->
+                            </ul>
+                        </div>
 
-                    <div class="form-group">
-                        <label for="order-quantity">Cantidad</label>
-                        <input type="number" id="order-quantity" class="form-input" value="1" min="1" required>
+                        <div style="border-top: 1px solid var(--border-color, #444); padding-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2em; margin-bottom: 15px; color: var(--text-color, #fff);">
+                                <span>Total:</span>
+                                <span id="order-total-amount">$0.00</span>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" id="order-modal-cancel" class="form-btn btn-cancel" style="flex: 1;">Cancelar</button>
+                                <button type="button" id="btn-confirm-order" class="form-btn btn-confirm" style="flex: 2; background-color: var(--bees-green, #28a745);">✅ Confirmar</button>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="modal-actions">
-                        <button type="button" id="order-modal-cancel" class="form-btn btn-cancel">Cancelar</button>
-                        <button type="submit" class="form-btn btn-confirm">Crear Pedido</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add search listener
+    const searchInput = document.getElementById('order-product-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = availableProducts.filter(p => p.nombre.toLowerCase().includes(term));
+            renderProductGrid(filtered);
+        });
+    }
+
+    // Add confirm listener
+    const confirmBtn = document.getElementById('btn-confirm-order');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', handleOrderSubmit);
+    }
+
+    // Make draggable
+    makeDraggable(document.getElementById('order-modal-content'), document.getElementById('order-modal-header'));
 }
 
 async function loadProductsForOrder() {
@@ -150,6 +220,150 @@ async function loadProductsForOrder() {
         console.error("Error loading products:", e);
         showNotification("Error cargando productos", "error");
     }
+}
+
+function makeDraggable(elmnt, handle) {
+    if (!elmnt || !handle) return;
+    
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    
+    handle.onmousedown = dragMouseDown;
+    handle.ontouchstart = dragTouchStart;
+
+    function dragMouseDown(e) {
+        e = e || window.event;
+        // e.preventDefault(); // Allow clicking buttons inside header if any
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+
+    function dragTouchStart(e) {
+        const touch = e.touches[0];
+        pos3 = touch.clientX;
+        pos4 = touch.clientY;
+        document.ontouchend = closeDragElement;
+        document.ontouchmove = elementDragTouch;
+    }
+
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        elmnt.style.transform = "none"; // Remove centering transform
+        elmnt.style.margin = "0";
+    }
+
+    function elementDragTouch(e) {
+        const touch = e.touches[0];
+        pos1 = pos3 - touch.clientX;
+        pos2 = pos4 - touch.clientY;
+        pos3 = touch.clientX;
+        pos4 = touch.clientY;
+        
+        elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        elmnt.style.transform = "none";
+        elmnt.style.margin = "0";
+    }
+
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+        document.ontouchend = null;
+        document.ontouchmove = null;
+    }
+}
+
+function renderProductGrid(products) {
+    const grid = document.getElementById('order-products-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    products.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card-mini';
+        card.style.cssText = 'background: var(--card-bg, #333); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 1px solid var(--border-color, #444); display: flex; flex-direction: column;';
+        card.onclick = () => addToCart(p);
+        
+        // Use default image if none provided
+        const imgUrl = p.imagen_url ? p.imagen_url : '/static/images/default_product.png'; // Fallback path
+        
+        card.innerHTML = `
+            <div style="height: 100px; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+                ${p.imagen_url ? `<img src="${p.imagen_url}" style="width: 100%; height: 100%; object-fit: cover;">` : '<span style="font-size: 2em;">🍺</span>'}
+                <div style="position: absolute; bottom: 5px; right: 5px; background: var(--bees-green, #28a745); color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">+</div>
+            </div>
+            <div style="padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="font-weight: bold; font-size: 0.9em; margin-bottom: 5px; color: var(--text-color, #fff); line-height: 1.2;">${p.nombre}</div>
+                <div style="color: var(--bees-yellow, #f5c518); font-weight: bold;">$${p.valor}</div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function addToCart(product) {
+    if (!orderCart[product.id]) {
+        orderCart[product.id] = { ...product, quantity: 0 };
+    }
+    orderCart[product.id].quantity++;
+    updateCartUI();
+}
+
+function removeFromCart(productId) {
+    if (orderCart[productId]) {
+        orderCart[productId].quantity--;
+        if (orderCart[productId].quantity <= 0) {
+            delete orderCart[productId];
+        }
+        updateCartUI();
+    }
+}
+
+function updateCartUI() {
+    const list = document.getElementById('order-cart-list');
+    const totalEl = document.getElementById('order-total-amount');
+    if (!list || !totalEl) return;
+    
+    list.innerHTML = '';
+    let total = 0;
+    const items = Object.values(orderCart);
+    
+    if (items.length === 0) {
+        list.innerHTML = '<li style="color: var(--text-secondary, #888); text-align: center; padding: 20px;">Carrito vacío</li>';
+    } else {
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;';
+            li.innerHTML = `
+                <div style="flex: 1;">
+                    <div style="font-weight: bold; color: var(--text-color, #fff);">${item.nombre}</div>
+                    <div style="font-size: 0.85em; color: var(--text-secondary, #aaa);">$${item.valor} x ${item.quantity}</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <button class="btn-minus" style="width: 24px; height: 24px; border-radius: 4px; border: none; background: #555; color: white; cursor: pointer;">-</button>
+                    <span style="font-weight: bold; min-width: 20px; text-align: center; color: var(--text-color, #fff);">${item.quantity}</span>
+                    <button class="btn-plus" style="width: 24px; height: 24px; border-radius: 4px; border: none; background: var(--bees-yellow, #f5c518); color: black; cursor: pointer;">+</button>
+                </div>
+            `;
+            
+            li.querySelector('.btn-minus').onclick = (e) => { e.stopPropagation(); removeFromCart(item.id); };
+            li.querySelector('.btn-plus').onclick = (e) => { e.stopPropagation(); addToCart(item); };
+            
+            list.appendChild(li);
+            total += item.valor * item.quantity;
+        });
+    }
+    
+    totalEl.textContent = `$${total.toFixed(2)}`;
 }
 
 async function openOrderModal(mesaId) {
@@ -165,18 +379,13 @@ async function openOrderModal(mesaId) {
     const account = currentAccounts.find(a => a.mesa_id == mesaId);
     if (modalTitle) modalTitle.textContent = `Pedido para ${account ? (account.mesa_nombre || 'Mesa ' + mesaId) : 'Mesa ' + mesaId}`;
 
-    // Load Products
+    // Reset Cart
+    orderCart = {};
+    updateCartUI();
+
+    // Load Products and Render Grid
     await loadProductsForOrder();
-    const productSelect = document.getElementById('order-product-select');
-    if (productSelect) {
-        productSelect.innerHTML = '<option value="">Seleccione un producto...</option>';
-        availableProducts.forEach(p => {
-            const option = document.createElement('option');
-            option.value = p.id;
-            option.textContent = `${p.nombre} - $${p.valor}`;
-            productSelect.appendChild(option);
-        });
-    }
+    renderProductGrid(availableProducts);
 
     // Load Users
     const userSelect = document.getElementById('order-user-select');
@@ -204,39 +413,39 @@ async function openOrderModal(mesaId) {
         }
     }
 
-    // Reset quantity
-    const qtyInput = document.getElementById('order-quantity');
-    if (qtyInput) qtyInput.value = 1;
-
     modal.classList.remove('hidden');
     modal.classList.add('active');
 }
 
 async function handleOrderSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const usuarioId = form.querySelector('#order-user-select').value;
-    const productoId = form.querySelector('#order-product-select').value;
-    const cantidad = form.querySelector('#order-quantity').value;
+    if (event) event.preventDefault();
+    
+    const userSelect = document.getElementById('order-user-select');
+    const usuarioId = userSelect ? userSelect.value : null;
 
     if (!usuarioId) {
         showNotification("Debe seleccionar un usuario.", "error");
         return;
     }
-    if (!productoId) {
-        showNotification("Debe seleccionar un producto.", "error");
+    
+    const items = Object.values(orderCart);
+    if (items.length === 0) {
+        showNotification("El carrito está vacío.", "error");
         return;
     }
 
     try {
-        const payload = {
-            producto_id: parseInt(productoId),
-            cantidad: parseInt(cantidad)
-        };
-        await apiFetch(`/consumos/${usuarioId}`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        // Send items one by one (using the admin endpoint)
+        for (const item of items) {
+            const payload = {
+                producto_id: item.id,
+                cantidad: item.quantity
+            };
+            await apiFetch(`/consumos/${usuarioId}`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
 
         showNotification("Pedido creado exitosamente.", "success");
         
@@ -478,50 +687,53 @@ function showHistoryModal(history) {
 async function showAccountDetails(cuentaId) {
     try {
         const details = await apiFetch(`/admin/accounts/${cuentaId}`);
-        const modal = document.getElementById('account-details-modal');
-        const content = document.getElementById('details-content');
-        if (!modal || !content) return;
-
-        const consumos = details.consumos || [];
-        const pagos = details.pagos || [];
-
-        content.innerHTML = `
-            <div class="account-summary account-summary-box">
-                <p><strong>Mesa:</strong> ${details.mesa_nombre}</p>
-                <p><strong>Total Consumido:</strong> $${details.total_consumido}</p>
-                <p><strong>Total Pagado:</strong> $${details.total_pagado}</p>
-                <p><strong>Saldo Pendiente:</strong> $${details.saldo_pendiente}</p>
-                <div style="margin-top: 15px;">
-                    <button id="btn-details-create-order" class="form-btn" style="width: 100%; background-color: var(--accent-color); color: white;">🛒 Crear Pedido</button>
-                </div>
-            </div>
-            <h4>Consumos</h4>
-            <ul class="details-consumos-list">
-                ${consumos.length ? consumos.map(c => `<li>${c.cantidad}x ${c.producto_nombre} — $${c.valor_total} <small>(${new Date(c.created_at).toLocaleString()})</small></li>`).join('') : '<li>Sin consumos</li>'}
-            </ul>
-             <h4>Pagos</h4>
-            <ul>
-                ${pagos.length ? pagos.map(p => `<li>$${p.monto} — <small>${new Date(p.created_at).toLocaleString()}</small></li>`).join('') : '<li>Sin pagos</li>'}
-            </ul>
-        `;
-        
-        // Add listener for the new button
-        const btnCreateOrder = document.getElementById('btn-details-create-order');
-        if (btnCreateOrder) {
-            btnCreateOrder.onclick = () => {
-                modal.classList.remove('active');
-                modal.classList.add('hidden');
-                openOrderModal(details.mesa_id);
-            };
-        }
-
-        // modal.style.display = 'flex';
-        modal.classList.remove('hidden');
-        modal.classList.add('active');
-
+        renderDetailsModal(details);
     } catch (e) {
         showNotification(e.message, 'error');
     }
+}
+
+function renderDetailsModal(details) {
+    const modal = document.getElementById('account-details-modal');
+    const content = document.getElementById('details-content');
+    if (!modal || !content) return;
+
+    const consumos = details.consumos || [];
+    const pagos = details.pagos || [];
+
+    content.innerHTML = `
+        <div class="account-summary account-summary-box">
+            <p><strong>Mesa:</strong> ${details.mesa_nombre}</p>
+            <p><strong>Total Consumido:</strong> $${details.total_consumido || '0.00'}</p>
+            <p><strong>Total Pagado:</strong> $${details.total_pagado || '0.00'}</p>
+            <p><strong>Saldo Pendiente:</strong> $${details.saldo_pendiente || '0.00'}</p>
+            <div style="margin-top: 15px;">
+                <button id="btn-details-create-order" class="form-btn" style="width: 100%; background-color: var(--bees-green, #28a745); color: white;">🛒 Crear Pedido</button>
+            </div>
+        </div>
+        <h4>Consumos</h4>
+        <ul class="details-consumos-list">
+            ${consumos.length ? consumos.map(c => `<li>${c.cantidad}x ${c.producto_nombre} — $${c.valor_total} <small>(${new Date(c.created_at).toLocaleString()})</small></li>`).join('') : '<li>Sin consumos</li>'}
+        </ul>
+            <h4>Pagos</h4>
+        <ul>
+            ${pagos.length ? pagos.map(p => `<li>$${p.monto} — <small>${new Date(p.created_at).toLocaleString()}</small></li>`).join('') : '<li>Sin pagos</li>'}
+        </ul>
+    `;
+    
+    // Add listener for the new button
+    const btnCreateOrder = document.getElementById('btn-details-create-order');
+    if (btnCreateOrder) {
+        btnCreateOrder.onclick = () => {
+            modal.classList.remove('active');
+            modal.classList.add('hidden');
+            openOrderModal(details.mesa_id);
+        };
+    }
+
+    // modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
 }
 
 async function handleCreateMesaSubmit(event) {
@@ -754,11 +966,9 @@ function setupAccountsListeners() {
     // Setup Order Modal
     injectOrderModal();
     const orderModal = document.getElementById('admin-create-order-modal');
-    const orderForm = document.getElementById('admin-create-order-form');
     const closeOrderX = document.getElementById('order-modal-close-x');
     const cancelOrderBtn = document.getElementById('order-modal-cancel');
 
-    if (orderForm) orderForm.addEventListener('submit', handleOrderSubmit);
     
     const closeOrderModal = () => {
         if (orderModal) {
@@ -835,21 +1045,25 @@ function setupMesaCardListeners() {
 
             const account = currentAccounts.find(a => a.mesa_id == mesaId);
 
-            if (account) {
-                if (account.cuenta_id) {
-                    try {
-                        await showAccountDetails(account.cuenta_id);
-                    } catch (err) {
-                        console.error("Error showing details:", err);
-                        showNotification("Error al mostrar detalles: " + err.message, "error");
-                    }
-                } else {
-                    console.warn(`[DEBUG] Account found for Mesa ${mesaId} but no cuenta_id`);
-                    showNotification('No hay detalles de cuenta activa para esta mesa.', 'info');
+            if (account && account.cuenta_id) {
+                try {
+                    await showAccountDetails(account.cuenta_id);
+                } catch (err) {
+                    console.error("Error showing details:", err);
+                    showNotification("Error al mostrar detalles: " + err.message, "error");
                 }
             } else {
-                console.warn(`[DEBUG] No active account found in local state for Mesa ${mesaId}`);
-                showNotification('No se encontró información de la cuenta localmente.', 'error');
+                // Show empty details if no account or no cuenta_id
+                const emptyDetails = {
+                    mesa_id: mesaId,
+                    mesa_nombre: account ? (account.mesa_nombre || `Mesa ${mesaId}`) : `Mesa ${mesaId}`,
+                    total_consumido: "0.00",
+                    total_pagado: "0.00",
+                    saldo_pendiente: "0.00",
+                    consumos: [],
+                    pagos: []
+                };
+                renderDetailsModal(emptyDetails);
             }
         }
     });
