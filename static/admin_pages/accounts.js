@@ -790,7 +790,7 @@ async function renderDetailsOrderForm(container, mesaId) {
                         <span id="details-total-amount">$0.00</span>
                     </div>
                     
-                    <button id="btn-details-confirm-order" class="form-btn" style="background-color: var(--bees-green, #28a745); width: 100%; margin-top: 5px;">✅ Confirmar Pedido</button>
+                    <button id="btn-details-confirm-order" class="form-btn" style="background-color: var(--bees-green, #28a745); width: 100%; margin-top: 5px;">Hacer Pedido</button>
                 </div>
             </div>
         </div>
@@ -883,11 +883,10 @@ function updateDetailsCartUI() {
     } else {
         items.forEach(item => {
             const li = document.createElement('li');
-            li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 0.9em;';
+            li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 0.9em; border-bottom: 1px solid #444; padding-bottom: 5px;';
             li.innerHTML = `
-                <span style="color: white;">${item.quantity}x ${item.nombre}</span>
+                <div style="flex: 1; color: white; font-weight: bold;">${item.quantity}x ${item.nombre}</div>
                 <div style="display: flex; align-items: center; gap: 5px;">
-                    <span style="color: #aaa;">$${(item.valor * item.quantity).toFixed(2)}</span>
                     <button class="btn-remove-item" style="background: none; border: none; color: #ff4444; cursor: pointer; font-weight: bold;">&times;</button>
                 </div>
             `;
