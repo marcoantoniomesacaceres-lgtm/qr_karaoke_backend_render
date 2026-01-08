@@ -39,6 +39,7 @@ async function loadDashboardPage() {
         // Tarjetas de métricas
         const metricsContainer = document.createElement('div');
         metricsContainer.className = 'bees-container-4col';
+        metricsContainer.style.marginTop = '30px';
         metricsContainer.innerHTML = `
             <div class="metric-card">
                 <div class="metric-card-icon">💰</div>
@@ -62,9 +63,6 @@ async function loadDashboardPage() {
             </div>
         `;
         dashboardContainer.appendChild(metricsContainer);
-
-        // Cargar últimos pedidos
-        await loadRecentOrders(dashboardContainer);
 
         // Acciones rápidas
         renderQuickActions(dashboardContainer);
@@ -93,7 +91,7 @@ async function loadDashboardPage() {
     }
 }
 
-async function loadRecentOrders(dashboardContainer) {
+async function loadRecentOrders(container) {
     try {
         const pedidos = await apiFetch('/admin/recent-consumos?limit=25');
         
@@ -108,7 +106,7 @@ async function loadRecentOrders(dashboardContainer) {
         const ordersCard = document.createElement('div');
         ordersCard.id = 'recent-orders-card';
         ordersCard.className = 'bees-card';
-        ordersCard.style.marginTop = '30px';
+        ordersCard.style.marginTop = '0';
 
         const ordersHeader = document.createElement('div');
         ordersHeader.className = 'bees-card-header';
@@ -195,18 +193,63 @@ async function loadRecentOrders(dashboardContainer) {
         }
 
         ordersCard.appendChild(listEl);
-        dashboardContainer.appendChild(ordersCard);
+        container.appendChild(ordersCard);
+
+        // Setup listeners for the orders list directly here
+        listEl.addEventListener('click', async (e) => {
+            const btnDespachado = e.target.closest('.btn-despachado');
+            const btnNoDespachado = e.target.closest('.btn-no-despachado');
+
+            let consumoIds;
+            let endpoint;
+            let confirmMessage;
+            let successMessage;
+            let isDeleteAction = false;
+
+            if (btnDespachado) {
+                consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
+                endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
+                confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
+                successMessage = 'Pedido marcado como despachado.';
+                isDeleteAction = false;
+            } else if (btnNoDespachado) {
+                consumoIds = (btnNoDespachado.dataset.ids || '').split(',').filter(id => id);
+                endpoint = `/admin/consumos/{consumo_id}`;
+                confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
+                successMessage = 'Pedido cancelado.';
+                isDeleteAction = true;
+            } else {
+                return;
+            }
+
+            if (!consumoIds || consumoIds.length === 0) return;
+            if (!confirm(confirmMessage)) return;
+
+            try {
+                for (const id of consumoIds) {
+                    const finalEndpoint = endpoint.replace('{consumo_id}', id);
+                    await apiFetch(finalEndpoint, { method: isDeleteAction ? 'DELETE' : 'POST' });
+                }
+
+                showNotification(successMessage, 'success');
+                // Refresh orders in the current container
+                loadRecentOrders(container);
+            } catch (error) {
+                console.error("Error procesando consumos:", error);
+                showNotification("Error procesando consumos", "error");
+            }
+        });
+
     } catch (error) {
         const errorCard = document.createElement('div');
         errorCard.className = 'bees-card';
-        errorCard.style.marginTop = '30px';
         errorCard.innerHTML = `
             <div class="bees-alert bees-alert-danger">
                 <span class="bees-alert-icon">❌</span>
                 <div>Error cargando pedidos: ${error.message}</div>
             </div>
         `;
-        dashboardContainer.appendChild(errorCard);
+        container.appendChild(errorCard);
     }
 }
 
@@ -343,53 +386,6 @@ function setupDashboardListeners() {
             window.open('/player', '_blank');
         });
     }
-
-    // Pedidos
-    const recentOrdersList = document.getElementById('recent-orders-list');
-    if (recentOrdersList) {
-        recentOrdersList.addEventListener('click', async (e) => {
-            const btnDespachado = e.target.closest('.btn-despachado');
-            const btnNoDespachado = e.target.closest('.btn-no-despachado');
-
-            let consumoIds;
-            let endpoint;
-            let confirmMessage;
-            let successMessage;
-            let isDeleteAction = false;
-
-            if (btnDespachado) {
-                consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
-                endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
-                confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
-                successMessage = 'Pedido marcado como despachado.';
-                isDeleteAction = false;
-            } else if (btnNoDespachado) {
-                consumoIds = (btnNoDespachado.dataset.ids || '').split(',').filter(id => id);
-                endpoint = `/admin/consumos/{consumo_id}`;
-                confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
-                successMessage = 'Pedido cancelado.';
-                isDeleteAction = true;
-            } else {
-                return;
-            }
-
-            if (!consumoIds || consumoIds.length === 0) return;
-            if (!confirm(confirmMessage)) return;
-
-            try {
-                for (const id of consumoIds) {
-                    const finalEndpoint = endpoint.replace('{consumo_id}', id);
-                    await apiFetch(finalEndpoint, { method: isDeleteAction ? 'DELETE' : 'POST' });
-                }
-
-                showNotification(successMessage, 'success');
-                setTimeout(() => loadDashboardPage(), 300);
-            } catch (error) {
-                console.error("Error procesando consumos:", error);
-                showNotification("Error procesando consumos", "error");
-            }
-        });
-    }
 }
 
 async function handleBroadcast() {
@@ -449,49 +445,114 @@ async function handleSendReaction(event) {
     }
 }
 
-// --- Navegación desde Barra Superior ---
-
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Seleccionar el elemento de la barra superior (la imagen/icono de pedidos pendientes)
-    // Se incluyen varios selectores comunes por si acaso cambia el HTML
-    const topBarPendingOrders = document.querySelector('.top-bar-pending-orders') || 
-                                document.querySelector('.navbar .pending-orders') ||
-                                document.querySelector('.pending-orders-icon');
-
-    if (topBarPendingOrders) {
-        // Cambiar el cursor para indicar que es clicable
-        topBarPendingOrders.style.cursor = 'pointer';
-
-        topBarPendingOrders.addEventListener('click', (e) => {
-            e.preventDefault();
-
-            // 2. Cambiar a la pestaña/vista del Dashboard
-            // Busca el botón que activa la pestaña del dashboard (ajustar selector si es necesario)
-            const dashboardTabBtn = document.querySelector('[data-tab="dashboard"]') || 
-                                    document.getElementById('btn-dashboard');
-            
-            if (dashboardTabBtn) {
-                dashboardTabBtn.click();
-            }
-
-            // 3. Desplazarse suavemente a la sección de Últimos Pedidos
-            // Usamos un timeout para dar tiempo a que la pestaña cambie y el contenido se renderice
-            setTimeout(() => {
-                // El ID de la tarjeta de pedidos generado en loadRecentOrders es 'recent-orders-card'
-                const recentOrdersSection = document.getElementById('recent-orders-card');
-                
-                if (recentOrdersSection) {
-                    recentOrdersSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    // Efecto de resaltado visual
-                    recentOrdersSection.style.transition = 'box-shadow 0.5s ease-in-out';
-                    const originalShadow = recentOrdersSection.style.boxShadow;
-                    recentOrdersSection.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.6)'; // Resplandor dorado
-                    setTimeout(() => {
-                        recentOrdersSection.style.boxShadow = originalShadow;
-                    }, 1500);
-                }
-            }, 300); // 300ms de espera para asegurar que la vista ha cambiado
+async function openOrdersModal() {
+    let modal = document.getElementById('orders-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'orders-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        `;
+        
+        const content = document.createElement('div');
+        content.className = 'bees-card';
+        content.style.cssText = `
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: var(--page-card-bg);
+            padding: 0;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            position: relative;
+        `;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--page-text);
+            font-size: 32px;
+            cursor: pointer;
+            z-index: 10;
+            line-height: 1;
+        `;
+        closeBtn.onclick = () => modal.style.display = 'none';
+        
+        const body = document.createElement('div');
+        body.id = 'orders-modal-body';
+        body.style.padding = '20px';
+        
+        content.appendChild(closeBtn);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
         });
     }
-});
+    
+    modal.style.display = 'flex';
+    const body = document.getElementById('orders-modal-body');
+    body.innerHTML = '<div style="text-align:center; padding: 40px;"><div class="spinner"></div><p style="margin-top:10px; color:var(--page-text-secondary);">Cargando pedidos...</p></div>';
+    
+    await loadRecentOrders(body);
+}
+window.openOrdersModal = openOrdersModal;
+
+// --- Navegación desde Barra Superior ---
+
+function initTopBarListener() {
+    // Evitar múltiples listeners si el script se carga varias veces
+    if (window.hasInitializedTopBarListener) return;
+    window.hasInitializedTopBarListener = true;
+
+    document.body.addEventListener('click', (e) => {
+        // 1. Selectores específicos (clases conocidas)
+        const specificTrigger = e.target.closest('.top-bar-pending-orders, .pending-orders-icon, .pending-orders, [data-action="open-orders"]');
+        
+        // 2. Detección heurística para botones de mesas en la barra superior
+        // Busca elementos dentro de la barra de navegación que parezcan notificaciones de mesas
+        // Se añade .top-bar para capturar clics directos en la barra si contiene texto relevante
+        const navbarTrigger = e.target.closest('.navbar .nav-item, header .item, .top-bar, .top-bar > div, .navbar-nav li, a.nav-link');
+        
+        const looksLikeTableOrder = navbarTrigger && (
+            (navbarTrigger.textContent && (
+                navbarTrigger.textContent.toLowerCase().includes('mesa') || 
+                navbarTrigger.textContent.toLowerCase().includes('vip') || 
+                navbarTrigger.textContent.toLowerCase().includes('toscana') || 
+                navbarTrigger.textContent.toLowerCase().includes('pedidos')
+            )) ||
+            navbarTrigger.querySelector('.badge')
+        );
+
+        if (specificTrigger || (navbarTrigger && looksLikeTableOrder)) {
+            e.preventDefault();
+            e.stopPropagation();
+            openOrdersModal();
+        }
+    });
+}
+
+// Inicializar listener inmediatamente si el DOM ya está listo, o esperar al evento
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTopBarListener);
+} else {
+    initTopBarListener();
+}
