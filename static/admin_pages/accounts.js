@@ -714,6 +714,7 @@ function renderDetailsModal(details) {
             <p><strong>Saldo Pendiente:</strong> $${details.saldo_pendiente || '0.00'}</p>
             <div style="margin-top: 15px;">
                 <button id="btn-details-create-order" class="form-btn" style="width: 100%; background-color: var(--bees-green, #28a745); color: white;">🛒 Crear Pedido</button>
+                <div id="details-order-panel" style="display: none; margin-top: 15px; background: var(--page-input-bg, #2a2a2a); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color, #444);"></div>
             </div>
         </div>
         <h4>Consumos</h4>
@@ -726,19 +727,226 @@ function renderDetailsModal(details) {
         </ul>
     `;
     
-    // Add listener for the new button
+    // Add listener for the toggle button
     const btnCreateOrder = document.getElementById('btn-details-create-order');
-    if (btnCreateOrder) {
-        btnCreateOrder.onclick = () => {
-            modal.classList.remove('active');
-            modal.classList.add('hidden');
-            openOrderModal(details.mesa_id);
+    const orderPanel = document.getElementById('details-order-panel');
+
+    if (btnCreateOrder && orderPanel) {
+        btnCreateOrder.onclick = async () => {
+            if (orderPanel.style.display === 'none') {
+                // Open
+                orderPanel.style.display = 'block';
+                btnCreateOrder.textContent = '❌ Cancelar Pedido';
+                btnCreateOrder.style.backgroundColor = 'var(--bees-red, #dc3545)';
+                
+                // Initialize form if empty
+                if (orderPanel.innerHTML.trim() === '') {
+                    await renderDetailsOrderForm(orderPanel, details.mesa_id);
+                }
+            } else {
+                // Close
+                orderPanel.style.display = 'none';
+                btnCreateOrder.textContent = '🛒 Crear Pedido';
+                btnCreateOrder.style.backgroundColor = 'var(--bees-green, #28a745)';
+            }
         };
     }
 
     // modal.style.display = 'flex';
     modal.classList.remove('hidden');
     modal.classList.add('active');
+}
+
+// Helper functions for the inline details order form
+async function renderDetailsOrderForm(container, mesaId) {
+    container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <!-- Products -->
+                <div style="flex: 1; min-width: 200px;">
+                    <input type="text" id="details-product-search" placeholder="🔍 Buscar producto..." class="form-input" style="width: 100%; margin-bottom: 10px;">
+                    <div id="details-products-grid" style="display: flex; flex-direction: column; gap: 5px; max-height: 300px; min-height: 100px; overflow-y: auto; padding-right: 5px; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 5px;">
+                        <div style="text-align: center; padding: 20px; color: #888;">Cargando productos...</div>
+                    </div>
+                </div>
+                
+                <!-- Cart & User -->
+                <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 10px;">
+                    <div>
+                        <label style="font-size: 0.85em; color: #aaa;">Usuario:</label>
+                        <select id="details-user-select" class="form-select" style="width: 100%;">
+                            <option value="">Cargando...</option>
+                        </select>
+                    </div>
+                    
+                    <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; overflow-y: auto; max-height: 150px; border: 1px solid #444;">
+                        <ul id="details-cart-list" style="list-style: none; padding: 0; margin: 0;">
+                            <li style="text-align: center; color: #888; font-size: 0.9em;">Carrito vacío</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; color: white;">
+                        <span>Total:</span>
+                        <span id="details-total-amount">$0.00</span>
+                    </div>
+                    
+                    <button id="btn-details-confirm-order" class="form-btn" style="background-color: var(--bees-green, #28a745); width: 100%; margin-top: 5px;">✅ Confirmar Pedido</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Reset global cart for this context
+    orderCart = {};
+
+    // Load Products
+    await loadProductsForOrder();
+    renderDetailsProductGrid(availableProducts);
+
+    // Load Users
+    const userSelect = document.getElementById('details-user-select');
+    try {
+        const users = await apiFetch(`/mesas/${mesaId}/usuarios-conectados`);
+        userSelect.innerHTML = '';
+        if (users.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = "";
+            opt.textContent = "No hay usuarios";
+            userSelect.appendChild(opt);
+        } else {
+            users.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.nick} (Lvl ${u.nivel})`;
+                userSelect.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        userSelect.innerHTML = '<option value="">Error</option>';
+    }
+
+    // Bind Events
+    const searchInput = document.getElementById('details-product-search');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = availableProducts.filter(p => p.nombre.toLowerCase().includes(term));
+        renderDetailsProductGrid(filtered);
+    });
+
+    const confirmBtn = document.getElementById('btn-details-confirm-order');
+    confirmBtn.addEventListener('click', () => handleDetailsOrderSubmit(mesaId));
+}
+
+function renderDetailsProductGrid(products) {
+    const grid = document.getElementById('details-products-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (products.length === 0) {
+        grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #aaa;">No se encontraron productos.</div>';
+        return;
+    }
+
+    products.forEach(p => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #333; border-bottom: 1px solid #444; padding: 10px; cursor: pointer; transition: background 0.2s; border-radius: 4px;';
+        row.onmouseover = () => row.style.background = '#444';
+        row.onmouseout = () => row.style.background = '#333';
+        
+        row.innerHTML = `
+            <div style="font-weight: bold; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px;">${p.nombre}</div>
+            <div style="color: var(--bees-yellow, #f5c518); font-weight: bold; min-width: 60px; text-align: right;">$${p.valor}</div>
+        `;
+        
+        row.onclick = () => {
+            if (!orderCart[p.id]) {
+                orderCart[p.id] = { ...p, quantity: 0 };
+            }
+            orderCart[p.id].quantity++;
+            updateDetailsCartUI();
+        };
+        grid.appendChild(row);
+    });
+}
+
+function updateDetailsCartUI() {
+    const list = document.getElementById('details-cart-list');
+    const totalEl = document.getElementById('details-total-amount');
+    if (!list || !totalEl) return;
+
+    list.innerHTML = '';
+    let total = 0;
+    const items = Object.values(orderCart);
+
+    if (items.length === 0) {
+        list.innerHTML = '<li style="text-align: center; color: #888; font-size: 0.9em;">Carrito vacío</li>';
+    } else {
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 0.9em;';
+            li.innerHTML = `
+                <span style="color: white;">${item.quantity}x ${item.nombre}</span>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="color: #aaa;">$${(item.valor * item.quantity).toFixed(2)}</span>
+                    <button class="btn-remove-item" style="background: none; border: none; color: #ff4444; cursor: pointer; font-weight: bold;">&times;</button>
+                </div>
+            `;
+            li.querySelector('.btn-remove-item').onclick = () => {
+                orderCart[item.id].quantity--;
+                if (orderCart[item.id].quantity <= 0) delete orderCart[item.id];
+                updateDetailsCartUI();
+            };
+            list.appendChild(li);
+            total += item.valor * item.quantity;
+        });
+    }
+    totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+async function handleDetailsOrderSubmit(mesaId) {
+    const userSelect = document.getElementById('details-user-select');
+    const usuarioId = userSelect ? userSelect.value : null;
+
+    if (!usuarioId) {
+        showNotification("Selecciona un usuario.", "error");
+        return;
+    }
+
+    const items = Object.values(orderCart);
+    if (items.length === 0) {
+        showNotification("El carrito está vacío.", "error");
+        return;
+    }
+
+    try {
+        for (const item of items) {
+            const payload = {
+                producto_id: item.id,
+                cantidad: item.quantity
+            };
+            await apiFetch(`/consumos/${usuarioId}`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
+
+        showNotification("Pedido creado.", "success");
+        
+        // Refresh details
+        const account = currentAccounts.find(a => a.mesa_id == mesaId);
+        if (account && account.cuenta_id) {
+            await showAccountDetails(account.cuenta_id);
+        } else {
+            // Fallback reload page if we can't refresh details easily
+            await loadAccountsPage();
+            // Close modal if we reload page
+            document.getElementById('account-details-modal').classList.remove('active');
+            document.getElementById('account-details-modal').classList.add('hidden');
+        }
+
+    } catch (e) {
+        showNotification(e.message || "Error", "error");
+    }
 }
 
 async function handleCreateMesaSubmit(event) {
