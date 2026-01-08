@@ -449,3 +449,49 @@ async function handleSendReaction(event) {
     }
 }
 
+// --- Navegación desde Barra Superior ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Seleccionar el elemento de la barra superior (la imagen/icono de pedidos pendientes)
+    // Se incluyen varios selectores comunes por si acaso cambia el HTML
+    const topBarPendingOrders = document.querySelector('.top-bar-pending-orders') || 
+                                document.querySelector('.navbar .pending-orders') ||
+                                document.querySelector('.pending-orders-icon');
+
+    if (topBarPendingOrders) {
+        // Cambiar el cursor para indicar que es clicable
+        topBarPendingOrders.style.cursor = 'pointer';
+
+        topBarPendingOrders.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // 2. Cambiar a la pestaña/vista del Dashboard
+            // Busca el botón que activa la pestaña del dashboard (ajustar selector si es necesario)
+            const dashboardTabBtn = document.querySelector('[data-tab="dashboard"]') || 
+                                    document.getElementById('btn-dashboard');
+            
+            if (dashboardTabBtn) {
+                dashboardTabBtn.click();
+            }
+
+            // 3. Desplazarse suavemente a la sección de Últimos Pedidos
+            // Usamos un timeout para dar tiempo a que la pestaña cambie y el contenido se renderice
+            setTimeout(() => {
+                // El ID de la tarjeta de pedidos generado en loadRecentOrders es 'recent-orders-card'
+                const recentOrdersSection = document.getElementById('recent-orders-card');
+                
+                if (recentOrdersSection) {
+                    recentOrdersSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Efecto de resaltado visual
+                    recentOrdersSection.style.transition = 'box-shadow 0.5s ease-in-out';
+                    const originalShadow = recentOrdersSection.style.boxShadow;
+                    recentOrdersSection.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.6)'; // Resplandor dorado
+                    setTimeout(() => {
+                        recentOrdersSection.style.boxShadow = originalShadow;
+                    }, 1500);
+                }
+            }, 300); // 300ms de espera para asegurar que la vista ha cambiado
+        });
+    }
+});

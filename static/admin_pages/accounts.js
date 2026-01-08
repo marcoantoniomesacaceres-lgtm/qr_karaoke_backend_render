@@ -957,8 +957,9 @@ async function handleCreateMesaSubmit(event) {
     const numeroMesa = numeroInput?.value || '';
     let nombreMesa = nombreInput?.value || '';
 
-    if (!numeroMesa || numeroMesa.trim() === '') {
-        showNotification('Por favor ingresa un número para la mesa.', 'error');
+    // Validar que al menos uno de los dos campos tenga valor
+    if ((!numeroMesa || numeroMesa.trim() === '') && (!nombreMesa || nombreMesa.trim() === '')) {
+        showNotification('Por favor ingresa un número o un nombre para la mesa.', 'error');
         return;
     }
 
@@ -970,8 +971,15 @@ async function handleCreateMesaSubmit(event) {
     }
 
     try {
-        // Generar el código QR basado en el número de mesa
-        const qrCode = `karaoke-mesa-${numeroMesa.toString().padStart(2, '0')}`;
+        // Generar el código QR
+        let qrCode;
+        if (numeroMesa && numeroMesa.trim() !== '') {
+            qrCode = `karaoke-mesa-${numeroMesa.toString().padStart(2, '0')}`;
+        } else {
+            // Si solo hay nombre, generar QR basado en el nombre (sanitizado)
+            const safeName = nombreMesa.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            qrCode = `karaoke-mesa-${safeName}`;
+        }
 
         const payload = {
             nombre: nombreMesa,
