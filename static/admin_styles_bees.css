@@ -240,6 +240,56 @@ body {
     text-align: center;
 }
 
+.top-order-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+}
+
+.top-btn-qty {
+    background: var(--surface-color);
+    border: 1px solid var(--text-secondary);
+    color: var(--text-color);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1em;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.top-btn-qty:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--bees-black);
+}
+
+.top-btn-delete-item {
+    background: none;
+    border: none;
+    color: var(--error-color);
+    cursor: pointer;
+    padding: 4px;
+    margin-left: auto;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.top-btn-delete-item:hover {
+    background: rgba(255, 68, 68, 0.1);
+    transform: scale(1.1);
+}
+
 .top-order-product {
     color: var(--text-color);
     flex: 1;

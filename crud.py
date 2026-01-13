@@ -2626,3 +2626,58 @@ def check_and_approve_next_lazy_song(db: Session):
         return aprobar_siguiente_cancion_lazy(db)
     
     return None
+
+def update_consumo_cantidad(db: Session, consumo_id: int, delta: int):
+    """
+    Actualiza la cantidad de un consumo existente.
+    delta puede ser positivo (incrementar) o negativo (decrementar).
+    Recalcula el valor total y actualiza el stock.
+    """
+    # 1. Obtener el consumo
+    db_consumo = db.query(models.Consumo).filter(models.Consumo.id == consumo_id).first()
+    if not db_consumo:
+        return None, "Consumo no encontrado."
+
+    # 2. Obtener el producto
+    db_producto = db_consumo.producto
+    if not db_producto:
+        return None, "Producto asociado no encontrado."
+
+    # 3. Validar nueva cantidad
+    nueva_cantidad = db_consumo.cantidad + delta
+    
+    # Si la nueva cantidad es menor que 1, no permitimos la operación (para eliminar, usar delete explícito)
+    if nueva_cantidad < 1:
+        return None, "La cantidad mínima es 1. Elimine el producto si desea removerlo."
+    
+    # 4. Validar stock si estamos aumentando
+    if delta > 0:
+        if db_producto.stock < delta:
+            return None, f"No hay suficiente stock. Disponible: {db_producto.stock}"
+    
+    # 5. Actualizar stock
+    # Si delta es positivo (aumento), restamos del stock.
+    # Si delta es negativo (disminución), sumamos al stock (delta es negativo, así que -= delta es restar un negativo -> sumar).
+    db_producto.stock -= delta
+    
+    # 6. Actualizar consumo
+    db_consumo.cantidad = nueva_cantidad
+    
+    # Recalcular valor total
+    valor_unitario = db_producto.valor
+    db_consumo.valor_total = valor_unitario * nueva_cantidad
+    
+    # 7. Actualizar puntos del usuario si corresponde (opcional, pero consistente)
+    # Revertimos puntos anteriores y sumamos nuevos, o ajustamos por la diferencia.
+    # Lógica de puntos: 1 punto por cada 10 de valor.
+    # Diferencia de valor:
+    diferencia_valor = valor_unitario * delta
+    puntos_delta = int(diferencia_valor / 10)
+    
+    if db_consumo.usuario:
+        db_consumo.usuario.puntos += puntos_delta
+    
+    db.commit()
+    db.refresh(db_consumo)
+    
+    return db_consumo, None

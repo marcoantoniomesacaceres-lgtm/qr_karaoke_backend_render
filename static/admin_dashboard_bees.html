@@ -249,8 +249,13 @@
 
                             const itemsHtml = grupo.items
                                 .map(item => `<div class="top-order-item">
-                                    <span class="top-order-quantity">${item.cantidad}x</span>
+                                    <div class="top-order-controls">
+                                        <button class="top-btn-qty btn-minus" data-id="${item.id}" title="Disminuir">-</button>
+                                        <span class="top-order-quantity">${item.cantidad}x</span>
+                                        <button class="top-btn-qty btn-plus" data-id="${item.id}" title="Aumentar">+</button>
+                                    </div>
                                     <span class="top-order-product">${item.producto_nombre}</span>
+                                    <button class="top-btn-delete-item" data-id="${item.id}" title="Eliminar producto">×</button>
                                 </div>`)
                                 .join('');
 
@@ -284,44 +289,73 @@
                     topOrdersList.addEventListener('click', async (e) => {
                         const btnDespachado = e.target.closest('.top-btn-despachado');
                         const btnCancelar = e.target.closest('.top-btn-cancelar');
+                        const btnPlus = e.target.closest('.btn-plus');
+                        const btnMinus = e.target.closest('.btn-minus');
+                        const btnDeleteItem = e.target.closest('.top-btn-delete-item');
+
+                        // Evitar doble clic
+                        const targetBtn = e.target.closest('button');
+                        if (targetBtn) targetBtn.disabled = true;
 
                         let consumoIds;
                         let endpoint;
                         let confirmMessage;
                         let successMessage;
-                        let isDeleteAction = false;
-
-                        if (btnDespachado) {
-                            consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
-                            endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
-                            confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
-                            successMessage = 'Pedido marcado como despachado.';
-                            isDeleteAction = false;
-                        } else if (btnCancelar) {
-                            consumoIds = (btnCancelar.dataset.ids || '').split(',').filter(id => id);
-                            endpoint = `/admin/consumos/{consumo_id}`;
-                            confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
-                            successMessage = 'Pedido cancelado.';
-                            isDeleteAction = true;
-                        } else {
-                            return;
-                        }
-
-                        if (!consumoIds || consumoIds.length === 0) return;
-                        if (!confirm(confirmMessage)) return;
+                        let method = 'POST';
 
                         try {
+                            if (btnPlus) {
+                                const id = btnPlus.dataset.id;
+                                await apiFetch(`/admin/consumos/${id}/increase`, { method: 'POST' });
+                                return;
+                            } else if (btnMinus) {
+                                const id = btnMinus.dataset.id;
+                                await apiFetch(`/admin/consumos/${id}/decrease`, { method: 'POST' });
+                                return;
+                            } else if (btnDeleteItem) {
+                                const id = btnDeleteItem.dataset.id;
+                                if (!confirm("¿Eliminar este producto del pedido?")) return;
+                                await apiFetch(`/admin/consumos/${id}`, { method: 'DELETE' });
+                                showNotification("Producto eliminado.", "success");
+                                return;
+                            } else if (btnDespachado) {
+                                consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
+                                endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
+                                confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
+                                successMessage = 'Pedido marcado como despachado.';
+                                method = 'POST';
+                            } else if (btnCancelar) {
+                                consumoIds = (btnCancelar.dataset.ids || '').split(',').filter(id => id);
+                                endpoint = `/admin/consumos/{consumo_id}`;
+                                confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
+                                successMessage = 'Pedido cancelado.';
+                                method = 'DELETE';
+                            } else {
+                                return;
+                            }
+
+                            if (!consumoIds || consumoIds.length === 0) return;
+                            if (!confirm(confirmMessage)) return;
+
                             for (const id of consumoIds) {
                                 const finalEndpoint = endpoint.replace('{consumo_id}', id);
-                                await apiFetch(finalEndpoint, { method: isDeleteAction ? 'DELETE' : 'POST' });
+                                await apiFetch(finalEndpoint, { method: method });
                             }
 
                             showNotification(successMessage, 'success');
-                            // Recargar pedidos en la barra superior
-                            loadTopOrdersBar();
+
                         } catch (error) {
-                            console.error("Error procesando consumos:", error);
-                            showNotification("Error procesando consumos", "error");
+                            console.error("Error procesando acción:", error);
+                            // Si es 404, es probable que ya se haya eliminado/despachado en otra pestaña/usuario
+                            if (error.message && error.message.includes("404")) {
+                                showNotification("El pedido ya no existe o fue modificado.", "warning");
+                            } else {
+                                showNotification(error.message || "Error procesando acción", "error");
+                            }
+                        } finally {
+                            if (targetBtn) targetBtn.disabled = false;
+                            // SIEMPRE recargar la barra para asegurar consistencia
+                            loadTopOrdersBar();
                         }
                     });
 

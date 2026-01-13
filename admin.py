@@ -987,6 +987,46 @@ async def admin_mark_consumo_despachado(consumo_id: int, db: Session = Depends(g
 
     return {"message": f"Consumo {consumo_id} marcado como despachado."}
 
+@router.post('/consumos/{consumo_id}/increase', status_code=200, summary='Incrementar cantidad de un consumo')
+async def admin_increase_consumo(consumo_id: int, db: Session = Depends(get_db)):
+    """
+    **[Admin]** Incrementa en 1 la cantidad de un producto en un pedido.
+    Actualiza stock y precio total.
+    """
+    consumo, error = crud.update_consumo_cantidad(db, consumo_id, delta=1)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    
+    # Notify clients about the update
+    try:
+        # We can reuse 'consumo_created' event or create a new 'consumo_updated' event.
+        # Since 'consumo_created' likely triggers a refresh, it might be enough.
+        # But 'consumo_updated' is more semantic. Let's send a generic update.
+        await websocket_manager.manager.broadcast_queue_update() # Refresh general state
+        # Also maybe send a specific consumption update if frontend listens to it
+    except Exception:
+        pass
+
+    return consumo
+
+@router.post('/consumos/{consumo_id}/decrease', status_code=200, summary='Decrementar cantidad de un consumo')
+async def admin_decrease_consumo(consumo_id: int, db: Session = Depends(get_db)):
+    """
+    **[Admin]** Decrementa en 1 la cantidad de un producto en un pedido.
+    No permite bajar de 1 (para eso usar eliminar).
+    Actualiza stock y precio total.
+    """
+    consumo, error = crud.update_consumo_cantidad(db, consumo_id, delta=-1)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    
+    try:
+        await websocket_manager.manager.broadcast_queue_update()
+    except Exception:
+        pass
+
+    return consumo
+
 @router.get("/reports/gold-users", response_model=List[schemas.UsuarioPublico], summary="Obtener usuarios de nivel Oro")
 def get_gold_users_report(db: Session = Depends(get_db)):
     """
