@@ -75,6 +75,11 @@ async function loadDashboardPage() {
 
         // Setup listeners
         setupDashboardListeners();
+
+        // Load orders in top bar if function exists
+        if (typeof loadTopOrdersBar === 'function') {
+            loadTopOrdersBar();
+        }
     } catch (error) {
         const dashboardContainer = document.getElementById('dashboard');
         if (dashboardContainer) {
@@ -94,8 +99,8 @@ async function loadDashboardPage() {
 async function loadRecentOrders(container) {
     try {
         const pedidos = await apiFetch('/admin/recent-consumos?limit=25');
-        
-        
+
+
         // Remove existing orders card if present (idempotency)
         const existingCard = document.getElementById('recent-orders-card');
         if (existingCard) {
@@ -391,12 +396,12 @@ function setupDashboardListeners() {
 async function handleBroadcast() {
     const input = document.getElementById('broadcast-message-input');
     const message = input ? input.value.trim() : '';
-    
+
     if (!message) {
         showNotification('El mensaje no puede estar vacío.', 'error');
         return;
     }
-    
+
     try {
         await apiFetch('/admin/broadcast-message', {
             method: 'POST',
@@ -413,7 +418,7 @@ async function handleResetNight() {
     if (!confirm('⚠️ ACCIÓN DESTRUCTIVA\n\n¿Estás seguro de reiniciar la noche?\nSe borrarán: mesas, usuarios, canciones y consumos.')) {
         return;
     }
-    
+
     try {
         await apiFetch('/admin/reset-night', { method: 'POST' });
         showNotification('Sistema reiniciado.', 'info');
@@ -428,7 +433,7 @@ async function handleSendReaction(event) {
     if (!btn) return;
 
     const reaction = btn.textContent.trim();
-    
+
     try {
         await fetch(`${API_BASE_URL}/broadcast/reaction`, {
             method: 'POST',
@@ -463,7 +468,7 @@ async function openOrdersModal() {
             align-items: center;
             backdrop-filter: blur(5px);
         `;
-        
+
         const content = document.createElement('div');
         content.className = 'bees-card';
         content.style.cssText = `
@@ -477,7 +482,7 @@ async function openOrdersModal() {
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             position: relative;
         `;
-        
+
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '&times;';
         closeBtn.style.cssText = `
@@ -493,25 +498,25 @@ async function openOrdersModal() {
             line-height: 1;
         `;
         closeBtn.onclick = () => modal.style.display = 'none';
-        
+
         const body = document.createElement('div');
         body.id = 'orders-modal-body';
         body.style.padding = '20px';
-        
+
         content.appendChild(closeBtn);
         content.appendChild(body);
         modal.appendChild(content);
         document.body.appendChild(modal);
-        
+
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.style.display = 'none';
         });
     }
-    
+
     modal.style.display = 'flex';
     const body = document.getElementById('orders-modal-body');
     body.innerHTML = '<div style="text-align:center; padding: 40px;"><div class="spinner"></div><p style="margin-top:10px; color:var(--page-text-secondary);">Cargando pedidos...</p></div>';
-    
+
     await loadRecentOrders(body);
 }
 window.openOrdersModal = openOrdersModal;
@@ -526,17 +531,17 @@ function initTopBarListener() {
     document.body.addEventListener('click', (e) => {
         // 1. Selectores específicos (clases conocidas)
         const specificTrigger = e.target.closest('.top-bar-pending-orders, .pending-orders-icon, .pending-orders, [data-action="open-orders"]');
-        
+
         // 2. Detección heurística para botones de mesas en la barra superior
         // Busca elementos dentro de la barra de navegación que parezcan notificaciones de mesas
         // Se añade .top-bar para capturar clics directos en la barra si contiene texto relevante
         const navbarTrigger = e.target.closest('.navbar .nav-item, header .item, .top-bar, .top-bar > div, .navbar-nav li, a.nav-link');
-        
+
         const looksLikeTableOrder = navbarTrigger && (
             (navbarTrigger.textContent && (
-                navbarTrigger.textContent.toLowerCase().includes('mesa') || 
-                navbarTrigger.textContent.toLowerCase().includes('vip') || 
-                navbarTrigger.textContent.toLowerCase().includes('toscana') || 
+                navbarTrigger.textContent.toLowerCase().includes('mesa') ||
+                navbarTrigger.textContent.toLowerCase().includes('vip') ||
+                navbarTrigger.textContent.toLowerCase().includes('toscana') ||
                 navbarTrigger.textContent.toLowerCase().includes('pedidos')
             )) ||
             navbarTrigger.querySelector('.badge')

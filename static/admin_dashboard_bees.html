@@ -227,40 +227,104 @@
                         if (!acc[mesaNombre]) {
                             acc[mesaNombre] = {
                                 items: [],
-                                cantidadTotal: 0,
-                                consumoIds: []
+                                ultimaFecha: new Date(0),
+                                nicks: new Set()
                             };
                         }
                         acc[mesaNombre].items.push(pedido);
-                        acc[mesaNombre].cantidadTotal += pedido.cantidad || 1;
-                        acc[mesaNombre].consumoIds.push(pedido.id);
+                        acc[mesaNombre].nicks.add(pedido.usuario_nick);
+                        if (new Date(pedido.created_at) > acc[mesaNombre].ultimaFecha) {
+                            acc[mesaNombre].ultimaFecha = new Date(pedido.created_at);
+                        }
                         return acc;
                     }, {});
 
-                    // Crear items para cada mesa
-                    Object.entries(pedidosPorMesa).forEach(([mesaNombre, grupo]) => {
-                        const div = document.createElement('div');
-                        div.className = 'order-item';
-                        div.setAttribute('data-mesa', mesaNombre);
-                        div.setAttribute('data-ids', grupo.consumoIds.join(','));
-                        div.title = `${mesaNombre}: ${grupo.items.map(i => `${i.cantidad}x ${i.producto_nombre}`).join(', ')}`;
+                    // Crear items detallados para cada mesa
+                    Object.keys(pedidosPorMesa)
+                        .sort((a, b) => pedidosPorMesa[b].ultimaFecha - pedidosPorMesa[a].ultimaFecha)
+                        .forEach(mesaNombre => {
+                            const grupo = pedidosPorMesa[mesaNombre];
+                            const div = document.createElement('div');
+                            div.className = 'top-order-card';
 
-                        div.innerHTML = `
-                        <span>${mesaNombre}</span>
-                        <span class="order-item-badge">${grupo.cantidadTotal}</span>
-                    `;
+                            const itemsHtml = grupo.items
+                                .map(item => `<div class="top-order-item">
+                                    <span class="top-order-quantity">${item.cantidad}x</span>
+                                    <span class="top-order-product">${item.producto_nombre}</span>
+                                </div>`)
+                                .join('');
 
-                        div.addEventListener('click', () => {
-                            // Abrir modal de gestión de pedidos
-                            if (typeof openOrdersModal === 'function') {
-                                openOrdersModal();
-                            } else {
-                                console.warn('openOrdersModal function not found');
-                            }
+                            const allConsumoIds = grupo.items.map(item => item.id).join(',');
+
+                            div.innerHTML = `
+                                <div class="top-order-header">
+                                    <span class="top-order-mesa">🔔 ${mesaNombre}</span>
+                                    <span class="top-order-time">${grupo.ultimaFecha.toLocaleTimeString()}</span>
+                                </div>
+                                <div class="top-order-items-list">
+                                    ${itemsHtml}
+                                </div>
+                                <div class="top-order-meta">
+                                    Por: <strong>${[...grupo.nicks].join(', ')}</strong>
+                                </div>
+                                <div class="top-order-actions">
+                                    <button class="top-btn-despachado" data-ids="${allConsumoIds}" title="Marcar todo como despachado">
+                                        ✅ Despachado
+                                    </button>
+                                    <button class="top-btn-cancelar" data-ids="${allConsumoIds}" title="Cancelar todo el pedido">
+                                        ❌ Cancelar
+                                    </button>
+                                </div>
+                            `;
+
+                            topOrdersList.appendChild(div);
                         });
 
-                        topOrdersList.appendChild(div);
+                    // Agregar event listeners para los botones de acción
+                    topOrdersList.addEventListener('click', async (e) => {
+                        const btnDespachado = e.target.closest('.top-btn-despachado');
+                        const btnCancelar = e.target.closest('.top-btn-cancelar');
+
+                        let consumoIds;
+                        let endpoint;
+                        let confirmMessage;
+                        let successMessage;
+                        let isDeleteAction = false;
+
+                        if (btnDespachado) {
+                            consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
+                            endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
+                            confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
+                            successMessage = 'Pedido marcado como despachado.';
+                            isDeleteAction = false;
+                        } else if (btnCancelar) {
+                            consumoIds = (btnCancelar.dataset.ids || '').split(',').filter(id => id);
+                            endpoint = `/admin/consumos/{consumo_id}`;
+                            confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
+                            successMessage = 'Pedido cancelado.';
+                            isDeleteAction = true;
+                        } else {
+                            return;
+                        }
+
+                        if (!consumoIds || consumoIds.length === 0) return;
+                        if (!confirm(confirmMessage)) return;
+
+                        try {
+                            for (const id of consumoIds) {
+                                const finalEndpoint = endpoint.replace('{consumo_id}', id);
+                                await apiFetch(finalEndpoint, { method: isDeleteAction ? 'DELETE' : 'POST' });
+                            }
+
+                            showNotification(successMessage, 'success');
+                            // Recargar pedidos en la barra superior
+                            loadTopOrdersBar();
+                        } catch (error) {
+                            console.error("Error procesando consumos:", error);
+                            showNotification("Error procesando consumos", "error");
+                        }
                     });
+
                 } catch (error) {
                     console.warn('Error cargando pedidos en barra superior:', error);
                 }
