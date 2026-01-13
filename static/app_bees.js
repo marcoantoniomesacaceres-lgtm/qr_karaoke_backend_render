@@ -129,7 +129,7 @@ function renderCart() {
         state.cart.forEach(item => {
             cartItemsList.innerHTML += `
                 <div class="cart-item">
-                    <span class="cart-item-name">${item.cantidad}x Producto</span>
+                    <span class="cart-item-name">${item.cantidad}x ${item.nombre}</span>
                     <button class="cart-remove-item-btn" data-product-id="${item.producto_id}">X</button>
                 </div>
             `;
