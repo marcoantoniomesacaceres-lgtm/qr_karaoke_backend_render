@@ -25,6 +25,9 @@
                     <h3>Últimos Pedidos</h3>
                     <p>Pedidos pendientes por despachar</p>
                 </div>
+                <button class="admin-orders-toggle" id="orders-toggle-btn" title="Expandir/Colapsar pedidos">
+                    <span class="toggle-icon">▼</span>
+                </button>
             </div>
             <div class="admin-orders-list" id="top-orders-list">
                 <!-- Los pedidos se cargarán aquí dinámicamente -->
@@ -248,10 +251,12 @@
                     `;
 
                         div.addEventListener('click', () => {
-                            // Navegar a la página de pedidos/cola si es necesario
-                            // Por ahora solo resalta visualmente
-                            document.querySelectorAll('.order-item').forEach(item => item.style.background = 'rgba(255, 215, 0, 0.1)');
-                            div.style.background = 'rgba(255, 215, 0, 0.3)';
+                            // Abrir modal de gestión de pedidos
+                            if (typeof openOrdersModal === 'function') {
+                                openOrdersModal();
+                            } else {
+                                console.warn('openOrdersModal function not found');
+                            }
                         });
 
                         topOrdersList.appendChild(div);
@@ -259,6 +264,26 @@
                 } catch (error) {
                     console.warn('Error cargando pedidos en barra superior:', error);
                 }
+            }
+
+            // Toggle para colapsar/expandir la barra de pedidos
+            function setupOrdersBarToggle() {
+                const toggleBtn = document.getElementById('orders-toggle-btn');
+                const ordersBar = document.querySelector('.admin-top-orders-bar');
+
+                if (!toggleBtn || !ordersBar) return;
+
+                // Cargar estado guardado del localStorage
+                const isCollapsed = localStorage.getItem('ordersBarCollapsed') === 'true';
+                if (isCollapsed) {
+                    ordersBar.classList.add('collapsed');
+                }
+
+                toggleBtn.addEventListener('click', () => {
+                    ordersBar.classList.toggle('collapsed');
+                    const collapsed = ordersBar.classList.contains('collapsed');
+                    localStorage.setItem('ordersBarCollapsed', collapsed);
+                });
             }
 
             // NEW FUNCTION: Enviar actualización de cuenta a través de WebSocket
@@ -792,6 +817,9 @@
 
                     // Cargar pedidos en la barra superior
                     loadTopOrdersBar();
+
+                    // Setup toggle para barra de pedidos
+                    setupOrdersBarToggle();
 
                     // Setup WebSocket for realtime updates (consume events and others)
                     setupAdminWebSocket();

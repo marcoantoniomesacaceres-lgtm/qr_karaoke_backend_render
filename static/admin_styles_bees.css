@@ -171,6 +171,52 @@ body {
     flex: 1;
 }
 
+/* Toggle button for collapsing orders bar */
+.admin-orders-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-left: auto;
+    transition: all 0.3s;
+    color: var(--primary-color);
+    font-size: 1.2em;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-orders-toggle:hover {
+    background: rgba(255, 215, 0, 0.1);
+    transform: scale(1.1);
+}
+
+.toggle-icon {
+    transition: transform 0.3s;
+    display: inline-block;
+}
+
+/* Collapsed state */
+.admin-top-orders-bar.collapsed {
+    max-height: 70px;
+}
+
+.admin-top-orders-bar.collapsed .admin-orders-list {
+    display: none;
+}
+
+.admin-top-orders-bar.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* Smooth transition for height */
+.admin-top-orders-bar {
+    transition: max-height 0.3s ease-in-out;
+}
+
 /* ============================================
    BARRA DE NAVEGACIÓN INFERIOR HORIZONTAL
    ============================================ */
