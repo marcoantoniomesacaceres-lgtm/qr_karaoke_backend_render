@@ -285,83 +285,107 @@
                             topOrdersList.appendChild(div);
                         });
 
-                    // Agregar event listeners para los botones de acción
-                    topOrdersList.addEventListener('click', async (e) => {
-                        const btnDespachado = e.target.closest('.top-btn-despachado');
-                        const btnCancelar = e.target.closest('.top-btn-cancelar');
-                        const btnPlus = e.target.closest('.btn-plus');
-                        const btnMinus = e.target.closest('.btn-minus');
-                        const btnDeleteItem = e.target.closest('.top-btn-delete-item');
-
-                        // Evitar doble clic
-                        const targetBtn = e.target.closest('button');
-                        if (targetBtn) targetBtn.disabled = true;
-
-                        let consumoIds;
-                        let endpoint;
-                        let confirmMessage;
-                        let successMessage;
-                        let method = 'POST';
-
-                        try {
-                            if (btnPlus) {
-                                const id = btnPlus.dataset.id;
-                                await apiFetch(`/admin/consumos/${id}/increase`, { method: 'POST' });
-                                return;
-                            } else if (btnMinus) {
-                                const id = btnMinus.dataset.id;
-                                await apiFetch(`/admin/consumos/${id}/decrease`, { method: 'POST' });
-                                return;
-                            } else if (btnDeleteItem) {
-                                const id = btnDeleteItem.dataset.id;
-                                if (!confirm("¿Eliminar este producto del pedido?")) return;
-                                await apiFetch(`/admin/consumos/${id}`, { method: 'DELETE' });
-                                showNotification("Producto eliminado.", "success");
-                                return;
-                            } else if (btnDespachado) {
-                                consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
-                                endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
-                                confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
-                                successMessage = 'Pedido marcado como despachado.';
-                                method = 'POST';
-                            } else if (btnCancelar) {
-                                consumoIds = (btnCancelar.dataset.ids || '').split(',').filter(id => id);
-                                endpoint = `/admin/consumos/{consumo_id}`;
-                                confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
-                                successMessage = 'Pedido cancelado.';
-                                method = 'DELETE';
-                            } else {
-                                return;
-                            }
-
-                            if (!consumoIds || consumoIds.length === 0) return;
-                            if (!confirm(confirmMessage)) return;
-
-                            for (const id of consumoIds) {
-                                const finalEndpoint = endpoint.replace('{consumo_id}', id);
-                                await apiFetch(finalEndpoint, { method: method });
-                            }
-
-                            showNotification(successMessage, 'success');
-
-                        } catch (error) {
-                            console.error("Error procesando acción:", error);
-                            // Si es 404, es probable que ya se haya eliminado/despachado en otra pestaña/usuario
-                            if (error.message && error.message.includes("404")) {
-                                showNotification("El pedido ya no existe o fue modificado.", "warning");
-                            } else {
-                                showNotification(error.message || "Error procesando acción", "error");
-                            }
-                        } finally {
-                            if (targetBtn) targetBtn.disabled = false;
-                            // SIEMPRE recargar la barra para asegurar consistencia
-                            loadTopOrdersBar();
-                        }
-                    });
 
                 } catch (error) {
                     console.warn('Error cargando pedidos en barra superior:', error);
                 }
+            }
+
+            // Configurar listeners de la barra superior (solo una vez)
+            function setupTopOrdersListeners() {
+                const topOrdersList = document.getElementById('top-orders-list');
+                if (!topOrdersList) return;
+
+                // Remover listeners previos si existieran (aunque al ser funcion init, se llama una vez)
+                // Usamos una bandera en el elemento para asegurarnos
+                if (topOrdersList.dataset.listenersAttached === 'true') return;
+                topOrdersList.dataset.listenersAttached = 'true';
+
+                topOrdersList.addEventListener('click', async (e) => {
+                    const btnDespachado = e.target.closest('.top-btn-despachado');
+                    const btnCancelar = e.target.closest('.top-btn-cancelar');
+                    const btnPlus = e.target.closest('.btn-plus');
+                    const btnMinus = e.target.closest('.btn-minus');
+                    const btnDeleteItem = e.target.closest('.top-btn-delete-item');
+
+                    // Evitar doble clic y acciones múltiples
+                    const targetBtn = e.target.closest('button');
+                    if (targetBtn) {
+                        if (targetBtn.disabled) return; // Ya está deshabilitado
+                        targetBtn.disabled = true;
+                    }
+
+                    let consumoIds;
+                    let endpoint;
+                    let confirmMessage;
+                    let successMessage;
+                    let method = 'POST';
+
+                    try {
+                        if (btnPlus) {
+                            const id = btnPlus.dataset.id;
+                            await apiFetch(`/admin/consumos/${id}/increase`, { method: 'POST' });
+                            return;
+                        } else if (btnMinus) {
+                            const id = btnMinus.dataset.id;
+                            await apiFetch(`/admin/consumos/${id}/decrease`, { method: 'POST' });
+                            return;
+                        } else if (btnDeleteItem) {
+                            const id = btnDeleteItem.dataset.id;
+                            if (!confirm("¿Eliminar este producto del pedido?")) {
+                                if (targetBtn) targetBtn.disabled = false;
+                                return;
+                            }
+                            await apiFetch(`/admin/consumos/${id}`, { method: 'DELETE' });
+                            showNotification("Producto eliminado.", "success");
+                            return;
+                        } else if (btnDespachado) {
+                            consumoIds = (btnDespachado.dataset.ids || '').split(',').filter(id => id);
+                            endpoint = `/admin/consumos/{consumo_id}/mark-despachado`;
+                            confirmMessage = '¿Confirmas que este pedido ha sido despachado?';
+                            successMessage = 'Pedido marcado como despachado.';
+                            method = 'POST';
+                        } else if (btnCancelar) {
+                            consumoIds = (btnCancelar.dataset.ids || '').split(',').filter(id => id);
+                            endpoint = `/admin/consumos/{consumo_id}`;
+                            confirmMessage = '¿Estás seguro de que quieres CANCELAR este pedido?';
+                            successMessage = 'Pedido cancelado.';
+                            method = 'DELETE';
+                        } else {
+                            if (targetBtn) targetBtn.disabled = false;
+                            return;
+                        }
+
+                        if (!consumoIds || consumoIds.length === 0) {
+                            if (targetBtn) targetBtn.disabled = false;
+                            return;
+                        }
+                        if (!confirm(confirmMessage)) {
+                            if (targetBtn) targetBtn.disabled = false;
+                            return;
+                        }
+
+                        for (const id of consumoIds) {
+                            const finalEndpoint = endpoint.replace('{consumo_id}', id);
+                            await apiFetch(finalEndpoint, { method: method });
+                        }
+
+                        showNotification(successMessage, 'success');
+
+                    } catch (error) {
+                        console.error("Error procesando acción:", error);
+                        // Si es 404, es probable que ya se haya eliminado/despachado en otra pestaña/usuario
+                        if (error.message && error.message.includes("404")) {
+                            showNotification("El pedido ya no existe o fue modificado.", "warning");
+                        } else {
+                            showNotification(error.message || "Error procesando acción", "error");
+                        }
+                    } finally {
+                        if (targetBtn) targetBtn.disabled = false;
+                        // SIEMPRE recargar la barra para asegurar consistencia
+                        loadTopOrdersBar();
+                    }
+                });
             }
 
             // Toggle para colapsar/expandir la barra de pedidos
@@ -913,8 +937,10 @@
                     // Cargar datos de la página inicial
                     loadDashboardPage();
 
+
                     // Cargar pedidos en la barra superior
                     loadTopOrdersBar();
+                    setupTopOrdersListeners(); // Attach listeners separately
 
                     // Setup toggle para barra de pedidos
                     setupOrdersBarToggle();
