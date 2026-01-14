@@ -21,6 +21,9 @@
         <div class="admin-orders-container">
             <div class="admin-orders-header">
                 <span class="admin-orders-icon">📦</span>
+                <div id="pending-orders-alert" class="pending-orders-alert hidden">
+                    🔔 <span class="alert-pulse"></span>
+                </div>
                 <div class="admin-orders-info">
                     <h3>Últimos Pedidos</h3>
                     <p>Pedidos pendientes por despachar</p>
@@ -286,6 +289,8 @@
                         });
 
 
+                    // Actualizar visibilidad del icono de alerta
+                    updateAlertIconVisibility();
                 } catch (error) {
                     console.warn('Error cargando pedidos en barra superior:', error);
                 }
@@ -405,7 +410,31 @@
                     ordersBar.classList.toggle('collapsed');
                     const collapsed = ordersBar.classList.contains('collapsed');
                     localStorage.setItem('ordersBarCollapsed', collapsed);
+
+                    // Update alert icon visibility
+                    updateAlertIconVisibility();
                 });
+            }
+
+            // NEW FUNCTION: Update Alert Icon Visibility
+            function updateAlertIconVisibility() {
+                const alertIcon = document.getElementById('pending-orders-alert');
+                const ordersBar = document.querySelector('.admin-top-orders-bar');
+                const topOrdersList = document.getElementById('top-orders-list');
+
+                if (!alertIcon || !ordersBar || !topOrdersList) return;
+
+                // Check if there are orders (simple check: if it doesn't have the empty message)
+                const hasOrders = !topOrdersList.querySelector('.admin-orders-empty') && topOrdersList.children.length > 0;
+
+                // Check if bar is collapsed
+                const isCollapsed = ordersBar.classList.contains('collapsed');
+
+                if (hasOrders && isCollapsed) {
+                    alertIcon.classList.remove('hidden');
+                } else {
+                    alertIcon.classList.add('hidden');
+                }
             }
 
             // NEW FUNCTION: Enviar actualización de cuenta a través de WebSocket
