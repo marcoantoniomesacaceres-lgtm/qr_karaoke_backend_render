@@ -195,7 +195,7 @@ function injectOrderModal() {
     </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
+
     // Add search listener
     const searchInput = document.getElementById('order-product-search');
     if (searchInput) {
@@ -229,9 +229,9 @@ async function loadProductsForOrder() {
 
 function makeDraggable(elmnt, handle) {
     if (!elmnt || !handle) return;
-    
+
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-    
+
     handle.onmousedown = dragMouseDown;
     handle.ontouchstart = dragTouchStart;
 
@@ -259,7 +259,7 @@ function makeDraggable(elmnt, handle) {
         pos2 = pos4 - e.clientY;
         pos3 = e.clientX;
         pos4 = e.clientY;
-        
+
         elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
         elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
         elmnt.style.transform = "none"; // Remove centering transform
@@ -272,7 +272,7 @@ function makeDraggable(elmnt, handle) {
         pos2 = pos4 - touch.clientY;
         pos3 = touch.clientX;
         pos4 = touch.clientY;
-        
+
         elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
         elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
         elmnt.style.transform = "none";
@@ -291,16 +291,16 @@ function renderProductGrid(products) {
     const grid = document.getElementById('order-products-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    
+
     products.forEach(p => {
         const card = document.createElement('div');
         card.className = 'product-card-mini';
         card.style.cssText = 'background: var(--card-bg, #333); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 1px solid var(--border-color, #444); display: flex; flex-direction: column;';
         card.onclick = () => addToCart(p);
-        
+
         // Use default image if none provided
         const imgUrl = p.imagen_url ? p.imagen_url : '/static/images/default_product.png'; // Fallback path
-        
+
         card.innerHTML = `
             <div style="height: 100px; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
                 ${p.imagen_url ? `<img src="${p.imagen_url}" style="width: 100%; height: 100%; object-fit: cover;">` : '<span style="font-size: 2em;">🍺</span>'}
@@ -337,11 +337,11 @@ function updateCartUI() {
     const list = document.getElementById('order-cart-list');
     const totalEl = document.getElementById('order-total-amount');
     if (!list || !totalEl) return;
-    
+
     list.innerHTML = '';
     let total = 0;
     const items = Object.values(orderCart);
-    
+
     if (items.length === 0) {
         list.innerHTML = '<li style="color: var(--text-secondary, #888); text-align: center; padding: 20px;">Carrito vacío</li>';
     } else {
@@ -359,15 +359,15 @@ function updateCartUI() {
                     <button class="btn-plus" style="width: 24px; height: 24px; border-radius: 4px; border: none; background: var(--bees-yellow, #f5c518); color: black; cursor: pointer;">+</button>
                 </div>
             `;
-            
+
             li.querySelector('.btn-minus').onclick = (e) => { e.stopPropagation(); removeFromCart(item.id); };
             li.querySelector('.btn-plus').onclick = (e) => { e.stopPropagation(); addToCart(item); };
-            
+
             list.appendChild(li);
             total += item.valor * item.quantity;
         });
     }
-    
+
     totalEl.textContent = `$${total.toFixed(2)}`;
 }
 
@@ -424,7 +424,7 @@ async function openOrderModal(mesaId) {
 
 async function handleOrderSubmit(event) {
     if (event) event.preventDefault();
-    
+
     const userSelect = document.getElementById('order-user-select');
     const usuarioId = userSelect ? userSelect.value : null;
 
@@ -432,7 +432,7 @@ async function handleOrderSubmit(event) {
         showNotification("Debe seleccionar un usuario.", "error");
         return;
     }
-    
+
     const items = Object.values(orderCart);
     if (items.length === 0) {
         showNotification("El carrito está vacío.", "error");
@@ -453,7 +453,7 @@ async function handleOrderSubmit(event) {
         }
 
         showNotification("Pedido creado exitosamente.", "success");
-        
+
         // Close modal
         const modal = document.getElementById('admin-create-order-modal');
         if (modal) {
@@ -726,7 +726,7 @@ function renderDetailsModal(details) {
             ${pagos.length ? pagos.map(p => `<li>$${p.monto} — <small>${new Date(p.created_at).toLocaleString()}</small></li>`).join('') : '<li>Sin pagos</li>'}
         </ul>
     `;
-    
+
     // Add listener for the toggle button
     const btnCreateOrder = document.getElementById('btn-details-create-order');
     const orderPanel = document.getElementById('details-order-panel');
@@ -738,7 +738,7 @@ function renderDetailsModal(details) {
                 orderPanel.style.display = 'block';
                 btnCreateOrder.textContent = '❌ Cancelar Pedido';
                 btnCreateOrder.style.backgroundColor = 'var(--bees-red, #dc3545)';
-                
+
                 // Initialize form if empty
                 if (orderPanel.innerHTML.trim() === '') {
                     await renderDetailsOrderForm(orderPanel, details.mesa_id);
@@ -799,42 +799,48 @@ async function renderDetailsOrderForm(container, mesaId) {
     // Reset global cart for this context
     orderCart = {};
 
+    // Bind Events IMMEDIATELY to prevent "frozen" button if async loading hangs
+    const searchInput = document.getElementById('details-product-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = availableProducts.filter(p => p.nombre.toLowerCase().includes(term));
+            renderDetailsProductGrid(filtered);
+        });
+    }
+
+    const confirmBtn = document.getElementById('btn-details-confirm-order');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => handleDetailsOrderSubmit(mesaId));
+    }
+
     // Load Products
     await loadProductsForOrder();
     renderDetailsProductGrid(availableProducts);
 
     // Load Users
     const userSelect = document.getElementById('details-user-select');
-    try {
-        const users = await apiFetch(`/mesas/${mesaId}/usuarios-conectados`);
-        userSelect.innerHTML = '';
-        if (users.length === 0) {
-            const opt = document.createElement('option');
-            opt.value = "";
-            opt.textContent = "No hay usuarios";
-            userSelect.appendChild(opt);
-        } else {
-            users.forEach(u => {
+    if (userSelect) { // Check if element exists
+        try {
+            const users = await apiFetch(`/mesas/${mesaId}/usuarios-conectados`);
+            userSelect.innerHTML = '';
+            if (users.length === 0) {
                 const opt = document.createElement('option');
-                opt.value = u.id;
-                opt.textContent = `${u.nick} (Lvl ${u.nivel})`;
+                opt.value = "";
+                opt.textContent = "No hay usuarios";
                 userSelect.appendChild(opt);
-            });
+            } else {
+                users.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = `${u.nick} (Lvl ${u.nivel})`;
+                    userSelect.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            userSelect.innerHTML = '<option value="">Error</option>';
         }
-    } catch (e) {
-        userSelect.innerHTML = '<option value="">Error</option>';
     }
-
-    // Bind Events
-    const searchInput = document.getElementById('details-product-search');
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtered = availableProducts.filter(p => p.nombre.toLowerCase().includes(term));
-        renderDetailsProductGrid(filtered);
-    });
-
-    const confirmBtn = document.getElementById('btn-details-confirm-order');
-    confirmBtn.addEventListener('click', () => handleDetailsOrderSubmit(mesaId));
 }
 
 function renderDetailsProductGrid(products) {
@@ -852,12 +858,12 @@ function renderDetailsProductGrid(products) {
         row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #333; border-bottom: 1px solid #444; padding: 10px; cursor: pointer; transition: background 0.2s; border-radius: 4px;';
         row.onmouseover = () => row.style.background = '#444';
         row.onmouseout = () => row.style.background = '#333';
-        
+
         row.innerHTML = `
             <div style="font-weight: bold; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px;">${p.nombre}</div>
             <div style="color: var(--bees-yellow, #f5c518); font-weight: bold; min-width: 60px; text-align: right;">$${p.valor}</div>
         `;
-        
+
         row.onclick = () => {
             if (!orderCart[p.id]) {
                 orderCart[p.id] = { ...p, quantity: 0 };
@@ -903,6 +909,7 @@ function updateDetailsCartUI() {
 }
 
 async function handleDetailsOrderSubmit(mesaId) {
+    console.log("[DEBUG] handleDetailsOrderSubmit invoked for mesa", mesaId);
     const userSelect = document.getElementById('details-user-select');
     const usuarioId = userSelect ? userSelect.value : null;
 
@@ -930,7 +937,7 @@ async function handleDetailsOrderSubmit(mesaId) {
         }
 
         showNotification("Pedido creado.", "success");
-        
+
         // Refresh details
         const account = currentAccounts.find(a => a.mesa_id == mesaId);
         if (account && account.cuenta_id) {
@@ -945,6 +952,12 @@ async function handleDetailsOrderSubmit(mesaId) {
 
     } catch (e) {
         showNotification(e.message || "Error", "error");
+    } finally {
+        const btn = document.getElementById('btn-details-confirm-order');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Hacer Pedido';
+        }
     }
 }
 
@@ -1189,7 +1202,7 @@ function setupAccountsListeners() {
     const closeOrderX = document.getElementById('order-modal-close-x');
     const cancelOrderBtn = document.getElementById('order-modal-cancel');
 
-    
+
     const closeOrderModal = () => {
         if (orderModal) {
             orderModal.classList.remove('active');
@@ -1246,7 +1259,7 @@ function setupMesaCardListeners() {
         if (target.matches('.btn-close-table') || target.closest('.btn-close-table')) {
             const btn = target.matches('.btn-close-table') ? target : target.closest('.btn-close-table');
             const mesaId = btn.dataset.mesaId;
-            
+
             // Check for outstanding balance before deactivating
             const account = currentAccounts.find(a => a.mesa_id == mesaId);
             if (account && Number(account.saldo_pendiente) > 0) {
