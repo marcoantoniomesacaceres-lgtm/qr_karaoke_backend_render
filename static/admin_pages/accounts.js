@@ -909,7 +909,6 @@ function updateDetailsCartUI() {
 }
 
 async function handleDetailsOrderSubmit(mesaId) {
-    console.log("[DEBUG] handleDetailsOrderSubmit invoked for mesa", mesaId);
     const userSelect = document.getElementById('details-user-select');
     const usuarioId = userSelect ? userSelect.value : null;
 
@@ -924,6 +923,75 @@ async function handleDetailsOrderSubmit(mesaId) {
         return;
     }
 
+    // Get user nickname for display
+    const userNick = userSelect.options[userSelect.selectedIndex].text;
+
+    // Calculate total
+    const total = items.reduce((sum, item) => sum + (item.valor * item.quantity), 0);
+
+    // Construct confirmation message
+    let msg = `¿Confirmar pedido para ${userNick}?\n\n`;
+    items.forEach(item => {
+        msg += `${item.quantity}x ${item.nombre} - $${(item.valor * item.quantity).toFixed(2)}\n`;
+    });
+    msg += `\nTotal: $${total.toFixed(2)}`;
+
+    // Simple native confirmation to avoid UI freezing issues
+    if (confirm(msg)) {
+        await processDetailsOrder(mesaId, usuarioId, items);
+    }
+}
+
+function showOrderConfirmationModal(mesaId, usuarioId, userNick, items) {
+    const modal = document.getElementById('confirm-order-creation-modal');
+    if (!modal) return;
+
+    // Populate Modal Data
+    document.getElementById('confirm-order-user').textContent = userNick;
+
+    const itemsList = document.getElementById('confirm-order-items');
+    itemsList.innerHTML = '';
+
+    let total = 0;
+    items.forEach(item => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '5px';
+        li.innerHTML = `<strong>${item.quantity}x</strong> ${item.nombre} <span style="float:right; color:#ddd;">$${(item.valor * item.quantity).toFixed(2)}</span>`;
+        itemsList.appendChild(li);
+        total += item.valor * item.quantity;
+    });
+
+    document.getElementById('confirm-order-total').textContent = `$${total.toFixed(2)}`;
+
+    // Show Modal
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
+
+    // Setup Buttons
+    const btnConfirm = document.getElementById('btn-confirm-order-final');
+    const btnCancel = document.getElementById('btn-cancel-order-final');
+
+    // Remove old listeners to prevent multiple firings
+    const newBtnConfirm = btnConfirm.cloneNode(true);
+    const newBtnCancel = btnCancel.cloneNode(true);
+    btnConfirm.parentNode.replaceChild(newBtnConfirm, btnConfirm);
+    btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
+
+    // Cancel Handler
+    newBtnCancel.addEventListener('click', () => {
+        modal.classList.remove('active');
+        modal.classList.add('hidden');
+    });
+
+    // Confirm Handler
+    newBtnConfirm.addEventListener('click', async () => {
+        modal.classList.remove('active');
+        modal.classList.add('hidden');
+        await processDetailsOrder(mesaId, usuarioId, items);
+    });
+}
+
+async function processDetailsOrder(mesaId, usuarioId, items) {
     try {
         for (const item of items) {
             const payload = {
@@ -945,9 +1013,12 @@ async function handleDetailsOrderSubmit(mesaId) {
         } else {
             // Fallback reload page if we can't refresh details easily
             await loadAccountsPage();
-            // Close modal if we reload page
-            document.getElementById('account-details-modal').classList.remove('active');
-            document.getElementById('account-details-modal').classList.add('hidden');
+            // Close details modal if we reload page
+            const detailsModal = document.getElementById('account-details-modal');
+            if (detailsModal) {
+                detailsModal.classList.remove('active');
+                detailsModal.classList.add('hidden');
+            }
         }
 
     } catch (e) {
@@ -956,7 +1027,6 @@ async function handleDetailsOrderSubmit(mesaId) {
         const btn = document.getElementById('btn-details-confirm-order');
         if (btn) {
             btn.disabled = false;
-            btn.textContent = 'Hacer Pedido';
         }
     }
 }
