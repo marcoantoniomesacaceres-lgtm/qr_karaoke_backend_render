@@ -1221,7 +1221,7 @@ function setupAccountsListeners() {
     const historyModal = document.getElementById('account-history-modal');
     const detailsModal = document.getElementById('account-details-modal');
     const closeHistoryBtn = document.getElementById('history-modal-close');
-    const closeDetailsBtn = document.getElementById('details-modal-close');
+    const closeDetailsXBtn = document.getElementById('details-modal-close-x');
 
     if (accountsGrid) {
         accountsGrid.addEventListener('click', handlePaymentModal);
@@ -1263,7 +1263,7 @@ function setupAccountsListeners() {
     if (closeHistoryBtn) closeHistoryBtn.onclick = () => { if (historyModal) { historyModal.classList.remove('active'); historyModal.classList.add('hidden'); } };
     if (historyModal) historyModal.onclick = (e) => { if (e.target === historyModal) { historyModal.classList.remove('active'); historyModal.classList.add('hidden'); } };
 
-    if (closeDetailsBtn) closeDetailsBtn.onclick = () => { if (detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
+    if (closeDetailsXBtn) closeDetailsXBtn.onclick = () => { if (detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
     if (detailsModal) detailsModal.onclick = (e) => { if (e.target === detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
 
     // Setup Order Modal

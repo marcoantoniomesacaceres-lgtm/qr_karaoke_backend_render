@@ -27,13 +27,14 @@
 <!-- Account Details Modal (Reusable for history details) -->
 <div id="account-details-modal" class="modal-overlay modal-overlay-higher hidden">
     <div class="card modal-card-xlarge modal-card-scrollable-high">
-        <h3 id="details-title">Detalles de Cuenta</h3>
+        <div class="modal-header-row">
+            <h3 id="details-title">Detalles de Cuenta</h3>
+            <button type="button" id="details-modal-close-x" class="btn-close-x">&times;</button>
+        </div>
         <div id="details-content" class="modal-content-scroll">
             <!-- Content -->
         </div>
-        <div class="text-right">
-            <button type="button" id="details-modal-close" class="form-btn modal-button-secondary">Cerrar</button>
-        </div>
+        <!-- Footer button removed as requested -->
     </div>
 </div>
 
