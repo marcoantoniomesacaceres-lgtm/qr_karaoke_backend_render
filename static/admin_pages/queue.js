@@ -450,7 +450,7 @@ async function handleAdminSearch(event, karaokeMode = false) {
                             <div style="font-weight: 600; color: var(--page-text); font-size: 13px; word-break: break-word;">${song.title}</div>
                             <div style="color: var(--page-text-muted); font-size: 11px;">⏱️ ${Math.floor(song.duration_seconds / 60)}:${(song.duration_seconds % 60).toString().padStart(2, '0')}</div>
                         </div>
-                        <button class="bees-btn bees-btn-primary admin-add-song-btn" data-title="${song.title}" data-youtube-id="${song.video_id}" data-duration="${song.duration_seconds}" style="flex-shrink: 0; padding: 4px 8px; font-size: 11px; white-space: nowrap; max-width: 85px; min-width: 70px;">➕ Añadir</button>
+                        <button class="bees-btn bees-btn-primary admin-add-song-btn" data-title="${song.title}" data-youtube-id="${song.video_id}" data-duration="${song.duration_seconds}" data-is-karaoke="${karaokeMode}" style="flex-shrink: 0; padding: 4px 8px; font-size: 11px; white-space: nowrap; max-width: 85px; min-width: 70px;">➕ Añadir</button>
                     </div>
                 `;
                 resultsContainer.appendChild(resultItem);
@@ -481,7 +481,8 @@ async function handleAdminAddSong(event) {
     const songData = {
         titulo: button.dataset.title,
         youtube_id: button.dataset.youtubeId,
-        duracion_seconds: parseInt(button.dataset.duration, 10)
+        duracion_seconds: parseInt(button.dataset.duration, 10),
+        is_karaoke: button.dataset.isKaraoke === 'true'  // Convertir string a boolean
     };
 
     const targetTableId = document.getElementById('admin-target-table').value;

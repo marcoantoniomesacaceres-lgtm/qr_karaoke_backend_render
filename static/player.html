@@ -545,10 +545,14 @@
                     const standbyParagraph = standbyScreen.querySelector('p');
                     let message = '';
 
-                    if (scoreInfo.puntuacion_ia > 0) {
-                        message = `¡Felicitaciones, <strong>${scoreInfo.cantante_nombre}</strong>! Tu puntaje fue de <strong>${scoreInfo.puntuacion_ia}</strong> puntos. ¡Sigue así!`;
-                    } else {
+                    // Solo mostrar puntaje si es modo karaoke
+                    if (scoreInfo.is_karaoke && scoreInfo.puntuacion_ia > 0) {
+                        message = `¡Felicitaciones, <strong>${scoreInfo.usuario_nick}</strong>! Tu puntaje fue de <strong>${scoreInfo.puntuacion_ia}</strong> puntos. ¡Sigue así!`;
+                    } else if (scoreInfo.is_karaoke && scoreInfo.puntuacion_ia === 0) {
                         message = `Nadie cantó la última canción. Puntaje: 0.`;
+                    } else {
+                        // Modo escuchar - no mostrar puntaje
+                        message = `Gracias por escuchar: <strong>${scoreInfo.titulo}</strong>`;
                     }
                     standbyParagraph.innerHTML = `${message}<br>Esperando la siguiente canción...`;
                 }

@@ -438,10 +438,13 @@ def marcar_cancion_actual_como_cantada(db: Session):
     if not cancion_actual:
         return None  # No hay ninguna canciÃÂ³n reproduciÃÂ©ndose
     
-    # 2. Calcular puntaje aleatorio (la IA fue eliminada por ser muy pesada)
-    puntuacion = random_scorer.calculate_score(cancion_actual.youtube_id, "")
-    
-    cancion_actual.puntuacion_ia = puntuacion
+    # 2. Calcular puntaje solo si es modo karaoke
+    if cancion_actual.is_karaoke:
+        puntuacion = random_scorer.calculate_score(cancion_actual.youtube_id, "")
+        cancion_actual.puntuacion_ia = puntuacion
+    else:
+        cancion_actual.puntuacion_ia = 0
+        puntuacion = 0
 
     # 3. Actualizar el estado de la canciÃÂ³n a 'cantada'
     cancion_actual.estado = "cantada"

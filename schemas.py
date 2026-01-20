@@ -9,6 +9,7 @@ class CancionBase(BaseModel):
     youtube_id: str
     puntuacion_ia: Optional[int] = None # Nuevo campo
     duracion_seconds: Optional[int] = 0
+    is_karaoke: Optional[bool] = True  # True: cantar, False: escuchar
 
 class CancionCreate(CancionBase):
     pass
@@ -18,6 +19,7 @@ class Cancion(CancionBase):
     estado: str
     created_at: datetime # Añadimos este campo
     puntuacion_ia: Optional[int] = None # Aseguramos que esté aquí también
+    is_karaoke: Optional[bool] = True  # Aseguramos que esté aquí también
     model_config = ConfigDict(from_attributes=True)
 
 # --- Schemas para Usuario (necesario para mostrar usuarios en una mesa) ---

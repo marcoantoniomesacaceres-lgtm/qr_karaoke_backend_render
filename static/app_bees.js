@@ -311,7 +311,7 @@ async function handleSearch(event, karaokeMode = false) {
                                 <div class="song-user">${Math.floor(song.duration_seconds / 60)}:${(song.duration_seconds % 60).toString().padStart(2, '0')}</div>
                             </div>
                         </div>
-                        <button class="add-song-btn" data-title="${song.title}" data-youtube-id="${song.video_id}" data-duration="${song.duration_seconds}">Añadir</button>
+                        <button class="add-song-btn" data-title="${song.title}" data-youtube-id="${song.video_id}" data-duration="${song.duration_seconds}" data-is-karaoke="${karaokeMode}">Añadir</button>
                     </li>
                 `;
             });
@@ -337,7 +337,8 @@ async function handleAddSong(event) {
     const songData = {
         titulo: button.dataset.title,
         youtube_id: button.dataset.youtubeId,
-        duracion_seconds: parseInt(button.dataset.duration, 10)
+        duracion_seconds: parseInt(button.dataset.duration, 10),
+        is_karaoke: button.dataset.isKaraoke === 'true'  // Convertir string a boolean
     };
 
     try {

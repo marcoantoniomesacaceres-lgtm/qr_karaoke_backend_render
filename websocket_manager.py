@@ -102,7 +102,8 @@ class ConnectionManager:
             "payload": {
                 "titulo": cancion.titulo,
                 "usuario_nick": cantante, # Reutilizamos el campo 'usuario_nick' que espera el frontend
-                "puntuacion_ia": cancion.puntuacion_ia
+                "puntuacion_ia": cancion.puntuacion_ia,
+                "is_karaoke": cancion.is_karaoke  # Nuevo campo para indicar si es karaoke
             }
         }
         await self._broadcast(json.dumps(payload))
