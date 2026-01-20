@@ -51,16 +51,21 @@
 }
 
 .modal-card-scrollable-high {
-    max-height: 85vh;
+    max-height: 80vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    /* Ensure rounded corners clip content */
 }
 
 /* ========== MODAL CONTENT ========== */
 .modal-content-scroll {
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
+    /* Critical for flex scrolling */
     margin: 15px 0;
+    overscroll-behavior: contain;
 }
 
 /* ========== BUTTON LAYOUTS ========== */
