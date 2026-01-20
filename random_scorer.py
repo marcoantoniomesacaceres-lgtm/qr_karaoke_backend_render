@@ -8,7 +8,7 @@ TEMP_DIR = "temp_audio"
 
 def calculate_score(original_youtube_id: str, user_audio_path: str) -> int:
     """
-    Calcula un puntaje aleatorio entre 0 y 100 para el usuario.
+    Calcula un puntaje aleatorio entre 80 y 100 para el usuario.
     Reemplaza la IA pesada con un sistema más ligero.
     
     Args:
@@ -16,8 +16,8 @@ def calculate_score(original_youtube_id: str, user_audio_path: str) -> int:
         user_audio_path: Ruta al archivo de audio del usuario (no se valida)
     
     Returns:
-        Un número aleatorio entre 0 y 100
+        Un número aleatorio entre 80 y 100
     """
-    score = random.randint(0, 100)
+    score = random.randint(80, 100)
     logger.info(f"Puntaje aleatorio calculado: {score}")
     return score

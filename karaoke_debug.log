@@ -2864,3 +2864,51 @@
 2026-01-06 15:27:59,601 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=k1ezpneMEA8%2C1a3REFH83WA%2Crbk6SCnHzLc%2C4Ez2wJnlwag%2CftfeDRZA5iE%2C6kYEW6oQfpw%2CxQ53GU2-_o8%2Ck1jzUtKrFk0%2CqgKkTvvTdbY%2CDjfaCC3ZKs8&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
 2026-01-06 15:27:59,620 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
 2026-01-06 15:27:59,622 - youtube - INFO - Procesamiento finalizado. Se encontraron 10 resultados formateados.
+2026-01-20 15:11:05,910 - youtube - INFO - Búsqueda [Admin] en YouTube con el término: 'yony rivera y sebastian ayala'
+2026-01-20 15:11:05,952 - youtube - INFO - Iniciando búsqueda interna en YouTube con el término: 'yony rivera y sebastian ayala' (Karaoke Mode: False)
+2026-01-20 15:11:09,246 - youtube - INFO - ¿Es una URL? ID extraído: None
+2026-01-20 15:11:09,246 - youtube - INFO - Búsqueda por texto: 'yony rivera y sebastian ayala'
+2026-01-20 15:11:09,252 - youtube - INFO - Realizando primera llamada a la API de YouTube (search)...
+2026-01-20 15:11:10,231 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/search?part=id&q=yony+rivera+y+sebastian+ayala&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94&type=video&videoCategoryId=10&maxResults=10 "HTTP/1.1 200 OK"
+2026-01-20 15:11:10,248 - youtube - INFO - Respuesta de la API (search) recibida con éxito.
+2026-01-20 15:11:10,249 - youtube - INFO - IDs de video encontrados: ['6kyJCaBg0Ys', '5yLGjXTF6MY', 'bY61n7lwzrY', 'U9GFert9tkU', 'hb5t-D5QVBI', '69NZ0WUo0dM', 'xnO-49PvGCY', '2y8e1Ca6GII', 'KHiSvtEsRug', 'Yh0uZiFZRIg']
+2026-01-20 15:11:10,251 - youtube - INFO - Realizando segunda llamada a la API de YouTube (videos)...
+2026-01-20 15:11:10,573 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=6kyJCaBg0Ys%2C5yLGjXTF6MY%2CbY61n7lwzrY%2CU9GFert9tkU%2Chb5t-D5QVBI%2C69NZ0WUo0dM%2CxnO-49PvGCY%2C2y8e1Ca6GII%2CKHiSvtEsRug%2CYh0uZiFZRIg&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
+2026-01-20 15:11:10,594 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
+2026-01-20 15:11:10,610 - youtube - INFO - Procesamiento finalizado. Se encontraron 10 resultados formateados.
+2026-01-20 15:11:10,685 - youtube - INFO - Búsqueda [Admin] en YouTube con el término: 'yony rivera y sebastian ayala'
+2026-01-20 15:11:10,686 - youtube - INFO - Iniciando búsqueda interna en YouTube con el término: 'yony rivera y sebastian ayala' (Karaoke Mode: False)
+2026-01-20 15:11:13,152 - youtube - INFO - ¿Es una URL? ID extraído: None
+2026-01-20 15:11:13,153 - youtube - INFO - Búsqueda por texto: 'yony rivera y sebastian ayala'
+2026-01-20 15:11:13,153 - youtube - INFO - Realizando primera llamada a la API de YouTube (search)...
+2026-01-20 15:11:13,947 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/search?part=id&q=yony+rivera+y+sebastian+ayala&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94&type=video&videoCategoryId=10&maxResults=10 "HTTP/1.1 200 OK"
+2026-01-20 15:11:14,084 - youtube - INFO - Respuesta de la API (search) recibida con éxito.
+2026-01-20 15:11:14,199 - youtube - INFO - IDs de video encontrados: ['6kyJCaBg0Ys', 'U9GFert9tkU', '5yLGjXTF6MY', '69NZ0WUo0dM', 'Z11kRI4Ewq4', 'yzZKapAPQeg', 'bY61n7lwzrY', 'EwxwsOeY9kQ', 'xnO-49PvGCY', 'hb5t-D5QVBI']
+2026-01-20 15:11:14,215 - youtube - INFO - Realizando segunda llamada a la API de YouTube (videos)...
+2026-01-20 15:11:14,648 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=6kyJCaBg0Ys%2CU9GFert9tkU%2C5yLGjXTF6MY%2C69NZ0WUo0dM%2CZ11kRI4Ewq4%2CyzZKapAPQeg%2CbY61n7lwzrY%2CEwxwsOeY9kQ%2CxnO-49PvGCY%2Chb5t-D5QVBI&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
+2026-01-20 15:11:14,695 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
+2026-01-20 15:11:14,699 - youtube - INFO - Procesamiento finalizado. Se encontraron 10 resultados formateados.
+2026-01-20 15:14:00,723 - youtube - INFO - Búsqueda [Admin] en YouTube con el término: 'el mayor de los ranas'
+2026-01-20 15:14:00,727 - youtube - INFO - Iniciando búsqueda interna en YouTube con el término: 'el mayor de los ranas' (Karaoke Mode: False)
+2026-01-20 15:14:02,587 - youtube - INFO - ¿Es una URL? ID extraído: None
+2026-01-20 15:14:02,587 - youtube - INFO - Búsqueda por texto: 'el mayor de los ranas'
+2026-01-20 15:14:02,593 - youtube - INFO - Realizando primera llamada a la API de YouTube (search)...
+2026-01-20 15:14:03,296 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/search?part=id&q=el+mayor+de+los+ranas&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94&type=video&videoCategoryId=10&maxResults=10 "HTTP/1.1 200 OK"
+2026-01-20 15:14:03,323 - youtube - INFO - Respuesta de la API (search) recibida con éxito.
+2026-01-20 15:14:03,330 - youtube - INFO - IDs de video encontrados: ['1a3REFH83WA', '4Ez2wJnlwag', 'DjfaCC3ZKs8', 'ftfeDRZA5iE', 'oOl5vy6KiAs', 'IRSedFplzCc', 'onGJj-JIBZk', '2JbrCXDNGcA', '6kYEW6oQfpw', 'UAAy5oTPUOE']
+2026-01-20 15:14:03,348 - youtube - INFO - Realizando segunda llamada a la API de YouTube (videos)...
+2026-01-20 15:14:03,589 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=1a3REFH83WA%2C4Ez2wJnlwag%2CDjfaCC3ZKs8%2CftfeDRZA5iE%2CoOl5vy6KiAs%2CIRSedFplzCc%2ConGJj-JIBZk%2C2JbrCXDNGcA%2C6kYEW6oQfpw%2CUAAy5oTPUOE&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
+2026-01-20 15:14:03,608 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
+2026-01-20 15:14:03,614 - youtube - INFO - Procesamiento finalizado. Se encontraron 10 resultados formateados.
+2026-01-20 15:14:03,645 - youtube - INFO - Búsqueda [Admin] en YouTube con el término: 'el mayor de los ranas'
+2026-01-20 15:14:03,677 - youtube - INFO - Iniciando búsqueda interna en YouTube con el término: 'el mayor de los ranas' (Karaoke Mode: False)
+2026-01-20 15:14:05,681 - youtube - INFO - ¿Es una URL? ID extraído: None
+2026-01-20 15:14:05,683 - youtube - INFO - Búsqueda por texto: 'el mayor de los ranas'
+2026-01-20 15:14:05,683 - youtube - INFO - Realizando primera llamada a la API de YouTube (search)...
+2026-01-20 15:14:06,389 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/search?part=id&q=el+mayor+de+los+ranas&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94&type=video&videoCategoryId=10&maxResults=10 "HTTP/1.1 200 OK"
+2026-01-20 15:14:06,404 - youtube - INFO - Respuesta de la API (search) recibida con éxito.
+2026-01-20 15:14:06,407 - youtube - INFO - IDs de video encontrados: ['1a3REFH83WA', '4Ez2wJnlwag', 'ftfeDRZA5iE', 'DjfaCC3ZKs8', 'oOl5vy6KiAs', 'IRSedFplzCc', 'onGJj-JIBZk', '6kYEW6oQfpw', '2JbrCXDNGcA', 'rERCTLp4CK8', 'UjYXahcriA0', 'eHflKESzSEY', 'UAAy5oTPUOE', 'k1jzUtKrFk0', 'BUUvW6XJIik', 'caP_V6eHGYY', 'OpVDSm-7LaQ', 'nBhUJ9Rf8s0', 'CfGKChXwc4s', 'dg-Xh5NNMIk', 'A4VTPpOFLwc', 'DWUpLPxb-lA', 'bF16O9IBSqw', '24JDIZ8xCok', 'gEejTe7PHxs']
+2026-01-20 15:14:06,415 - youtube - INFO - Realizando segunda llamada a la API de YouTube (videos)...
+2026-01-20 15:14:06,619 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=1a3REFH83WA%2C4Ez2wJnlwag%2CftfeDRZA5iE%2CDjfaCC3ZKs8%2CoOl5vy6KiAs%2CIRSedFplzCc%2ConGJj-JIBZk%2C6kYEW6oQfpw%2C2JbrCXDNGcA%2CrERCTLp4CK8%2CUjYXahcriA0%2CeHflKESzSEY%2CUAAy5oTPUOE%2Ck1jzUtKrFk0%2CBUUvW6XJIik%2CcaP_V6eHGYY%2COpVDSm-7LaQ%2CnBhUJ9Rf8s0%2CCfGKChXwc4s%2Cdg-Xh5NNMIk%2CA4VTPpOFLwc%2CDWUpLPxb-lA%2CbF16O9IBSqw%2C24JDIZ8xCok%2CgEejTe7PHxs&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
+2026-01-20 15:14:06,680 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
+2026-01-20 15:14:06,757 - youtube - INFO - Procesamiento finalizado. Se encontraron 23 resultados formateados.
