@@ -247,7 +247,7 @@
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         // Variable global para el reproductor de YouTube
-        let ytPlayer = null;
+        var ytPlayer = null;
 
         // Callback cuando la API está lista
         function onYouTubeIframeAPIReady() {
@@ -486,6 +486,12 @@
                     const data = await response.json();
                     console.log('📋 Cola inicial cargada:', data);
                     updateQueueUI(data);
+
+                    // Auto-play si hay una canción sonando actualmente
+                    if (data.now_playing && data.now_playing.youtube_id) {
+                        console.log('🔄 Sincronizando reproductor con canción actual:', data.now_playing.titulo);
+                        playVideo(data.now_playing.youtube_id, data.now_playing.duracion_seconds || 0);
+                    }
                 }
             } catch (err) {
                 console.warn('⚠️ Error cargando cola inicial:', err);
@@ -570,17 +576,21 @@
 
                 // 5. Pausar reproducción
                 if (data.type === 'pause_playback') {
-                    if (ytPlayer && ytPlayer.pauseVideo) {
+                    if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
                         ytPlayer.pauseVideo();
                         console.log('⏸️ Video pausado por admin');
+                    } else {
+                        console.warn('⚠️ Fallo al pausar: Object ytPlayer:', ytPlayer);
                     }
                 }
 
                 // 6. Reanudar reproducción
                 if (data.type === 'resume_playback') {
-                    if (ytPlayer && ytPlayer.playVideo) {
+                    if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
                         ytPlayer.playVideo();
                         console.log('▶️ Video reanudado por admin');
+                    } else {
+                        console.warn('⚠️ Fallo al reanudar: Object ytPlayer:', ytPlayer);
                     }
                 }
 
