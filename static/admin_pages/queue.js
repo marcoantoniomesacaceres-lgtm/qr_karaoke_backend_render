@@ -315,13 +315,30 @@ function renderApprovedSongs(songs, listElement) {
 
         let buttonsHtml = '';
         if (isPlaying) {
-            const pauseButtonText = playerState.isPlaying ? '⏸️ Pausar' : '▶️ Reproducir';
+            const isPaused = !playerState.isPlaying;
+            // SVG Icons
+            const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+            const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+            // Restart icon is like a "Previous" or "Replay"
+            const restartIcon = `<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>`;
+            const nextIcon = `<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
+
             buttonsHtml = `
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;">
-                    <button class="bees-btn bees-btn-primary bees-btn-small" data-id="${song.id}" data-action="play-song" title="Reproducir en player">▶️ Reproducir</button>
-                    <button class="bees-btn bees-btn-info bees-btn-small" data-action="pause-resume-toggle" title="Pausar/Reanudar">${pauseButtonText}</button>
-                    <button class="bees-btn bees-btn-warning bees-btn-small" data-action="restart" title="Reiniciar">🔄 Reiniciar</button>
-                    <button class="bees-btn bees-btn-success bees-btn-small" data-action="play-next" title="Siguiente canción">⏭️ Siguiente</button>
+                <div class="admin-player-controls">
+                    <!-- Restart -->
+                    <button class="player-btn" data-action="restart" title="Reiniciar">
+                        ${restartIcon}
+                    </button>
+                    
+                    <!-- Play/Pause Main -->
+                    <button class="player-btn player-btn-large" data-action="pause-resume-toggle" title="${isPaused ? 'Reanudar' : 'Pausar'}">
+                       ${isPaused ? playIcon : pauseIcon}
+                    </button>
+
+                    <!-- Next -->
+                    <button class="player-btn" data-action="play-next" title="Siguiente">
+                        ${nextIcon}
+                    </button>
                 </div>
             `;
         }
@@ -332,7 +349,6 @@ function renderApprovedSongs(songs, listElement) {
                     <button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-up" title="Subir">⬆️ Subir</button>
                     <button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-down" title="Bajar">⬇️ Bajar</button>
                     <button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove" title="Eliminar">❌ Eliminar</button>
-                </div>
                 </div>
             `;
         }
@@ -667,7 +683,7 @@ async function handleQueueActions(event) {
 
 async function handlePauseResume() {
     const pauseBtn = document.querySelector('button[data-action="pause-resume-toggle"]');
-    const originalText = pauseBtn ? pauseBtn.textContent : '';
+    const originalText = pauseBtn ? pauseBtn.innerHTML : '';
 
     try {
         // 1. Determine Intent based on current local state
@@ -677,7 +693,10 @@ async function handlePauseResume() {
         // 2. Optimistic UI Update
         playerState.isPlaying = newIsPlaying; // Toggle state immediately
         if (pauseBtn) {
-            pauseBtn.textContent = newIsPlaying ? '⏸️ Pausar' : '▶️ Reanudar';
+            const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+            const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+            pauseBtn.innerHTML = newIsPlaying ? pauseIcon : playIcon;
+            pauseBtn.title = newIsPlaying ? 'Pausar' : 'Reanudar';
         }
 
         // 3. API Call
@@ -695,7 +714,7 @@ async function handlePauseResume() {
         // Revert on error
         playerState.isPlaying = !playerState.isPlaying;
         if (pauseBtn) {
-            pauseBtn.textContent = originalText;
+            pauseBtn.innerHTML = originalText;
         }
         showNotification(`Error: ${error.message}`, 'error');
     }

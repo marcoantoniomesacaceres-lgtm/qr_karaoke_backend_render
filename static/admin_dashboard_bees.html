@@ -985,7 +985,10 @@
 
                     // Event Listeners - Global only
                     document.querySelector('.nav-menu').addEventListener('click', handleNavigation);
-                    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+                    const logoutBtnLegacy = document.getElementById('logout-btn');
+                    if (logoutBtnLegacy) {
+                        logoutBtnLegacy.addEventListener('click', handleLogout);
+                    }
 
                     // Page modules handle their own event listeners via setupXxxListeners()
                     // Called automatically when pages load via handleNavigation()
