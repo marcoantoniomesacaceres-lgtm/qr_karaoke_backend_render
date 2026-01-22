@@ -487,11 +487,14 @@
                     console.log('📋 Cola inicial cargada:', data);
                     updateQueueUI(data);
 
-                    // Auto-play si hay una canción sonando actualmente
+                    // Auto-play DESHABILITADO al cargar la página (solicitud del usuario)
+                    // El reproductor iniciará en standby (logo) y esperará orden del admin.
+                    /* 
                     if (data.now_playing && data.now_playing.youtube_id) {
                         console.log('🔄 Sincronizando reproductor con canción actual:', data.now_playing.titulo);
                         playVideo(data.now_playing.youtube_id, data.now_playing.duracion_seconds || 0);
                     }
+                    */
                 }
             } catch (err) {
                 console.warn('⚠️ Error cargando cola inicial:', err);
