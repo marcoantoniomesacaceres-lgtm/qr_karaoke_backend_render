@@ -2105,7 +2105,7 @@ def get_cola_lazy(db: Session):
 
         .filter(models.Cancion.estado == "pendiente_lazy")
 
-        .order_by(models.Cancion.orden_manual.asc().nulls_last(), models.Cancion.created_at.asc())
+        .order_by(models.Cancion.orden_manual.asc().nulls_last(), models.Cancion.created_at.asc(), models.Cancion.id.asc())
 
         .all()
 

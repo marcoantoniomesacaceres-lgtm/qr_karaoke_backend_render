@@ -2912,3 +2912,27 @@
 2026-01-20 15:14:06,619 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=1a3REFH83WA%2C4Ez2wJnlwag%2CftfeDRZA5iE%2CDjfaCC3ZKs8%2CoOl5vy6KiAs%2CIRSedFplzCc%2ConGJj-JIBZk%2C6kYEW6oQfpw%2C2JbrCXDNGcA%2CrERCTLp4CK8%2CUjYXahcriA0%2CeHflKESzSEY%2CUAAy5oTPUOE%2Ck1jzUtKrFk0%2CBUUvW6XJIik%2CcaP_V6eHGYY%2COpVDSm-7LaQ%2CnBhUJ9Rf8s0%2CCfGKChXwc4s%2Cdg-Xh5NNMIk%2CA4VTPpOFLwc%2CDWUpLPxb-lA%2CbF16O9IBSqw%2C24JDIZ8xCok%2CgEejTe7PHxs&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
 2026-01-20 15:14:06,680 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
 2026-01-20 15:14:06,757 - youtube - INFO - Procesamiento finalizado. Se encontraron 23 resultados formateados.
+2026-01-22 16:00:51,671 - youtube - INFO - Búsqueda [Admin] en YouTube con el término: 'el mayor de los ranas'
+2026-01-22 16:00:51,684 - youtube - INFO - Iniciando búsqueda interna en YouTube con el término: 'el mayor de los ranas' (Karaoke Mode: False)
+2026-01-22 16:00:54,092 - youtube - INFO - ¿Es una URL? ID extraído: None
+2026-01-22 16:00:54,093 - youtube - INFO - Búsqueda por texto: 'el mayor de los ranas'
+2026-01-22 16:00:54,093 - youtube - INFO - Realizando primera llamada a la API de YouTube (search)...
+2026-01-22 16:00:54,688 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/search?part=id&q=el+mayor+de+los+ranas&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94&type=video&videoCategoryId=10&maxResults=10 "HTTP/1.1 200 OK"
+2026-01-22 16:00:54,699 - youtube - INFO - Respuesta de la API (search) recibida con éxito.
+2026-01-22 16:00:54,700 - youtube - INFO - IDs de video encontrados: ['1a3REFH83WA', '4Ez2wJnlwag', 'ftfeDRZA5iE', 'DjfaCC3ZKs8', 'oOl5vy6KiAs', 'IRSedFplzCc', '2JbrCXDNGcA', 'onGJj-JIBZk', 'rERCTLp4CK8', '6kYEW6oQfpw']
+2026-01-22 16:00:54,703 - youtube - INFO - Realizando segunda llamada a la API de YouTube (videos)...
+2026-01-22 16:00:54,936 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=1a3REFH83WA%2C4Ez2wJnlwag%2CftfeDRZA5iE%2CDjfaCC3ZKs8%2CoOl5vy6KiAs%2CIRSedFplzCc%2C2JbrCXDNGcA%2ConGJj-JIBZk%2CrERCTLp4CK8%2C6kYEW6oQfpw&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
+2026-01-22 16:00:54,946 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
+2026-01-22 16:00:54,946 - youtube - INFO - Procesamiento finalizado. Se encontraron 10 resultados formateados.
+2026-01-22 16:00:54,985 - youtube - INFO - Búsqueda [Admin] en YouTube con el término: 'el mayor de los ranas'
+2026-01-22 16:00:55,007 - youtube - INFO - Iniciando búsqueda interna en YouTube con el término: 'el mayor de los ranas' (Karaoke Mode: False)
+2026-01-22 16:00:57,031 - youtube - INFO - ¿Es una URL? ID extraído: None
+2026-01-22 16:00:57,032 - youtube - INFO - Búsqueda por texto: 'el mayor de los ranas'
+2026-01-22 16:00:57,033 - youtube - INFO - Realizando primera llamada a la API de YouTube (search)...
+2026-01-22 16:00:57,685 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/search?part=id&q=el+mayor+de+los+ranas&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94&type=video&videoCategoryId=10&maxResults=10 "HTTP/1.1 200 OK"
+2026-01-22 16:00:57,698 - youtube - INFO - Respuesta de la API (search) recibida con éxito.
+2026-01-22 16:00:57,705 - youtube - INFO - IDs de video encontrados: ['1a3REFH83WA', '4Ez2wJnlwag', 'ftfeDRZA5iE', 'DjfaCC3ZKs8', 'oOl5vy6KiAs', 'IRSedFplzCc', '2JbrCXDNGcA', 'onGJj-JIBZk', 'rERCTLp4CK8', '6kYEW6oQfpw']
+2026-01-22 16:00:57,713 - youtube - INFO - Realizando segunda llamada a la API de YouTube (videos)...
+2026-01-22 16:00:57,915 - httpx - INFO - HTTP Request: GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails%2Csnippet&id=1a3REFH83WA%2C4Ez2wJnlwag%2CftfeDRZA5iE%2CDjfaCC3ZKs8%2CoOl5vy6KiAs%2CIRSedFplzCc%2C2JbrCXDNGcA%2ConGJj-JIBZk%2CrERCTLp4CK8%2C6kYEW6oQfpw&key=AIzaSyD5J79DvieL1TPjhk2ZOiwU-cHgd0QXn94 "HTTP/1.1 200 OK"
+2026-01-22 16:00:58,030 - youtube - INFO - Respuesta de la API (videos) recibida con éxito. Procesando resultados...
+2026-01-22 16:00:58,155 - youtube - INFO - Procesamiento finalizado. Se encontraron 10 resultados formateados.
