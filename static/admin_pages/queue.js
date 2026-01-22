@@ -1,9 +1,8 @@
 // Queue Page Module - BEES Style
 // Manejo: cola de canciones, búsqueda de canciones, añadir canciones
 
-// Estado de reproducción para el control de pausa/reanudación
 let playerState = {
-    isPlaying: true,  // false = pausado, true = reproduciendo
+    isPlaying: false,  // false = pausado, true = reproduciendo
     currentSongId: null
 };
 
