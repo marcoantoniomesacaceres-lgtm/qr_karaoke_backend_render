@@ -667,14 +667,12 @@ async def move_pending_song_down(cancion_id: int, db: Session = Depends(get_db),
 async def move_lazy_song_up(cancion_id: int, db: Session = Depends(get_db), api_key: str = Depends(api_key_auth)):
     """
     **[Admin]** Mueve una canción en la cola lazy una posición hacia arriba.
-    Usa la lista visual completa (Fetch List) para garantizar que se intercambia con el vecino visual.
+    CONVIERTE la cola dinámica en una cola manual estática para garantizar el orden.
     """
-    import datetime
-
-    # 1. Obtener la lista visual completa tal como la ve el usuario (Round Robin aplicado)
+    # 1. Obtener la lista visual completa actual
     cola_lazy = crud.get_cola_lazy(db)
     
-    # 2. Encontrar el índice de la canción actual
+    # 2. Encontrar índices
     current_index = -1
     for i, song in enumerate(cola_lazy):
         if song.id == cancion_id:
@@ -684,34 +682,21 @@ async def move_lazy_song_up(cancion_id: int, db: Session = Depends(get_db), api_
     if current_index == -1:
         raise HTTPException(status_code=404, detail="Canción lazy no encontrada en la cola.")
     
-    # 3. Verificar si se puede mover hacia arriba
     if current_index == 0:
         return {"mensaje": "La canción ya está en el principio."}
         
-    current_song = cola_lazy[current_index]
-    target_song = cola_lazy[current_index - 1]
+    # 3. Intercambiar en la lista EN MEMORIA
+    cola_lazy[current_index], cola_lazy[current_index - 1] = cola_lazy[current_index - 1], cola_lazy[current_index]
     
-    # 4. Intercambiar timestamps para intentar forzar el reordenamiento
-    # Nota: Si el algoritmo Round Robin es muy estricto, esto podría no cambiar el orden visual en casos complejos de cuotas,
-    # pero resuelve el problema de colisiones de timestamp y reordenamiento simple.
-    
-    # Si tienen el mismo timestamp, forzamos que la actual sea un poco más antigua
-    if current_song.created_at == target_song.created_at:
-         current_song.created_at = target_song.created_at - datetime.timedelta(seconds=1)
-    else:
-         # Intercambiar timestamps
-         temp_created = current_song.created_at
-         current_song.created_at = target_song.created_at
-         target_song.created_at = temp_created
-    
-    # Limpiamos orden_manual si existiera para evitar conflictos, priorizando timestamp
-    # (Opcional, pero recomendado si queremos comportamiento fluido)
-    # current_song.orden_manual = None
-    # target_song.orden_manual = None
-         
+    # 4. "Congelar" el orden: Asignar orden_manual secuencial a TODA la lista
+    # Esto sobreescribe la lógica dinámica de Round Robin para las canciones actuales,
+    # garantizando que el orden visual se respete.
+    for index, song in enumerate(cola_lazy):
+        song.orden_manual = index + 1
+        
     db.commit()
     
-    crud.create_admin_log_entry(db, action="MOVE_LAZY_UP", details=f"Canción '{current_song.titulo}' movida hacia arriba en cola lazy.")
+    crud.create_admin_log_entry(db, action="MOVE_LAZY_UP", details=f"Canción ID {cancion_id} movida hacia arriba (Cola convertida a manual).")
     await websocket_manager.manager.broadcast_queue_update()
     return {"mensaje": "Canción movida hacia arriba."}
 
@@ -719,14 +704,12 @@ async def move_lazy_song_up(cancion_id: int, db: Session = Depends(get_db), api_
 async def move_lazy_song_down(cancion_id: int, db: Session = Depends(get_db), api_key: str = Depends(api_key_auth)):
     """
     **[Admin]** Mueve una canción en la cola lazy una posición hacia abajo.
-    Usa la lista visual completa.
+    CONVIERTE la cola dinámica en una cola manual estática para garantizar el orden.
     """
-    import datetime
-
     # 1. Obtener la lista visual completa
     cola_lazy = crud.get_cola_lazy(db)
     
-    # 2. Encontrar el índice
+    # 2. Encontrar índice
     current_index = -1
     for i, song in enumerate(cola_lazy):
         if song.id == cancion_id:
@@ -736,24 +719,19 @@ async def move_lazy_song_down(cancion_id: int, db: Session = Depends(get_db), ap
     if current_index == -1:
         raise HTTPException(status_code=404, detail="Canción lazy no encontrada en la cola.")
     
-    # 3. Verificar si se puede mover hacia abajo
     if current_index >= len(cola_lazy) - 1:
         return {"mensaje": "La canción ya está en el final."}
         
-    current_song = cola_lazy[current_index]
-    target_song = cola_lazy[current_index + 1]
+    # 3. Intercambiar en la lista EN MEMORIA
+    cola_lazy[current_index], cola_lazy[current_index + 1] = cola_lazy[current_index + 1], cola_lazy[current_index]
     
-    # 4. Intercambiar timestamps
-    if current_song.created_at == target_song.created_at:
-         current_song.created_at = target_song.created_at + datetime.timedelta(seconds=1)
-    else:
-         temp_created = current_song.created_at
-         current_song.created_at = target_song.created_at
-         target_song.created_at = temp_created
-             
+    # 4. "Congelar" el orden secuencial
+    for index, song in enumerate(cola_lazy):
+        song.orden_manual = index + 1
+        
     db.commit()
     
-    crud.create_admin_log_entry(db, action="MOVE_LAZY_DOWN", details=f"Canción '{current_song.titulo}' movida hacia abajo en cola lazy.")
+    crud.create_admin_log_entry(db, action="MOVE_LAZY_DOWN", details=f"Canción ID {cancion_id} movida hacia abajo (Cola convertida a manual).")
     await websocket_manager.manager.broadcast_queue_update()
     return {"mensaje": "Canción movida hacia abajo."}
 
