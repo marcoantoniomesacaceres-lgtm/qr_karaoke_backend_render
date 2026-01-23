@@ -229,14 +229,12 @@ function connectWebSocket() {
 // LÓGICA DE API Y EVENTOS
 // ============================================
 
-async function handleLogin(event) {
-    event.preventDefault();
-    const nick = nickInput.value.trim();
-
+async function performConnect(nick) {
     if (!nick) {
         errorMessage.textContent = 'Por favor, introduce un apodo.';
-        return;
+        return null;
     }
+
     connectButton.disabled = true;
     connectButton.textContent = 'Conectando...';
     errorMessage.textContent = '';
@@ -257,11 +255,56 @@ async function handleLogin(event) {
 
         await fetchUserProfile();
         showDashboard();
+        return data;
     } catch (error) {
         errorMessage.textContent = error.message;
+        return null;
     } finally {
         connectButton.disabled = false;
         connectButton.textContent = 'Conectar';
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const nick = nickInput.value.trim();
+    await performConnect(nick);
+}
+
+async function attemptAutoConnectFromQr() {
+    try {
+        const match = state.tableQrCode && state.tableQrCode.match(/^karaoke-mesa-(\d+)-usuario(\d+)$/i);
+        if (!match) return;
+        const mesaNumRaw = match[1];
+        const userNum = match[2];
+        // Normalize mesa number to two digits if needed
+        const mesaNum = mesaNumRaw.padStart ? mesaNumRaw.padStart(2, '0') : mesaNumRaw;
+        const qrBase = `karaoke-mesa-${mesaNum}`;
+
+        // Try to fetch mesa to get its display name; fallback to 'Mesa <n>' if not available
+        let mesaNombre = null;
+        try {
+            const mesaResp = await fetch(`${API_BASE_URL}/mesas/${encodeURIComponent(qrBase)}`);
+            if (mesaResp.ok) {
+                const mesaData = await mesaResp.json();
+                mesaNombre = mesaData.nombre;
+            }
+        } catch (e) {
+            console.warn('Could not fetch mesa details for auto-connect:', e);
+        }
+
+        if (!mesaNombre) {
+            mesaNombre = `Mesa ${parseInt(mesaNumRaw, 10)}`;
+        }
+
+        const nick = `${mesaNombre}-Usuario${userNum}`;
+        console.log('Attempting auto-connect with nick:', nick);
+        const res = await performConnect(nick);
+        if (!res) {
+            console.warn('Auto-connect failed for nick:', nick);
+        }
+    } catch (e) {
+        console.error('Error in attemptAutoConnectFromQr:', e);
     }
 }
 
@@ -720,6 +763,9 @@ window.addEventListener('DOMContentLoaded', () => {
             fetchUserProfile();
         }
         showDashboard();
+    } else {
+        // Si no hay sesión almacenada para esta mesa, intentar auto-conexión si el QR incluye '-usuarioN'
+        attemptAutoConnectFromQr();
     }
 
     // Event Listeners
