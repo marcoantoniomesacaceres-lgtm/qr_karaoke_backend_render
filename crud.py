@@ -50,7 +50,8 @@ def get_canciones_por_usuario(db: Session, usuario_id: int):
 
 def create_cancion_para_usuario(db: Session, cancion: schemas.CancionCreate, usuario_id: int):
     """Crea una nueva canciÃÂ³n y la asocia a un usuario."""
-    db_cancion = models.Cancion(**cancion.dict(), usuario_id=usuario_id)
+    # Usar model_dump() (Pydantic v2) en vez de dict()
+    db_cancion = models.Cancion(**cancion.model_dump(), usuario_id=usuario_id)
     db.add(db_cancion)
     db.commit()
     db.refresh(db_cancion)
@@ -252,7 +253,7 @@ def get_productos(db: Session, skip: int = 0, limit: int = 100):
 def create_producto(db: Session, producto: schemas.ProductoCreate):
     """Crea un nuevo producto en el catÃÂ¡logo."""
     # Aseguramos que el producto se cree como activo por defecto.
-    producto_data = producto.dict()
+    producto_data = producto.model_dump()
     # El schema ProductoCreate ya tiene `is_active` con un valor por defecto.
     # Al pasarlo directamente, evitamos el error de "multiple values for keyword argument".
     # Si el schema no lo tuviera, podrÃÂ­amos hacer `producto_data.pop('is_active', None)`
@@ -1022,7 +1023,7 @@ def update_producto(db: Session, producto_id: int, producto_update: schemas.Prod
     """
     db_producto = db.query(models.Producto).filter(models.Producto.id == producto_id).first()
     if db_producto:
-        for key, value in producto_update.dict(exclude_unset=True).items():
+        for key, value in producto_update.model_dump(exclude_unset=True).items():
             setattr(db_producto, key, value)
         db.commit()
         db.refresh(db_producto)
@@ -1790,7 +1791,7 @@ def get_table_payment_status(db: Session, mesa_id: int) -> Optional[dict]:
          return schemas.MesaEstadoPago(
              mesa_id=mesa.id, cuenta_id=None, mesa_nombre=mesa.nombre, 
              total_consumido=Decimal(0), total_pagado=Decimal(0), saldo_pendiente=Decimal(0), consumos=[], pagos=[]
-         ).dict()
+         ).model_dump()
          
     return get_cuenta_payment_status(db, active_cuenta.id)
 
@@ -2073,7 +2074,7 @@ def get_cuenta_payment_status(db: Session, cuenta_id: int) -> Optional[dict]:
         consumos=consumos_items, 
         pagos=pagos_detalle,
         nivel=("oro" if total_consumido >= 150000 else "plata" if total_consumido >= 50000 else "bronce")
-    ).dict()# CÃÂ³digo para agregar al final de crud.py
+    ).model_dump()# CÃÂ³digo para agregar al final de crud.py
 
 
 

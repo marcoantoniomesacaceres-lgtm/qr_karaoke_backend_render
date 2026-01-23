@@ -48,9 +48,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ===============================
-# APP FASTAPI
+# APP FASTAPI with lifespan
 # ===============================
-app = FastAPI(title="Karaoke 'LA CANTA QUE RANA'")
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Setup inicial en lifespan (reemplaza @app.on_event startup)
+    db = SessionLocal()
+    try:
+        crud.get_or_create_dj_user(db)
+        yield
+    finally:
+        db.close()
+
+app = FastAPI(title="Karaoke 'LA CANTA QUE RANA'", lifespan=lifespan)
 
 # ===============================
 # ✅ HEALTH CHECK PARA RENDER
@@ -60,18 +72,6 @@ def health_check():
     return {"status": "ok"}
 
 # ===============================
-# DATOS INICIALES
-# ===============================
-def setup_initial_data():
-    db = SessionLocal()
-    try:
-        crud.get_or_create_dj_user(db)
-    finally:
-        db.close()
-
-setup_initial_data()
-
-# ===============================
 # MIDDLEWARE
 # ===============================
 @app.middleware("http")
@@ -79,33 +79,6 @@ async def add_referrer_policy_header(request: Request, call_next):
     response: Response = await call_next(request)
     response.headers["Referrer-Policy"] = "origin"
     return response
-
-# ===============================
-# EVENTO STARTUP
-# ===============================
-@app.on_event("startup")
-def startup_event():
-    db = SessionLocal()
-
-    # mesas_a_crear = []
-    # for i in range(1, 2):  # Solo crear la mesa base 1
-    #     mesas_a_crear.append({
-    #         "nombre": f"Mesa {i}",
-    #         "qr_code": f"karaoke-mesa-{i:02d}"
-    #     })
-
-    # for mesa_data in mesas_a_crear:
-    #     mesa_existente = crud.get_mesa_by_qr(db, mesa_data["qr_code"])
-    #     if not mesa_existente:
-    #         crud.create_mesa(
-    #             db=db,
-    #             mesa=schemas.MesaCreate(**mesa_data)
-    #         )
-    #         print(f"[OK] Mesa creada: {mesa_data['nombre']}")
-    #     else:
-    #         print(f"[INFO] Mesa ya existente: {mesa_data['nombre']}")
-
-    db.close()
 
 # ===============================
 # FRONTEND

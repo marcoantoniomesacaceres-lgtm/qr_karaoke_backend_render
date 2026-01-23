@@ -65,8 +65,8 @@ ENDPOINTS = [
     ("POST", "/admin/settings/general", {"app_name": "test", "theme": "dark"}),
 ]
 
-def test_endpoint(method, path, body=None):
-    """Test a single endpoint and return status code."""
+def run_endpoint(method, path, body=None):
+    """Test a single endpoint and return status code. (Renombrada para evitar colección por pytest)"""
     url = BASE_URL + path if path.startswith("/") else BASE_URL + "/" + path
     # Skip parametrized paths
     if "{" in url:
@@ -101,7 +101,7 @@ def main():
     
     for method, path, *body_list in ENDPOINTS:
         body = body_list[0] if body_list else None
-        status, error = test_endpoint(method, path, body)
+        status, error = run_endpoint(method, path, body)
         
         endpoint_str = f"{method:6} {path:50}"
         

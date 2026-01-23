@@ -747,6 +747,14 @@ async def approve_next_lazy_song(db: Session = Depends(get_db), api_key: str = D
         raise HTTPException(status_code=404, detail="No hay canciones en cola lazy para aprobar.")
 
     crud.create_admin_log_entry(db, action="APPROVE_LAZY_NEXT", details=f"Canción '{siguiente.titulo}' aprobada manualmente desde admin.")
+
+    # Si no hay canción en reproducción, intentar iniciar la siguiente automáticamente
+    try:
+        await crud.start_next_song_if_autoplay_and_idle(db)
+    except Exception as e:
+        # Registrar error no crítico y continuar con la actualización de cola
+        print(f"Error al intentar iniciar la siguiente canción tras aprobar lazy: {e}")
+
     await websocket_manager.manager.broadcast_queue_update()
     return siguiente
 

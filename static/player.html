@@ -267,6 +267,10 @@
         // Variables para el autoplay automático
         let autoplayTimer = null;
 
+        // Flags para acciones enviadas por admin antes de que el reproductor exista
+        let pendingPause = false;
+        let pendingResume = false;
+
         // Variables para rastrear el video actual (necesarias para reiniciar)
         let currentVideoId = null;
         let currentVideoDuration = 0;
@@ -338,7 +342,29 @@
         // Evento cuando el reproductor está listo
         function onPlayerReady(event) {
             console.log('✅ Reproductor listo, iniciando reproducción');
+            // Iniciamos por defecto
             event.target.playVideo();
+
+            // Aplicar acciones encoladas por admin si las hubiera
+            try {
+                if (pendingPause) {
+                    if (typeof event.target.pauseVideo === 'function') {
+                        event.target.pauseVideo();
+                        console.log('⏸️ Aplicando pausa encolada por admin');
+                    }
+                    pendingPause = false;
+                } else if (pendingResume) {
+                    if (typeof event.target.playVideo === 'function') {
+                        event.target.playVideo();
+                        console.log('▶️ Aplicando reanudar encolado por admin');
+                    }
+                    pendingResume = false;
+                }
+            } catch (e) {
+                console.warn('⚠️ Error aplicando acción encolada:', e);
+                pendingPause = false;
+                pendingResume = false;
+            }
         }
 
         // Evento cuando cambia el estado del reproductor
@@ -487,14 +513,16 @@
                     console.log('📋 Cola inicial cargada:', data);
                     updateQueueUI(data);
 
-                    // Auto-play DESHABILITADO al cargar la página (solicitud del usuario)
-                    // El reproductor iniciará en standby (logo) y esperará orden del admin.
-                    /* 
+                    // Auto-play: sincronizar reproductor con la canción actual si existe.
                     if (data.now_playing && data.now_playing.youtube_id) {
-                        console.log('🔄 Sincronizando reproductor con canción actual:', data.now_playing.titulo);
-                        playVideo(data.now_playing.youtube_id, data.now_playing.duracion_seconds || 0);
+                        // Si no hay video cargado o el video actual es distinto, iniciar reproducción automáticamente
+                        if (!currentVideoId || currentVideoId !== data.now_playing.youtube_id) {
+                            console.log('🔄 Sincronizando reproductor con canción actual:', data.now_playing.titulo);
+                            playVideo(data.now_playing.youtube_id, data.now_playing.duracion_seconds || 0);
+                        } else {
+                            console.log('🔁 Reproductor ya sincronizado con la canción actual:', data.now_playing.youtube_id);
+                        }
                     }
-                    */
                 }
             } catch (err) {
                 console.warn('⚠️ Error cargando cola inicial:', err);
@@ -583,7 +611,10 @@
                         ytPlayer.pauseVideo();
                         console.log('⏸️ Video pausado por admin');
                     } else {
-                        console.warn('⚠️ Fallo al pausar: Object ytPlayer:', ytPlayer);
+                        // Encolar la pausa para aplicarla cuando el reproductor esté listo
+                        pendingPause = true;
+                        pendingResume = false;
+                        console.log('⏳ Pausa encolada hasta inicialización del reproductor (admin solicitó pausar antes de crear el player).');
                     }
                 }
 
@@ -593,7 +624,10 @@
                         ytPlayer.playVideo();
                         console.log('▶️ Video reanudado por admin');
                     } else {
-                        console.warn('⚠️ Fallo al reanudar: Object ytPlayer:', ytPlayer);
+                        // Encolar la reanudación para aplicarla cuando el reproductor esté listo
+                        pendingResume = true;
+                        pendingPause = false;
+                        console.log('⏳ Reanudar encolado hasta inicialización del reproductor (admin solicitó reanudar antes de crear el player).');
                     }
                 }
 

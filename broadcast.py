@@ -21,6 +21,6 @@ async def send_reaction(payload: ReactionPayload):
     # Usamos asyncio.create_task para enviar la notificación en segundo plano
     # y devolver la respuesta al cliente inmediatamente, sin esperar.
     asyncio.create_task(
-        websocket_manager.manager.broadcast_reaction(payload.dict())
+        websocket_manager.manager.broadcast_reaction(payload.model_dump())
     )
     return {"message": "Reaction sent"}

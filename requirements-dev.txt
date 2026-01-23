@@ -1,2 +1,6 @@
 # Dependencias de desarrollo
 pytest
+playwright
+pytest-playwright
+selenium
+webdriver-manager
