@@ -571,6 +571,15 @@
                         console.log('Recibida orden de reproducir:', videoId);
                         const duration = data.payload.duracion_seconds || data.payload.duration || 0;
                         playVideo(videoId, duration);
+
+                        // Forzar actualización de la cola inmediatamente para sincronizar el título/artista
+                        // Esto evita que el player quede mostrando metadatos antiguos si el evento de
+                        // actualización de la cola no llega o llega después del evento play_song.
+                        try {
+                            fetchAndUpdateQueue();
+                        } catch (e) {
+                            console.warn('No se pudo actualizar la cola tras play_song:', e);
+                        }
                     } else {
                         console.error('No se pudo extraer el ID de YouTube:', data.payload);
                     }
@@ -673,37 +682,47 @@
         }
 
         function updateQueueUI(queueData) {
-            const nowPlayingInfo = document.getElementById('now-playing-info');
-            const upcomingInfo = document.getElementById('upcoming-info');
+            // Logging y defensas para evitar que un payload inesperado rompa la UI
+            try {
+                console.debug('updateQueueUI called with payload:', queueData);
 
-            // Actualizar "Ahora Cantando"
-            if (queueData.now_playing) {
-                const song = queueData.now_playing;
-                const addedBy = song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick;
-                nowPlayingInfo.innerHTML = `
-                    <div class="info-title">${song.titulo}</div>
-                    <div class="info-artist">Por: <strong>${addedBy}</strong></div>`;
-            } else {
-                nowPlayingInfo.innerHTML = `<div class="info-title">Esperando canción...</div><div class="info-artist"></div>`;
-            }
+                const nowPlayingInfo = document.getElementById('now-playing-info');
+                const upcomingInfo = document.getElementById('upcoming-info');
 
-            // Actualizar "Siguiente" y guardar información para la transición
-            if (queueData.upcoming && queueData.upcoming.length > 0) {
-                const nextSong = queueData.upcoming[0];
-                const addedBy = nextSong.usuario.mesa ? nextSong.usuario.mesa.nombre : nextSong.usuario.nick;
+                // Actualizar "Ahora Cantando"
+                if (queueData && queueData.now_playing) {
+                    const song = queueData.now_playing;
+                    // Protegemos contra estructura inesperada
+                    const addedBy = (song && song.usuario) ? (song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick) : 'Desconocido';
+                    const title = (song && song.titulo) ? song.titulo : 'Título desconocido';
+                    nowPlayingInfo.innerHTML = `
+                        <div class="info-title">${title}</div>
+                        <div class="info-artist">Por: <strong>${addedBy}</strong></div>`;
+                } else {
+                    nowPlayingInfo.innerHTML = `<div class="info-title">Esperando canción...</div><div class="info-artist"></div>`;
+                }
 
-                // Guardar información de la siguiente canción para mostrar en la transición
-                nextSongInfo = {
-                    titulo: nextSong.titulo,
-                    cantante: addedBy
-                };
+                // Actualizar "Siguiente" y guardar información para la transición
+                if (queueData && queueData.upcoming && queueData.upcoming.length > 0) {
+                    const nextSong = queueData.upcoming[0];
+                    const addedBy = (nextSong && nextSong.usuario) ? (nextSong.usuario.mesa ? nextSong.usuario.mesa.nombre : nextSong.usuario.nick) : 'Desconocido';
 
-                upcomingInfo.innerHTML = `
-                    <div class="info-title">${nextSong.titulo}</div>
-                    <div class="info-artist">Por: <strong>${addedBy}</strong></div>`;
-            } else {
-                nextSongInfo = null;
-                upcomingInfo.innerHTML = `<div class="info-title">No hay canciones en espera</div><div class="info-artist"></div>`;
+                    // Guardar información de la siguiente canción para mostrar en la transición
+                    nextSongInfo = {
+                        titulo: nextSong && nextSong.titulo ? nextSong.titulo : 'Título desconocido',
+                        cantante: addedBy
+                    };
+
+                    upcomingInfo.innerHTML = `
+                        <div class="info-title">${nextSongInfo.titulo}</div>
+                        <div class="info-artist">Por: <strong>${addedBy}</strong></div>`;
+                } else {
+                    nextSongInfo = null;
+                    upcomingInfo.innerHTML = `<div class="info-title">No hay canciones en espera</div><div class="info-artist"></div>`;
+                }
+            } catch (e) {
+                // No permitimos que un error en la UI detenga el reproductor; logueamos para diagnóstico
+                console.error('Error en updateQueueUI:', e, 'payload:', queueData);
             }
         }
 

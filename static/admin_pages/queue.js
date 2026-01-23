@@ -278,102 +278,92 @@ async function loadQueueData() {
 function renderApprovedSongs(songs, listElement) {
     if (!listElement) return;
 
-    let songArray = [];
+    // Queremos mostrar como máximo UNA canción: la que está reproduciéndose
+    // si existe, o en su defecto la primera canción aprobada (siguiente en sonar).
+    let item = null;
+    let isPlaying = false;
+
     if (Array.isArray(songs)) {
-        songArray = songs;
+        if (songs.length > 0) {
+            item = songs[0];
+            isPlaying = !!(item.estado && item.estado === 'reproduciendo');
+        }
     } else if (songs && typeof songs === 'object') {
         if (songs.now_playing) {
-            songArray.push(songs.now_playing);
-        }
-        if (songs.upcoming && Array.isArray(songs.upcoming)) {
-            songArray = songArray.concat(songs.upcoming);
+            item = songs.now_playing;
+            isPlaying = true;
+        } else if (songs.upcoming && Array.isArray(songs.upcoming) && songs.upcoming.length > 0) {
+            item = songs.upcoming[0];
+            isPlaying = false;
         }
     }
 
     listElement.innerHTML = '';
-    if (!songArray || songArray.length === 0) {
+
+    if (!item) {
         const emptyItem = document.createElement('li');
         emptyItem.innerHTML = '<div class="bees-alert bees-alert-info"><span class="bees-alert-icon">ℹ️</span><div>La cola de canciones está vacía.</div></div>';
         listElement.appendChild(emptyItem);
         return;
     }
 
-    songArray.forEach((song, index) => {
-        const li = document.createElement('li');
-        li.style.marginBottom = '16px';
+    const song = item;
+    const li = document.createElement('li');
+    li.style.marginBottom = '16px';
 
-        let addedBy = 'Desconocido';
-        if (song.usuario) {
-            addedBy = song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick;
-        }
+    let addedBy = 'Desconocido';
+    if (song.usuario) {
+        addedBy = song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick;
+    }
 
-        const isPlaying = index === 0;
-        const statusBadge = isPlaying
-            ? '<span class="bees-badge bees-badge-success">▶️ Reproduciendo</span>'
-            : `<span class="bees-badge bees-badge-info">#${index}</span>`;
+    const statusBadge = isPlaying
+        ? '<span class="bees-badge bees-badge-success">▶️ Reproduciendo</span>'
+        : '<span class="bees-badge bees-badge-info">#1</span>';
 
-        let buttonsHtml = '';
-        if (isPlaying) {
-            const isPaused = !playerState.isPlaying;
-            // SVG Icons
-            const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
-            const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-            // Restart icon is like a "Previous" or "Replay"
-            const restartIcon = `<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>`;
-            const nextIcon = `<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
+    let buttonsHtml = '';
+    if (isPlaying) {
+        const isPaused = !playerState.isPlaying;
+        // SVG Icons
+        const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+        const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+        const restartIcon = `<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>`;
+        const nextIcon = `<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
 
-            buttonsHtml = `
-                <div class="admin-player-controls">
-                    <!-- Restart -->
-                    <button class="player-btn" data-action="restart" title="Reiniciar">
-                        ${restartIcon}
-                    </button>
-                    
-                    <!-- Play/Pause Main -->
-                    <button class="player-btn player-btn-large" data-action="pause-resume-toggle" title="${isPaused ? 'Reanudar' : 'Pausar'}">
-                       ${isPaused ? playIcon : pauseIcon}
-                    </button>
-
-                    <!-- Next -->
-                    <button class="player-btn" data-action="play-next" title="Siguiente">
-                        ${nextIcon}
-                    </button>
-                </div>
-            `;
-        }
-        else {
-            // Botones para canciones en espera (no reproduciendo)
-            buttonsHtml = `
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
-                    <button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-up" title="Subir">⬆️ Subir</button>
-                    <button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-down" title="Bajar">⬇️ Bajar</button>
-                    <button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove" title="Eliminar">❌ Eliminar</button>
-                </div>
-            `;
-        }
-
-        // Ocultar botones SOLO para la segunda canción (la próxima en sonar)
-        if (index === 1) {
-            buttonsHtml = '';
-        }
-
-        li.innerHTML = `
-            <div style="background: var(--page-input-bg); border-radius: 12px; padding: 16px; border-left: 4px solid ${isPlaying ? 'var(--bees-green)' : 'var(--bees-yellow)'};">
-                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                    <img src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura" style="width: 60px; height: 45px; border-radius: 6px; object-fit: cover;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--page-text); margin-bottom: 4px; word-break: break-word;">${song.titulo}</div>
-                        <div style="font-size: 12px; color: var(--page-text-secondary);">Agregada por: <strong>${addedBy}</strong></div>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                    ${statusBadge}
-                </div>
-                ${buttonsHtml}
+        buttonsHtml = `
+            <div class="admin-player-controls">
+                <button class="player-btn" data-action="restart" title="Reiniciar">${restartIcon}</button>
+                <button class="player-btn player-btn-large" data-action="pause-resume-toggle" title="${isPaused ? 'Reanudar' : 'Pausar'}">${isPaused ? playIcon : pauseIcon}</button>
+                <button class="player-btn" data-action="play-next" title="Siguiente">${nextIcon}</button>
             </div>
         `;
-        listElement.appendChild(li);
-    });
+    } else {
+        // Mostrar controles para gestión previa a la reproducción
+        buttonsHtml = `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
+                <button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-up" title="Subir">⬆️ Subir</button>
+                <button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-down" title="Bajar">⬇️ Bajar</button>
+                <button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove" title="Eliminar">❌ Eliminar</button>
+            </div>
+        `;
+    }
+
+    li.innerHTML = `
+        <div style="background: var(--page-input-bg); border-radius: 12px; padding: 16px; border-left: 4px solid ${isPlaying ? 'var(--bees-green)' : 'var(--bees-yellow)'};">
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                <img src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura" style="width: 60px; height: 45px; border-radius: 6px; object-fit: cover;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--page-text); margin-bottom: 4px; word-break: break-word;">${song.titulo}</div>
+                    <div style="font-size: 12px; color: var(--page-text-secondary);">Agregada por: <strong>${addedBy}</strong></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                ${statusBadge}
+            </div>
+            ${buttonsHtml}
+        </div>
+    `;
+
+    listElement.appendChild(li);
 }
 
 function renderLazySongs(songs, listElement) {

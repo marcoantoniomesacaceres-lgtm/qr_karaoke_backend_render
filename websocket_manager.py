@@ -3,6 +3,9 @@ from typing import List
 from fastapi import WebSocket
 import models
 from fastapi.encoders import jsonable_encoder
+import logging
+
+logger = logging.getLogger(__name__)
 
 import schemas, crud
 from database import SessionLocal
@@ -113,6 +116,13 @@ class ConnectionManager:
         Envía un evento para reproducir una canción en el reproductor.
         Incluye la duración para permitir el autoplay automático.
         """
+        # Log para facilitar correlación entre eventos de servidor y updates del cliente
+        try:
+            logger.info(f"Emitiendo play_song -> youtube_id={youtube_id}, duration_seconds={duration_seconds}")
+        except Exception:
+            # Evitar que un error de logging interrumpa el flujo
+            print(f"Emitiendo play_song -> youtube_id={youtube_id}, duration_seconds={duration_seconds}")
+
         payload = {
             "type": "play_song", 
             "payload": {

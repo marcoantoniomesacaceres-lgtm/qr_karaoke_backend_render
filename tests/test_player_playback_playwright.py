@@ -82,3 +82,47 @@ def test_player_starts_playback_on_approve_lazy_playwright(page):
         assert played is True
     finally:
         stop_server(proc)
+
+@pytest.mark.playwright
+def test_play_song_updates_now_playing_ui_playwright(page):
+    """Verifica que al recibir play_song el UI de 'Ahora Cantando' se actualice con título y artista."""
+    proc = start_server()
+    try:
+        init_script = """
+            window.__fake_player = { played: false, created: false };
+            window.YT = { Player: function(id, opts) { window.__fake_player.created = true; window.__fake_player.opts = opts; this.loadVideoById = function(id) {}; this.playVideo = function() { window.__fake_player.played = true; }; this.pauseVideo = function() { window.__fake_player.played = false; }; } };
+        """
+        page.add_init_script(init_script)
+
+        page.goto(f"{SERVER_URL}/player")
+
+        # Crear datos de prueba
+        headers = {'X-API-Key': 'zxc12345'}
+        r = requests.post(f"{SERVER_URL}/api/v1/mesas/", json={'nombre': 'E2E_UI', 'qr_code': 'e2e_ui'}, headers=headers)
+        assert r.status_code == 201
+        mesa = r.json()
+
+        db = SessionLocal()
+        usuario = crud.create_usuario_en_mesa(db, usuario=schemas.UsuarioCreate(nick='ui_user'), mesa_id=mesa['id'])
+
+        song_title = 'UI PlayingSong'
+        song_payload = schemas.CancionCreate(titulo=song_title, youtube_id='UIPLAY', duracion_seconds=20, is_karaoke=False)
+        db_song = crud.create_cancion_para_usuario(db, cancion=song_payload, usuario_id=usuario.id)
+        crud.update_cancion_estado(db, cancion_id=db_song.id, nuevo_estado='pendiente_lazy')
+        db.close()
+
+        # Aprobar siguiente (esto debe disparar play_song)
+        r = requests.post(f"{SERVER_URL}/api/v1/admin/canciones/lazy/approve-next", headers=headers)
+        assert r.status_code == 200
+
+        # Esperar que el fake player indique reproducción
+        page.wait_for_function('window.__fake_player && window.__fake_player.played === true', timeout=8000)
+
+        # Y verificar que la UI se actualizó
+        page.wait_for_function("document.querySelector('#now-playing-info .info-title') && document.querySelector('#now-playing-info .info-title').textContent.includes('" + song_title + "')", timeout=8000)
+
+        title_text = page.locator('#now-playing-info .info-title').inner_text()
+        assert song_title in title_text
+
+    finally:
+        stop_server(proc)
