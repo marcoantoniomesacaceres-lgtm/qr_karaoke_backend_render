@@ -338,11 +338,20 @@ function renderApprovedSongs(songs, listElement) {
         `;
     } else {
         // Mostrar controles para gestión previa a la reproducción
+        // Si estamos mostrando la primera canción aprobada (upcoming[0]), no permitir 'subir'.
+        const upcomingCount = (typeof currentQueueData !== 'undefined' && currentQueueData.upcoming && Array.isArray(currentQueueData.upcoming)) ? currentQueueData.upcoming.length : 0;
+        const showMoveDown = upcomingCount > 1; // Solo si hay más canciones abajo puede bajarse
+        const approvedButtons = [];
+
+        // No mostramos 'Subir' porque esta vista muestra la primera en upcoming (index 0)
+        if (showMoveDown) approvedButtons.push(`<button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-down" title="Bajar">⬇️ Bajar</button>`);
+
+        // Siempre permitir eliminar
+        approvedButtons.push(`<button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove" title="Eliminar">❌ Eliminar</button>`);
+
         buttonsHtml = `
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
-                <button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-up" title="Subir">⬆️ Subir</button>
-                <button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-down" title="Bajar">⬇️ Bajar</button>
-                <button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove" title="Eliminar">❌ Eliminar</button>
+            <div style="display: grid; grid-template-columns: repeat(${approvedButtons.length}, 1fr); gap: 8px; margin-top: 12px;">
+                ${approvedButtons.join('')}
             </div>
         `;
     }
@@ -391,11 +400,19 @@ function renderLazySongs(songs, listElement) {
             : `<span class="bees-badge bees-badge-info">#${index + 1} en cola lazy</span>`;
 
         // Botones para gestionar la canción lazy
+        // Mostrar/ocultar botones según la posición en la cola (primero / último)
+        const lazyCount = Array.isArray(songs) ? songs.length : 0;
+        const showMoveUp = index > 0 && lazyCount > 1;
+        const showMoveDown = index < lazyCount - 1 && lazyCount > 1;
+        const lazyButtons = [];
+        if (showMoveUp) lazyButtons.push(`<button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-lazy-up" title="Subir">⬆️ Subir</button>`);
+        if (showMoveDown) lazyButtons.push(`<button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-lazy-down" title="Bajar">⬇️ Bajar</button>`);
+        // Siempre permitir eliminar
+        lazyButtons.push(`<button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove-lazy" title="Eliminar">❌ Eliminar</button>`);
+
         const buttonsHtml = `
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
-                <button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-lazy-up" title="Subir">⬆️ Subir</button>
-                <button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-lazy-down" title="Bajar">⬇️ Bajar</button>
-                <button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove-lazy" title="Eliminar">❌ Eliminar</button>
+            <div style="display: grid; grid-template-columns: repeat(${lazyButtons.length}, 1fr); gap: 8px; margin-top: 12px;">
+                ${lazyButtons.join('')}
             </div>
         `;
 
