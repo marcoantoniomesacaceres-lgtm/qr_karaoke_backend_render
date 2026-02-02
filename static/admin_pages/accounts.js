@@ -40,11 +40,24 @@ function renderAccounts(accounts, accountsGrid) {
         // Extraer el número lógico de la mesa del nombre
         // Si el nombre sigue el patrón "Mesa X", extraemos X
         // Si no, usamos mesa_id como fallback
-        let numeroMesa = acc.mesa_id; // Fallback al ID de la base de datos
-        if (acc.mesa_nombre) {
-            const match = acc.mesa_nombre.match(/Mesa\s+(\d+)/i);
-            if (match && match[1]) {
-                numeroMesa = parseInt(match[1], 10);
+        // Extraer el número lógico de la mesa
+        // 1. Intentar desde el QR code (karaoke-mesa-XX)
+        // 2. Intentar desde el nombre (Mesa XX)
+        // 3. Fallback al ID de la base de datos
+        let numeroMesa = acc.mesa_id;
+
+        if (acc.qr_code) {
+            const matchQr = acc.qr_code.match(/karaoke-mesa-(\d+)/i);
+            if (matchQr && matchQr[1]) {
+                numeroMesa = parseInt(matchQr[1], 10);
+            }
+        }
+
+        // Si no pudimos sacar del QR (o no había), intentamos del nombre si aún es el ID
+        if (numeroMesa === acc.mesa_id && acc.mesa_nombre) {
+            const matchNombre = acc.mesa_nombre.match(/Mesa\s+(\d+)/i);
+            if (matchNombre && matchNombre[1]) {
+                numeroMesa = parseInt(matchNombre[1], 10);
             }
         }
 
