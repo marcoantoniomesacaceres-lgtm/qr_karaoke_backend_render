@@ -798,11 +798,12 @@ h2 {
 
 .queue-actions-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: 100%;
     min-width: 200px;
     margin-left: 10px;
+    margin-top: 10px;
 }
 
 .queue-actions-grid button {
@@ -1760,4 +1761,21 @@ input:checked+.slider:before {
 
 .file-input-hidden {
     display: none;
+}
+
+/* QR Modal Refactoring Styles */
+.qr-modal-label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.qr-modal-select {
+    width: 100%;
+}
+
+.qr-management-buttons-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 15px 0;
 }

@@ -69,13 +69,19 @@
         </div>
 
         <div class="form-group qr-modal-form-group">
-            <div class="qr-management-row">
-                <div class="qr-management-col">
-                    <label for="qr-modal-user-select" class="qr-modal-label">Seleccionar Usuario:</label>
-                    <select id="qr-modal-user-select" class="form-control qr-modal-select">
-                        <option value="1">Usuario 1 (Principal)</option>
-                    </select>
-                </div>
+            <label for="qr-modal-user-select" class="qr-modal-label">Seleccionar Usuario:</label>
+            <select id="qr-modal-user-select" class="form-control qr-modal-select">
+                <option value="1">Usuario 1 (Principal)</option>
+            </select>
+        </div>
+
+        <div id="qr-modal-content" class="qr-modal-content-wrapper">
+            <div id="qr-modal-image-container" class="qr-image-container">
+                <!-- QR Image injected here -->
+                <img id="qr-modal-img" src="" alt="QR Code" class="qr-image">
+            </div>
+
+            <div class="qr-management-buttons-row">
                 <button type="button" id="qr-modal-add-user" class="form-btn qr-action-btn qr-btn-add"
                     title="Añadir Usuario">
                     ➕
@@ -85,15 +91,7 @@
                     ❌
                 </button>
             </div>
-        </div>
 
-
-
-        <div id="qr-modal-content" class="qr-modal-content-wrapper">
-            <div id="qr-modal-image-container" class="qr-image-container">
-                <!-- QR Image injected here -->
-                <img id="qr-modal-img" src="" alt="QR Code" class="qr-image">
-            </div>
             <p id="qr-modal-url" class="qr-url-text">
             </p>
         </div>
