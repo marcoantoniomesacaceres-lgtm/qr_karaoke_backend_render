@@ -265,3 +265,25 @@ justify-content: center;
     color: #ff0000;
     transform: scale(1.1);
 }
+
+/* =========================================
+   Dynamic User Generation Styles
+   ========================================= */
+
+#qr-modal-max-users {
+    margin-bottom: 15px;
+}
+
+#qr-modal-generate-users {
+    width: 100%;
+    margin-bottom: 15px;
+    background-color: var(--bees-yellow, #f5c518);
+    color: black;
+}
+
+.qr-download-btn {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

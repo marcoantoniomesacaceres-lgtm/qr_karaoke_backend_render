@@ -13,6 +13,40 @@ function setupTablesListeners() {
         qrForm.addEventListener('submit', handleGenerateQR);
     }
 
+    // Dynamic User Generation
+    const generateUsersBtn = document.getElementById('qr-generate-users-btn');
+    const maxUsersInput = document.getElementById('qr-max-users');
+    const userSelect = document.getElementById('qr-user-select');
+
+    if (generateUsersBtn && maxUsersInput && userSelect) {
+        generateUsersBtn.addEventListener('click', () => {
+            const maxUsers = parseInt(maxUsersInput.value, 10);
+
+            if (!maxUsers || maxUsers < 1) {
+                showNotification('Por favor ingresa un número válido de usuarios (mínimo 1)', 'error');
+                return;
+            }
+
+            if (maxUsers > 100) {
+                showNotification('El número máximo de usuarios es 100', 'warning');
+                return;
+            }
+
+            // Clear current options
+            userSelect.innerHTML = '';
+
+            // Generate new options
+            for (let i = 1; i <= maxUsers; i++) {
+                const option = document.createElement('option');
+                option.value = i.toString();
+                option.textContent = `Usuario ${i}`;
+                userSelect.appendChild(option);
+            }
+
+            showNotification(`Se generaron ${maxUsers} usuarios exitosamente`, 'success');
+        });
+    }
+
     // Management Buttons
     const btnActivate = document.getElementById('btn-activate');
     const btnDeactivate = document.getElementById('btn-deactivate');

@@ -1147,6 +1147,8 @@ function setupQRModal() {
     const closeBtn = document.getElementById('qr-modal-close');
     const closeXBtn = document.getElementById('qr-modal-close-x');
     const userSelect = document.getElementById('qr-modal-user-select');
+    const maxUsersInput = document.getElementById('qr-modal-max-users');
+    const generateUsersBtn = document.getElementById('qr-modal-generate-users');
 
     if (closeBtn) closeBtn.onclick = () => closeQRModal();
     if (closeXBtn) closeXBtn.onclick = () => closeQRModal();
@@ -1156,6 +1158,42 @@ function setupQRModal() {
         userSelect.addEventListener('change', () => {
             if (currentQRTableId) {
                 updateQRForTable(currentQRTableId, userSelect.value);
+            }
+        });
+    }
+
+    // Add listener for the "Generar Usuarios" button
+    if (generateUsersBtn && userSelect && maxUsersInput) {
+        generateUsersBtn.addEventListener('click', () => {
+            const maxUsers = parseInt(maxUsersInput.value, 10);
+
+            if (!maxUsers || maxUsers < 1) {
+                showNotification('Por favor ingresa un número válido de usuarios (mínimo 1)', 'error');
+                return;
+            }
+
+            if (maxUsers > 100) {
+                showNotification('El número máximo de usuarios es 100', 'warning');
+                return;
+            }
+
+            // Clear current options
+            userSelect.innerHTML = '';
+
+            // Generate new options
+            for (let i = 1; i <= maxUsers; i++) {
+                const option = document.createElement('option');
+                option.value = i.toString();
+                option.textContent = i === 1 ? `Usuario ${i} (Principal)` : `Usuario ${i}`;
+                userSelect.appendChild(option);
+            }
+
+            showNotification(`Se generaron ${maxUsers} usuarios exitosamente`, 'success');
+
+            // Update QR for the first user
+            if (currentQRTableId) {
+                userSelect.value = "1";
+                updateQRForTable(currentQRTableId, "1");
             }
         });
     }

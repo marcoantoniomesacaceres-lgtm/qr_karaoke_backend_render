@@ -1,0 +1,115 @@
+/* Tables & QR Page Styles */
+
+/* Layout */
+.tables-page-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Headers */
+.section-header-primary {
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.section-header-error {
+    border-bottom: 2px solid var(--error-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* Form Elements */
+.form-label-large {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.form-input-large {
+    font-size: 1.2em;
+    padding: 10px;
+}
+
+.form-input-full {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.form-select-large {
+    font-size: 1.1em;
+    padding: 10px;
+    width: 100%;
+}
+
+/* Buttons */
+.btn-generate-users {
+    width: 100%;
+    font-size: 1em;
+    padding: 8px;
+    margin-bottom: 10px;
+    background-color: var(--bees-yellow, #f5c518);
+    color: black;
+}
+
+.btn-generate-qr {
+    width: 100%;
+    font-size: 1.2em;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.btn-action-large {
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+.btn-action-delete {
+    padding: 15px;
+    font-size: 1.1em;
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-action-create {
+    padding: 15px;
+    font-size: 1.1em;
+    background-color: #28a745;
+}
+
+.btn-player-dashboard {
+    padding: 10px 20px;
+}
+
+/* Containers */
+.management-actions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.qr-result-area {
+    margin-top: 30px;
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+}
+
+.qr-placeholder-text {
+    color: #888;
+}
+
+.management-status {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.center-container {
+    margin-top: 20px;
+    text-align: center;
+}
