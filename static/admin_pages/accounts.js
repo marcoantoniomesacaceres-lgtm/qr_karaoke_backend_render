@@ -37,6 +37,17 @@ function renderAccounts(accounts, accountsGrid) {
         const saldo = Number(acc.saldo_pendiente) || 0;
         const isActive = acc.activa !== false; // Asumimos activa por defecto
 
+        // Extraer el número lógico de la mesa del nombre
+        // Si el nombre sigue el patrón "Mesa X", extraemos X
+        // Si no, usamos mesa_id como fallback
+        let numeroMesa = acc.mesa_id; // Fallback al ID de la base de datos
+        if (acc.mesa_nombre) {
+            const match = acc.mesa_nombre.match(/Mesa\s+(\d+)/i);
+            if (match && match[1]) {
+                numeroMesa = parseInt(match[1], 10);
+            }
+        }
+
         // Determinar clase de saldo
         let saldoClass = 'zero';
         if (saldo > 0) saldoClass = 'negative';
@@ -57,7 +68,7 @@ function renderAccounts(accounts, accountsGrid) {
                 <div class="mesa-info">
                     <div class="info-row">
                         <label>Número de Mesa:</label>
-                        <span>${acc.mesa_id}</span>
+                        <span>${numeroMesa}</span>
                     </div>
                     <div class="info-row">
                         <label>Saldo:</label>
