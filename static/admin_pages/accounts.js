@@ -1341,10 +1341,19 @@ function updateQRForTable(mesaId, userNum) {
     const urlText = document.getElementById('qr-modal-url');
     // const downloadBtn = document.getElementById('qr-modal-download-btn'); // removed in previous steps or not used?
 
-    const tableNum = mesaId.toString().padStart(2, '0');
     // Construct QR Code string
-    // IMPORTANT: The backend likely expects 'karaoke-mesa-XX-usuarioYY'
-    const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
+    // Attempt to use the actual QR code from the table if available
+    let tableQrBase = `karaoke-mesa-${mesaId.toString().padStart(2, '0')}`;
+
+    // Find account to get true QR code
+    if (typeof currentAccounts !== 'undefined') {
+        const account = currentAccounts.find(a => a.mesa_id == mesaId);
+        if (account && account.qr_code) {
+            tableQrBase = account.qr_code;
+        }
+    }
+
+    const qrCode = `${tableQrBase}-usuario${userNum}`;
 
     // Generate URL
     const appBaseUrl = window.location.origin;
