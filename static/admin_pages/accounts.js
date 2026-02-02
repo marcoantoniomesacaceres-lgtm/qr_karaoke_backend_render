@@ -1142,13 +1142,14 @@ function setupCreateMesaModal() {
     }
 }
 
+// Setup QR Modal Listeners
 function setupQRModal() {
     const qrModal = document.getElementById('qr-management-modal');
     const closeBtn = document.getElementById('qr-modal-close');
     const closeXBtn = document.getElementById('qr-modal-close-x');
     const userSelect = document.getElementById('qr-modal-user-select');
-    const maxUsersInput = document.getElementById('qr-modal-max-users');
-    const generateUsersBtn = document.getElementById('qr-modal-generate-users');
+    const addUserBtn = document.getElementById('qr-modal-add-user');
+    const removeUserBtn = document.getElementById('qr-modal-remove-user');
 
     if (closeBtn) closeBtn.onclick = () => closeQRModal();
     if (closeXBtn) closeXBtn.onclick = () => closeQRModal();
@@ -1158,42 +1159,76 @@ function setupQRModal() {
         userSelect.addEventListener('change', () => {
             if (currentQRTableId) {
                 updateQRForTable(currentQRTableId, userSelect.value);
+                // Enable/Disable remove button based on selection
+                if (removeUserBtn) {
+                    // Prevent removing the last user or User 1 if desired, though logic below handles removal properly.
+                    // For now, always enable unless it's the only one? No, user requested X next to QR.
+                    // Let's enable it always if a valid user is selected.
+                    removeUserBtn.disabled = !userSelect.value;
+                }
             }
         });
     }
 
-    // Add listener for the "Generar Usuarios" button
-    if (generateUsersBtn && userSelect && maxUsersInput) {
-        generateUsersBtn.addEventListener('click', () => {
-            const maxUsers = parseInt(maxUsersInput.value, 10);
+    if (addUserBtn && userSelect) {
+        addUserBtn.addEventListener('click', () => {
+            // Find max current ID
+            let maxId = 0;
+            for (let opt of userSelect.options) {
+                const val = parseInt(opt.value, 10);
+                if (!isNaN(val) && val > maxId) maxId = val;
+            }
+            const newId = maxId + 1;
 
-            if (!maxUsers || maxUsers < 1) {
-                showNotification('Por favor ingresa un número válido de usuarios (mínimo 1)', 'error');
+            if (newId > 100) {
+                showNotification('Límite de usuarios alcanzado (100).', 'warning');
                 return;
             }
 
-            if (maxUsers > 100) {
-                showNotification('El número máximo de usuarios es 100', 'warning');
-                return;
-            }
+            const option = document.createElement('option');
+            option.value = newId.toString();
+            option.textContent = `Usuario ${newId}`;
+            userSelect.appendChild(option);
 
-            // Clear current options
-            userSelect.innerHTML = '';
+            // Select the new user
+            userSelect.value = newId.toString();
 
-            // Generate new options
-            for (let i = 1; i <= maxUsers; i++) {
-                const option = document.createElement('option');
-                option.value = i.toString();
-                option.textContent = i === 1 ? `Usuario ${i} (Principal)` : `Usuario ${i}`;
-                userSelect.appendChild(option);
-            }
-
-            showNotification(`Se generaron ${maxUsers} usuarios exitosamente`, 'success');
-
-            // Update QR for the first user
+            // Trigger update
             if (currentQRTableId) {
-                userSelect.value = "1";
-                updateQRForTable(currentQRTableId, "1");
+                updateQRForTable(currentQRTableId, newId.toString());
+            }
+
+            // Enable remove button
+            if (removeUserBtn) removeUserBtn.disabled = false;
+        });
+    }
+
+    if (removeUserBtn && userSelect) {
+        removeUserBtn.addEventListener('click', () => {
+            const selectedVal = userSelect.value;
+            if (!selectedVal) return;
+
+            // Confirm? Maybe not needed for quick action, but safer.
+            // if (!confirm(`¿Eliminar Usuario ${selectedVal}?`)) return;
+
+            const selectedIndex = userSelect.selectedIndex;
+            userSelect.remove(selectedIndex);
+
+            // Select another user if available
+            if (userSelect.options.length > 0) {
+                // Try to select previous, or first
+                const newIndex = Math.max(0, selectedIndex - 1);
+                userSelect.selectedIndex = newIndex;
+                updateQRForTable(currentQRTableId, userSelect.value);
+                removeUserBtn.disabled = false;
+            } else {
+                // Empty state - Should we recreate User 1? Or just clear QR?
+                // The requirements say "disable", so maybe just clear QR
+                const img = document.getElementById('qr-modal-img');
+                const urlText = document.getElementById('qr-modal-url');
+                if (img) img.src = '';
+                if (urlText) urlText.textContent = 'Sin usuario seleccionado';
+                removeUserBtn.disabled = true;
             }
         });
     }
@@ -1208,10 +1243,11 @@ function closeQRModal() {
     currentQRTableId = null;
 }
 
-function openQRModal(mesaId) {
+async function openQRModal(mesaId) {
     const qrModal = document.getElementById('qr-management-modal');
     const userSelect = document.getElementById('qr-modal-user-select');
     const modalTitle = document.getElementById('qr-modal-title');
+    const removeUserBtn = document.getElementById('qr-modal-remove-user');
 
     if (!qrModal) return;
 
@@ -1219,17 +1255,69 @@ function openQRModal(mesaId) {
 
     // Find mesa name
     const account = currentAccounts.find(a => a.mesa_id == mesaId);
-    if (account) {
-        modalTitle.textContent = `Gestionar QR - ${account.mesa_nombre || 'Mesa ' + mesaId}`;
-    } else {
-        modalTitle.textContent = `Gestionar QR - Mesa ${mesaId}`;
+    let mesaName = account ? (account.mesa_nombre || 'Mesa ' + mesaId) : 'Mesa ' + mesaId;
+    if (modalTitle) modalTitle.textContent = `Gestionar QR - ${mesaName}`;
+
+    // Reset dropdown and fetch connected users
+    if (userSelect) {
+        userSelect.innerHTML = ''; // Clear existing
+        try {
+            // Fetch connected users to get real names
+            const connectedUsers = await apiFetch(`/mesas/${mesaId}/usuarios-conectados`);
+
+            // We need to reconstruct the "Slots". 
+            // Since the backend might not persist "Slot 1 = Pedro", we have to infer or just list them.
+            // Strategy: List connected users FIRST with their real names.
+            // Then check if we need to add "Usuario X" placeholder for the max ID found + 1?
+            // Actually, the user wants "Usuario 1 (Pedro)". This implies a mapping.
+            // If the backend doesn't store "Usuario 1" was assigned to "Pedro", we can't reproduce it perfectly on reload.
+            // Assumption: We will list connected users as "Usuario X (Nick)". 
+            // If there are NO connected users, we default to "Usuario 1 (Principal)".
+
+            let maxId = 0;
+
+            if (connectedUsers && connectedUsers.length > 0) {
+                // Sort by ID or creation if possible, else just map
+                connectedUsers.forEach((u, index) => {
+                    // If user object has a slot ID, use it. If not, use index + 1?
+                    // Backend user object: { id, nick, ... }
+                    // We don't have a stored 'slot' in the standard User model usually.
+                    // We will assign them slots 1..N based on this list.
+                    const slotId = index + 1;
+                    const option = document.createElement('option');
+                    option.value = slotId.toString();
+                    option.textContent = `Usuario ${slotId} (${u.nick})`;
+                    userSelect.appendChild(option);
+                    maxId = slotId;
+                });
+
+                // If we want to ensure at least one "Open" slot or if the user wants to add more.
+                // We leave it as is, user can click (+) to add new slots.
+            } else {
+                // Default clean state
+                const option = document.createElement('option');
+                option.value = "1";
+                option.textContent = "Usuario 1 (Principal)";
+                userSelect.appendChild(option);
+                maxId = 1;
+            }
+        } catch (e) {
+            console.warn("Error fetching connected users, falling back to default", e);
+            const option = document.createElement('option');
+            option.value = "1";
+            option.textContent = "Usuario 1 (Principal)";
+            userSelect.appendChild(option);
+        }
+
+        // Select the first one
+        if (userSelect.options.length > 0) {
+            userSelect.selectedIndex = 0;
+            updateQRForTable(mesaId, userSelect.value);
+            if (removeUserBtn) removeUserBtn.disabled = false;
+        } else {
+            if (removeUserBtn) removeUserBtn.disabled = true;
+        }
     }
-
-    // Reset user select to 1
-    if (userSelect) userSelect.value = "1";
-
-    // Generate initial QR for User 1
-    updateQRForTable(mesaId, "1");
 
     qrModal.classList.remove('hidden');
     qrModal.classList.add('active');
@@ -1238,10 +1326,11 @@ function openQRModal(mesaId) {
 function updateQRForTable(mesaId, userNum) {
     const img = document.getElementById('qr-modal-img');
     const urlText = document.getElementById('qr-modal-url');
-    const downloadBtn = document.getElementById('qr-modal-download-btn');
+    // const downloadBtn = document.getElementById('qr-modal-download-btn'); // removed in previous steps or not used?
 
     const tableNum = mesaId.toString().padStart(2, '0');
     // Construct QR Code string
+    // IMPORTANT: The backend likely expects 'karaoke-mesa-XX-usuarioYY'
     const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
 
     // Generate URL
@@ -1252,10 +1341,10 @@ function updateQRForTable(mesaId, userNum) {
     if (img) img.src = qrImageUrl;
     if (urlText) urlText.textContent = appUrl;
 
-    if (downloadBtn) {
-        downloadBtn.href = qrImageUrl;
-        downloadBtn.download = `mesa-${mesaId}-usuario${userNum}.png`;
-    }
+    // if (downloadBtn) {
+    //     downloadBtn.href = qrImageUrl;
+    //     downloadBtn.download = `mesa-${mesaId}-usuario${userNum}.png`;
+    // }
 }
 
 

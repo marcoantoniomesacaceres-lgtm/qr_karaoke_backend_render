@@ -69,30 +69,25 @@
         </div>
 
         <div class="form-group qr-modal-form-group">
-            <label for="qr-modal-max-users" class="qr-modal-label">Número de Usuarios para esta Mesa:</label>
-            <input type="number" id="qr-modal-max-users" class="form-control qr-modal-select" min="1" value="10"
-                placeholder="Ej: 10, 20, 50...">
-            <button type="button" id="qr-modal-generate-users" class="form-btn">
-                🔄 Generar Usuarios
-            </button>
+            <div class="qr-management-row">
+                <div class="qr-management-col">
+                    <label for="qr-modal-user-select" class="qr-modal-label">Seleccionar Usuario:</label>
+                    <select id="qr-modal-user-select" class="form-control qr-modal-select">
+                        <option value="1">Usuario 1 (Principal)</option>
+                    </select>
+                </div>
+                <button type="button" id="qr-modal-add-user" class="form-btn qr-action-btn qr-btn-add"
+                    title="Añadir Usuario">
+                    ➕
+                </button>
+                <button type="button" id="qr-modal-remove-user" class="form-btn qr-action-btn qr-btn-remove"
+                    title="Eliminar Usuario" disabled>
+                    ❌
+                </button>
+            </div>
         </div>
 
-        <div class="form-group qr-modal-form-group">
-            <label for="qr-modal-user-select" class="qr-modal-label">Seleccionar
-                Usuario:</label>
-            <select id="qr-modal-user-select" class="form-control qr-modal-select">
-                <option value="1">Usuario 1 (Principal)</option>
-                <option value="2">Usuario 2</option>
-                <option value="3">Usuario 3</option>
-                <option value="4">Usuario 4</option>
-                <option value="5">Usuario 5</option>
-                <option value="6">Usuario 6</option>
-                <option value="7">Usuario 7</option>
-                <option value="8">Usuario 8</option>
-                <option value="9">Usuario 9</option>
-                <option value="10">Usuario 10</option>
-            </select>
-        </div>
+
 
         <div id="qr-modal-content" class="qr-modal-content-wrapper">
             <div id="qr-modal-image-container" class="qr-image-container">

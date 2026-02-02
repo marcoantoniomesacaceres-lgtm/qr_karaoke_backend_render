@@ -287,3 +287,25 @@ justify-content: center;
     align-items: center;
     justify-content: center;
 }
+
+.qr-management-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.qr-management-col {
+    flex: 1;
+}
+
+.qr-action-btn {
+    padding: 10px 15px;
+}
+
+.qr-btn-add {
+    background-color: var(--bees-green, #28a745);
+}
+
+.qr-btn-remove {
+    background-color: var(--bees-red, #dc3545);
+}
