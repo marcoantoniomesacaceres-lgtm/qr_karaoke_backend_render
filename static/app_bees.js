@@ -825,7 +825,8 @@ window.addEventListener('DOMContentLoaded', () => {
         showDashboard();
     } else {
         // Si no hay sesión almacenada para esta mesa, intentar auto-conexión si el QR incluye '-usuarioN'
-        attemptAutoConnectFromQr();
+        // COMENTADO: El usuario quiere que siempre se pida el alias manualmente
+        // attemptAutoConnectFromQr();
     }
 
     // Event Listeners
