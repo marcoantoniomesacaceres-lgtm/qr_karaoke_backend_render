@@ -2687,3 +2687,119 @@ def update_consumo_cantidad(db: Session, consumo_id: int, delta: int):
     db.refresh(db_consumo)
     
     return db_consumo, None
+def move_lazy_song_up(db: Session, cancion_id: int, usuario_id: int):
+    """
+    Mueve una canción pendiente_lazy hacia arriba en la cola del usuario.
+    Solo funciona para canciones del usuario actual.
+    """
+    # 1. Validar que la canción existe, está en pendiente_lazy y pertenece al usuario
+    cancion = db.query(models.Cancion).filter(
+        models.Cancion.id == cancion_id,
+        models.Cancion.estado == 'pendiente_lazy',
+        models.Cancion.usuario_id == usuario_id
+    ).first()
+    
+    if not cancion:
+        return None
+    
+    # 2. Obtener todas las canciones pendiente_lazy del usuario, ordenadas
+    canciones_usuario = (
+        db.query(models.Cancion)
+        .filter(
+            models.Cancion.usuario_id == usuario_id,
+            models.Cancion.estado == 'pendiente_lazy'
+        )
+        .order_by(models.Cancion.orden_manual.asc().nulls_last(), models.Cancion.id.asc())
+        .all()
+    )
+    
+    if len(canciones_usuario) <= 1:
+        # Si hay solo una canción, no se puede mover
+        return cancion
+    
+    # 3. Encontrar el índice de la canción actual
+    indice_actual = None
+    for i, c in enumerate(canciones_usuario):
+        if c.id == cancion_id:
+            indice_actual = i
+            break
+    
+    if indice_actual is None or indice_actual == 0:
+        # No encontrado o ya está al principio
+        return cancion
+    
+    # 4. Intercambiar orden con la canción anterior
+    cancion_anterior = canciones_usuario[indice_actual - 1]
+    
+    # Si la canción anterior tiene orden_manual, incrementamos el orden de la actual
+    if cancion_anterior.orden_manual is not None:
+        # Asignar un orden entre la anterior y la siguiente (si existe)
+        nuevo_orden = cancion_anterior.orden_manual - 0.5
+    else:
+        # Ambas sin orden_manual, asignar a la anterior
+        cancion_anterior.orden_manual = 1
+        nuevo_orden = 0
+    
+    cancion.orden_manual = nuevo_orden
+    db.commit()
+    db.refresh(cancion)
+    
+    return cancion
+
+def move_lazy_song_down(db: Session, cancion_id: int, usuario_id: int):
+    """
+    Mueve una canción pendiente_lazy hacia abajo en la cola del usuario.
+    Solo funciona para canciones del usuario actual.
+    """
+    # 1. Validar que la canción existe, está en pendiente_lazy y pertenece al usuario
+    cancion = db.query(models.Cancion).filter(
+        models.Cancion.id == cancion_id,
+        models.Cancion.estado == 'pendiente_lazy',
+        models.Cancion.usuario_id == usuario_id
+    ).first()
+    
+    if not cancion:
+        return None
+    
+    # 2. Obtener todas las canciones pendiente_lazy del usuario, ordenadas
+    canciones_usuario = (
+        db.query(models.Cancion)
+        .filter(
+            models.Cancion.usuario_id == usuario_id,
+            models.Cancion.estado == 'pendiente_lazy'
+        )
+        .order_by(models.Cancion.orden_manual.asc().nulls_last(), models.Cancion.id.asc())
+        .all()
+    )
+    
+    if len(canciones_usuario) <= 1:
+        # Si hay solo una canción, no se puede mover
+        return cancion
+    
+    # 3. Encontrar el índice de la canción actual
+    indice_actual = None
+    for i, c in enumerate(canciones_usuario):
+        if c.id == cancion_id:
+            indice_actual = i
+            break
+    
+    if indice_actual is None or indice_actual == len(canciones_usuario) - 1:
+        # No encontrado o ya está al final
+        return cancion
+    
+    # 4. Intercambiar orden con la canción siguiente
+    cancion_siguiente = canciones_usuario[indice_actual + 1]
+    
+    # Asignar orden entre la canción siguiente y la anterior (si existe)
+    if cancion_siguiente.orden_manual is not None:
+        nuevo_orden = cancion_siguiente.orden_manual + 0.5
+    else:
+        # Ambas sin orden_manual, asignar a la siguiente
+        cancion_siguiente.orden_manual = 1
+        nuevo_orden = 2
+    
+    cancion.orden_manual = nuevo_orden
+    db.commit()
+    db.refresh(cancion)
+    
+    return cancion

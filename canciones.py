@@ -268,3 +268,30 @@ async def eliminar_cancion(cancion_id: int, usuario_id: int, db: Session = Depen
     crud.delete_cancion(db, cancion_id=cancion_id)
     await websocket_manager.manager.broadcast_queue_update() # Notificar actualización de la cola
     return Response(status_code=204)
+@router.post("/{cancion_id}/mover-arriba", response_model=schemas.Cancion, summary="Mover una canciÃ³n pendiente_lazy hacia arriba")
+async def mover_cancion_arriba(cancion_id: int, usuario_id: int, db: Session = Depends(get_db)):
+    """
+    [Usuario] Mueve una canciÃ³n pendiente_lazy hacia arriba en su cola personal.
+    Solo funciona para canciones del usuario actual en estado pendiente_lazy.
+    """
+    db_cancion = crud.move_lazy_song_up(db, cancion_id=cancion_id, usuario_id=usuario_id)
+    
+    if not db_cancion:
+        raise HTTPException(status_code=404, detail="CanciÃ³n no encontrada o no te pertenece.")
+    
+    await websocket_manager.manager.broadcast_queue_update()
+    return db_cancion
+
+@router.post("/{cancion_id}/mover-abajo", response_model=schemas.Cancion, summary="Mover una canciÃ³n pendiente_lazy hacia abajo")
+async def mover_cancion_abajo(cancion_id: int, usuario_id: int, db: Session = Depends(get_db)):
+    """
+    [Usuario] Mueve una canciÃ³n pendiente_lazy hacia abajo en su cola personal.
+    Solo funciona para canciones del usuario actual en estado pendiente_lazy.
+    """
+    db_cancion = crud.move_lazy_song_down(db, cancion_id=cancion_id, usuario_id=usuario_id)
+    
+    if not db_cancion:
+        raise HTTPException(status_code=404, detail="CanciÃ³n no encontrada o no te pertenece.")
+    
+    await websocket_manager.manager.broadcast_queue_update()
+    return db_cancion

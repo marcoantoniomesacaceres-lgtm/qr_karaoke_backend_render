@@ -57,9 +57,16 @@ function renderQueue(queueData) {
 function createSongItemHTML(song, isMyList) {
     const statusClass = `status-${song.estado}`;
     const canDelete = isMyList && (song.estado === 'pendiente' || song.estado === 'aprobado' || song.estado === 'pendiente_lazy');
+    const canMove = isMyList && song.estado === 'pendiente_lazy';
     const scoreInfo = isMyList && song.estado === 'cantada' && song.puntuacion_ia ?
         `<div class="song-score">Puntaje: <strong>${song.puntuacion_ia}</strong></div>` : '';
     const deleteButton = `<button class="delete-song-btn" data-song-id="${song.id}">Eliminar</button>`;
+    const moveButtons = canMove ? `
+        <div class="song-move-buttons">
+            <button class="move-up-btn" data-song-id="${song.id}" title="Mover hacia arriba">⬆️</button>
+            <button class="move-down-btn" data-song-id="${song.id}" title="Mover hacia abajo">⬇️</button>
+        </div>
+    ` : '';
 
     return `
         <li class="song-item" id="song-${song.id}">
@@ -73,6 +80,7 @@ function createSongItemHTML(song, isMyList) {
             <div>
                 ${scoreInfo}
                 ${isMyList ? `<span class="song-status ${statusClass}">${song.estado}</span>` : ''}
+                ${moveButtons}
                 ${canDelete ? deleteButton : ''}
             </div>
         </li>
@@ -546,6 +554,58 @@ async function handleDeleteSong(event) {
     }
 }
 
+async function handleMoveSongUp(event) {
+    if (!event.target.classList.contains('move-up-btn')) return;
+
+    const button = event.target;
+    const songId = button.dataset.songId;
+    button.disabled = true;
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/canciones/${songId}/mover-arriba?usuario_id=${state.user.id}`,
+            { method: 'POST' }
+        );
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || 'No se pudo mover la canción.');
+        }
+        showNotification('Canción movida hacia arriba.');
+        fetchMyList();
+    } catch (error) {
+        console.error('Error al mover canción:', error);
+        showNotification(error.message, 'error', 4000);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function handleMoveSongDown(event) {
+    if (!event.target.classList.contains('move-down-btn')) return;
+
+    const button = event.target;
+    const songId = button.dataset.songId;
+    button.disabled = true;
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/canciones/${songId}/mover-abajo?usuario_id=${state.user.id}`,
+            { method: 'POST' }
+        );
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || 'No se pudo mover la canción.');
+        }
+        showNotification('Canción movida hacia abajo.');
+        fetchMyList();
+    } catch (error) {
+        console.error('Error al mover canción:', error);
+        showNotification(error.message, 'error', 4000);
+    } finally {
+        button.disabled = false;
+    }
+}
+
 async function fetchProducts() {
     catalogList.innerHTML = '<p>Cargando catálogo...</p>';
     const response = await fetch(`${API_BASE_URL}/productos/`);
@@ -823,5 +883,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const mySongList = document.getElementById('my-song-list');
     if (mySongList) {
         mySongList.addEventListener('click', handleDeleteSong);
-    }
+        mySongList.addEventListener('click', handleMoveSongUp);
+        mySongList.addEventListener('click', handleMoveSongDown);    }
 });
