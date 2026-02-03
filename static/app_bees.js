@@ -79,7 +79,7 @@ function createSongItemHTML(song, isMyList) {
             </div>
             <div>
                 ${scoreInfo}
-                ${isMyList ? `<span class="song-status ${statusClass}">${song.estado}</span>` : ''}
+                ${isMyList && song.estado !== 'pendiente_lazy' ? `<span class="song-status ${statusClass}">${song.estado}</span>` : ''}
                 ${moveButtons}
                 ${canDelete ? deleteButton : ''}
             </div>
@@ -884,5 +884,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (mySongList) {
         mySongList.addEventListener('click', handleDeleteSong);
         mySongList.addEventListener('click', handleMoveSongUp);
-        mySongList.addEventListener('click', handleMoveSongDown);    }
+        mySongList.addEventListener('click', handleMoveSongDown);
+    }
 });
