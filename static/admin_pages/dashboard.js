@@ -317,28 +317,49 @@ function renderReactions(dashboardContainer) {
 
     const buttonsContainer = document.createElement('div');
     buttonsContainer.id = 'reaction-buttons';
-    buttonsContainer.style.display = 'flex';
-    buttonsContainer.style.gap = '12px';
-    buttonsContainer.style.flexWrap = 'wrap';
+    buttonsContainer.style.display = 'grid';
+    buttonsContainer.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    buttonsContainer.style.gap = '15px';
     buttonsContainer.style.justifyContent = 'center';
+    buttonsContainer.style.maxWidth = '400px';
+    buttonsContainer.style.margin = '0 auto';
 
     const reactions = [
-        { emoji: '😊', title: '¡Genial!' },
-        { emoji: '👍', title: '¡Me gusta!' },
-        { emoji: '🔥', title: '¡Fuego!' },
+        { emoji: '�', title: '¡Aplausos!' },
+        { emoji: '❤️', title: '¡Me encanta!' },
+        { emoji: '💔', title: '¡Corazón roto!' },
+        { emoji: '😈', title: '¡Diablillo!' },
+        { emoji: '😳', title: '¡Sonrojado!' },
+        { emoji: '😢', title: '¡Triste!' },
+        { emoji: '🙈', title: '¡No miro!' },
+        { emoji: '🍻', title: '¡Salud!' },
         { emoji: '🤩', title: '¡Increíble!' },
-        { emoji: '🎤', title: '¡Buena voz!' },
-        { emoji: '🍻', title: '¡Salud!' }
+        { emoji: '🔥', title: '¡Fuego!' },
+        { emoji: '👍', title: '¡Me gusta!' },
+        { emoji: '😀', title: '¡Feliz!' }
     ];
 
     reactions.forEach(reaction => {
         const btn = document.createElement('button');
-        btn.className = 'bees-btn bees-btn-secondary bees-btn-small';
+        btn.className = 'bees-btn bees-btn-secondary';
         btn.textContent = reaction.emoji;
         btn.title = reaction.title;
-        btn.style.fontSize = '20px';
-        btn.style.width = 'auto';
-        btn.style.padding = '12px 16px';
+        btn.style.fontSize = '32px';
+        btn.style.width = '100%';
+        btn.style.padding = '20px';
+        btn.style.border = '2px solid #FFD700';
+        btn.style.borderRadius = '12px';
+        btn.style.backgroundColor = '#ffffff';
+        btn.style.cursor = 'pointer';
+        btn.style.transition = 'all 0.2s ease';
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'scale(1.05)';
+            btn.style.boxShadow = '0 4px 12px rgba(255, 215, 0, 0.3)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'scale(1)';
+            btn.style.boxShadow = 'none';
+        });
         buttonsContainer.appendChild(btn);
     });
 
