@@ -325,10 +325,10 @@ function renderReactions(dashboardContainer) {
     buttonsContainer.style.margin = '0 auto';
 
     const reactions = [
-        { emoji: '�', title: '¡Aplausos!' },
+        { emoji: '👏', title: '¡Aplausos!' },
         { emoji: '❤️', title: '¡Me encanta!' },
         { emoji: '💔', title: '¡Corazón roto!' },
-        { emoji: '😈', title: '¡Diablillo!' },
+        { emoji: <span style={{ color: '#5B2D8B' }}>😈</span>, title: '¡Diablillo!' },
         { emoji: '😳', title: '¡Sonrojado!' },
         { emoji: '😢', title: '¡Triste!' },
         { emoji: '🙈', title: '¡No miro!' },
