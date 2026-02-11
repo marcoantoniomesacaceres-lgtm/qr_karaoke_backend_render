@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from security import api_key_auth # Importamos la seguridad
+from app.core.security import api_key_auth # Importamos la seguridad
 
-import crud, schemas
-from database import SessionLocal
+from app.crud import base as crud
+from app.schemas import base as schemas
+from app.core.database import SessionLocal
 
 router = APIRouter()
 

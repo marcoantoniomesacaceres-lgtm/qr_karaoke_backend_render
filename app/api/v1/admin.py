@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, Response, HTTPException, Body, Backgroun
 import os, time
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-import models 
-import crud, schemas
-import config
-from database import SessionLocal
-import websocket_manager
-from security import api_key_auth, MASTER_API_KEY
+from app.crud import base as crud
+from app.schemas import base as schemas
+from app.core import config
+from app.core import websocket_manager
+from app.core.database import SessionLocal
+from app.models import base as models
+from app.core.security import api_key_auth
 
 router = APIRouter(dependencies=[Depends(api_key_auth)])
 

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-import crud, schemas, models
+from app.crud import base as crud
+from app.schemas import base as schemas
+from app.models import base as models
 import re # Importar para el filtro de groserías
 import datetime
-from database import SessionLocal
-from security import api_key_auth
+from app.core.database import SessionLocal
+from app.core.security import api_key_auth
 
 router = APIRouter()
 

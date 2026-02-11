@@ -5,8 +5,8 @@ from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 from fastapi import Depends
 
-import crud
-from database import SessionLocal
+from app.crud import base as crud
+from app.core.database import SessionLocal
 
 # Definimos el nombre del header que esperamos recibir
 api_key_header = APIKeyHeader(name="X-API-Key")

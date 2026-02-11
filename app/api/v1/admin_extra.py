@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from settings_storage import load_settings, save_settings
+from app.utils.settings_storage import load_settings, save_settings
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin Extra"])
 

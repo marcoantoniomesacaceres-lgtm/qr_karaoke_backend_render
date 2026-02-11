@@ -7,7 +7,7 @@ import re
 from urllib.parse import urlparse, parse_qs
 import logging
 
-from security import api_key_auth # Importar la función de autenticación
+from app.core.security import api_key_auth # Importar la función de autenticación
 logger = logging.getLogger(__name__)
 
 router = APIRouter()

@@ -7,10 +7,12 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from decimal import Decimal
 
-import crud, schemas, models
-from database import SessionLocal
-from security import api_key_auth, optional_api_key_auth
-import websocket_manager # Importamos el gestor de websockets
+from app.crud import base as crud
+from app.schemas import base as schemas
+from app.models import base as models
+from app.core.database import SessionLocal
+from app.core.security import api_key_auth, optional_api_key_auth
+from app.core import websocket_manager # Importamos el gestor de websockets
 
 router = APIRouter()
 

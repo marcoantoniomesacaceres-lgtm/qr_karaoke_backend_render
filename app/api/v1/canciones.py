@@ -7,10 +7,12 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from typing import List
 
-import crud, schemas, models, config
-from database import SessionLocal # get_db se importará desde aquí
-import websocket_manager
-from security import api_key_auth
+from app.core.database import SessionLocal
+from app.models import base as models
+from app.schemas import base as schemas
+from app.crud import base as crud
+from app.core.websocket_manager import manager
+from app.core.security import api_key_auth
 
 router = APIRouter() # El prefijo y las etiquetas se pueden definir aquí o al incluir el router en main.py
 

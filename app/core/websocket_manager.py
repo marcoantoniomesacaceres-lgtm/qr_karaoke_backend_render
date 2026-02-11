@@ -1,14 +1,15 @@
 import json
 from typing import List
 from fastapi import WebSocket
-import models
+from app.models import base as models
 from fastapi.encoders import jsonable_encoder
 import logging
 
 logger = logging.getLogger(__name__)
 
-import schemas, crud
-from database import SessionLocal
+from app.schemas import base as schemas
+from app.crud import base as crud
+from app.core.database import SessionLocal
 
 class ConnectionManager:
     def __init__(self):

@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-import crud, schemas
-from database import SessionLocal
-import websocket_manager
-from security import api_key_auth
+from app.crud import base as crud
+from app.schemas import base as schemas
+from app.core.database import SessionLocal
+from app.core import websocket_manager
+from app.core.security import api_key_auth
 import asyncio
 import datetime
 

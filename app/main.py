@@ -1,3 +1,4 @@
+# app/main.py
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,15 +16,27 @@ print("YOUTUBE_API_KEY cargada:", os.getenv("YOUTUBE_API_KEY"))
 # ===============================
 # BASE DE DATOS
 # ===============================
-from database import engine, SessionLocal
-import models
+from app.core.database import engine, SessionLocal
+from app.models import base as models
 
 models.Base.metadata.create_all(bind=engine)
 
-import crud, schemas, broadcast, thumbnails
-import mesas, canciones, youtube, consumos, usuarios, admin, productos, websocket_manager
-from admin_settings_router import router as settings_router
-from admin_extra_router import router as admin_extra_router
+# Imports actualizados
+from app.crud import base as crud
+from app.schemas import base as schemas
+from app.core import websocket_manager
+from app.services import thumbnails
+from app.api.v1 import (
+    mesas,
+    canciones,
+    youtube,
+    consumos,
+    usuarios,
+    admin,
+    productos,
+    admin_settings,
+    admin_extra
+)
 
 # ===============================
 # LOGGING
@@ -32,8 +45,11 @@ log_formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+# Crear carpeta logs si no existe
+os.makedirs("logs", exist_ok=True)
+
 file_handler = logging.FileHandler(
-    "karaoke_debug.log", mode='a', encoding='utf-8'
+    "logs/karaoke_debug.log", mode='a', encoding='utf-8'
 )
 file_handler.setFormatter(log_formatter)
 
@@ -54,7 +70,6 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Setup inicial en lifespan (reemplaza @app.on_event startup)
     db = SessionLocal()
     try:
         crud.get_or_create_dj_user(db)
@@ -127,10 +142,10 @@ app.include_router(usuarios.router, prefix="/api/v1/usuarios", tags=["Usuarios"]
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administración"])
 app.include_router(admin.public_router, prefix="/api/v1", tags=["Público"])
 app.include_router(productos.router, prefix="/api/v1/productos", tags=["Productos"])
-app.include_router(broadcast.router, prefix="/api/v1/broadcast", tags=["Broadcast"])
+# app.include_router(broadcast.router, prefix="/api/v1/broadcast", tags=["Broadcast"])  # Módulo broadcast no encontrado
 app.include_router(thumbnails.router)
-app.include_router(settings_router)
-app.include_router(admin_extra_router)
+app.include_router(admin_settings.router)
+app.include_router(admin_extra.router)
 
 # ===============================
 # STATIC FILES
