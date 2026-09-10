@@ -337,47 +337,6 @@ function renderSettings(settings, container) {
     `;
     cardsContainer.appendChild(lazyQueueCard);
 
-    // ============= TARJETA 6: CLAVES API =============
-    const apiKeysCard = document.createElement('div');
-    apiKeysCard.className = 'settings-card';
-    apiKeysCard.innerHTML = `
-        <div class="settings-card-header">
-            <div class="settings-card-icon">🔐</div>
-            <div class="settings-card-header-content">
-                <h3>Claves de API</h3>
-                <p>Gestiona tus accesos</p>
-            </div>
-        </div>
-        <div id="api-keys-list" class="api-keys-list">
-            <p style="text-align: center; color: var(--settings-text-secondary);">Cargando claves...</p>
-        </div>
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--settings-border);">
-            <h4 style="margin: 0 0 16px 0; color: var(--settings-text);">Crear Nueva Clave</h4>
-            <form id="create-api-key-form">
-                <div class="bees-form-group">
-                    <label for="key-description">Descripción</label>
-                    <input type="text" id="key-description" name="description" placeholder="Ej: Mi laptop personal" required>
-                </div>
-                <button type="submit" class="bees-btn bees-btn-primary">
-                    🔑 Generar Clave
-                </button>
-            </form>
-            <div id="new-key-display" class="generated-key-display">
-                <h4 class="generated-key-title">✅ ¡Clave Generada!</h4>
-                <div class="generated-key-warning">
-                    ⚠️ <strong>Guarda esta clave ahora.</strong> No podrás verla de nuevo.
-                </div>
-                <div class="key-input-group">
-                    <input type="text" id="generated-key" readonly placeholder="Tu clave aparecerá aquí">
-                    <button type="button" id="copy-generated-key" class="bees-btn bees-btn-success">
-                        📋 Copiar
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    cardsContainer.appendChild(apiKeysCard);
-
     // ============= TARJETA: REPRODUCTOR NATIVO (PLAYER 2) =============
     const player2Card = document.createElement('div');
     player2Card.className = 'settings-card';
@@ -662,116 +621,6 @@ async function handleNotificationsChange(event, form) {
     }
 }
 
-async function loadApiKeys() {
-    const apiKeysList = document.getElementById('api-keys-list');
-    if (!apiKeysList) return;
-
-    try {
-        const keys = await apiFetch('/admin/api-keys');
-
-        if (!keys || keys.length === 0) {
-            apiKeysList.innerHTML = '<p style="text-align: center; color: var(--settings-text-secondary);">No hay claves creadas todavía.</p>';
-            return;
-        }
-
-        const keysTable = document.createElement('div');
-        keysTable.className = 'api-keys-list';
-
-        keys.forEach(key => {
-            const keyItem = document.createElement('div');
-            keyItem.className = 'api-key-item';
-
-            const keyInfo = document.createElement('div');
-            keyInfo.className = 'api-key-info';
-            keyInfo.innerHTML = `
-                <p class="api-key-description">🔑 ${key.description || 'Sin descripción'}</p>
-                <p class="api-key-dates">
-                    Creada: ${new Date(key.created_at).toLocaleString('es-ES')}
-                    ${key.last_used ? `<br>Último uso: ${new Date(key.last_used).toLocaleString('es-ES')}` : ''}
-                </p>
-            `;
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'bees-btn bees-btn-danger';
-            deleteBtn.textContent = '🗑️ Eliminar';
-            deleteBtn.onclick = () => handleDeleteApiKey(key.id);
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'api-key-actions';
-            actionsDiv.appendChild(deleteBtn);
-
-            keyItem.appendChild(keyInfo);
-            keyItem.appendChild(actionsDiv);
-            keysTable.appendChild(keyItem);
-        });
-
-        apiKeysList.innerHTML = '';
-        apiKeysList.appendChild(keysTable);
-    } catch (error) {
-        apiKeysList.innerHTML = `<p style="text-align: center; color: var(--bees-red);">❌ Error al cargar claves: ${error.message}</p>`;
-    }
-}
-
-async function handleCreateApiKey(event, form) {
-    event.preventDefault();
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-        const newKey = await apiFetch('/admin/api-keys', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-
-        // Mostrar clave generada
-        const newKeyDisplay = document.getElementById('new-key-display');
-        const generatedKeyInput = document.getElementById('generated-key');
-        generatedKeyInput.value = newKey.key;
-        newKeyDisplay.classList.add('show');
-
-        // Botón copiar
-        const copyBtn = document.getElementById('copy-generated-key');
-        copyBtn.onclick = () => {
-            navigator.clipboard.writeText(newKey.key).then(() => {
-                showNotification('✅ Clave copiada al portapapeles.', 'success');
-                copyBtn.textContent = '✔️ Copiado!';
-                setTimeout(() => {
-                    copyBtn.textContent = '📋 Copiar';
-                }, 2000);
-            }).catch(err => {
-                showNotification('❌ Error al copiar clave.', 'error');
-            });
-        };
-
-        showNotification('✅ Clave generada con éxito. ¡Guárdala ahora!', 'success');
-        form.reset();
-
-        // Recargar lista
-        await loadApiKeys();
-
-        // Ocultar después de 60 segundos
-        setTimeout(() => {
-            newKeyDisplay.classList.remove('show');
-        }, 60000);
-    } catch (error) {
-        showNotification(`❌ ${error.message}`, 'error');
-    }
-}
-
-async function handleDeleteApiKey(keyId) {
-    if (!confirm('🗑️ ¿Eliminar esta clave? Esta acción no se puede deshacer.')) {
-        return;
-    }
-
-    try {
-        await apiFetch(`/admin/api-keys/${keyId}`, { method: 'DELETE' });
-        showNotification('✅ Clave eliminada con éxito.', 'success');
-        await loadApiKeys();
-    } catch (error) {
-        showNotification(`❌ ${error.message}`, 'error');
-    }
-}
-
 async function handleGeneralSettingsUpdate(event, form) {
     event.preventDefault();
     const formData = new FormData(form);
@@ -990,9 +839,6 @@ function setupSettingsListeners() {
 
     // Load current lazy queue configuration
     loadLazyQueueConfig();
-
-    // Load API keys
-    loadApiKeys();
 
     // Player 2 controls listeners
     const btnLaunch = document.getElementById('btn-launch-player2');

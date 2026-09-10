@@ -548,9 +548,9 @@ async function handlePaymentSubmit(event) {
     const amountInput = form.querySelector('#payment-amount');
     const methodSelect = form.querySelector('#payment-method');
 
-    const mesaId = parseInt(mesaIdInput?.value || 0, 10);
-    const amount = parseFloat(amountInput?.value || 0);
-    const metodo = methodSelect?.value || 'Efectivo';
+    const mesaId = parseInt((mesaIdInput && mesaIdInput.value) || 0, 10);
+    const amount = parseFloat((amountInput && amountInput.value) || 0);
+    const metodo = (methodSelect && methodSelect.value) || 'Efectivo';
 
     if (!amount || amount <= 0) {
         showNotification('Por favor ingresa un monto válido.', 'error');
@@ -730,10 +730,10 @@ function renderDetailsModal(details) {
     const consumos = details.consumos || [];
     const pagos = details.pagos || [];
     // Parsear los valores numéricos correctamente (pueden venir como Decimal serializado, número o string)
-    const totalConsumido = Number(details.total_consumido ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
-    const totalPagado = Number(details.total_pagado ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
-    const saldoRaw = details.saldo_pendiente !== undefined ? details.saldo_pendiente : (details.saldo ?? 0);
-    const saldoPendiente = Number(saldoRaw ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
+    const totalConsumido = Number(details.total_consumido != null ? details.total_consumido : 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
+    const totalPagado = Number(details.total_pagado != null ? details.total_pagado : 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
+    const saldoRaw = details.saldo_pendiente !== undefined ? details.saldo_pendiente : (details.saldo != null ? details.saldo : 0);
+    const saldoPendiente = Number(saldoRaw != null ? saldoRaw : 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
 
     content.innerHTML = `
         <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -1110,8 +1110,8 @@ async function handleCreateMesaSubmit(event) {
     const numeroInput = form.querySelector('#mesa-numero');
     const nombreInput = form.querySelector('#mesa-nombre');
 
-    const numeroMesa = numeroInput?.value || '';
-    let nombreMesa = nombreInput?.value || '';
+    const numeroMesa = (numeroInput && numeroInput.value) || '';
+    let nombreMesa = (nombreInput && nombreInput.value) || '';
 
     // Validar que al menos uno de los dos campos tenga valor
     if ((!numeroMesa || numeroMesa.trim() === '') && (!nombreMesa || nombreMesa.trim() === '')) {
@@ -1387,37 +1387,35 @@ async function openQRModal(mesaId) {
     qrModal.classList.add('active');
 }
 
-function updateQRForTable(mesaId, userNum) {
+async function updateQRForTable(mesaId, userNum) {
     const img = document.getElementById('qr-modal-img');
     const urlText = document.getElementById('qr-modal-url');
-    // const downloadBtn = document.getElementById('qr-modal-download-btn'); // removed in previous steps or not used?
 
-    // Construct QR Code string
-    // Attempt to use the actual QR code from the table if available
-    let tableQrBase = `karaoke-mesa-${mesaId.toString().padStart(2, '0')}`;
-
-    // Find account to get true QR code
+    let localId = null;
     if (typeof currentAccounts !== 'undefined') {
         const account = currentAccounts.find(a => a.mesa_id == mesaId);
-        if (account && account.qr_code) {
-            tableQrBase = account.qr_code;
+        if (account && account.local_id) {
+            localId = account.local_id;
         }
     }
+    if (!localId && localStorage.getItem('selectedLocalId')) {
+        localId = parseInt(localStorage.getItem('selectedLocalId'));
+    }
+    if (!localId) localId = 1;
 
-    const qrCode = `${tableQrBase}-usuario${userNum}`;
+    try {
+        const res = await apiFetch(`/mesas/generate-qr-key?mesa_id=${mesaId}&local_id=${localId}&user_num=${userNum}`);
+        if (res && res.key) {
+            const appBaseUrl = window.location.origin;
+            const appUrl = `${appBaseUrl}/user?key=${encodeURIComponent(res.key)}`;
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
 
-    // Generate URL
-    const appBaseUrl = window.location.origin;
-    const appUrl = `${appBaseUrl}/user?table=${encodeURIComponent(qrCode)}`;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
-
-    if (img) img.src = qrImageUrl;
-    if (urlText) urlText.textContent = appUrl;
-
-    // if (downloadBtn) {
-    //     downloadBtn.href = qrImageUrl;
-    //     downloadBtn.download = `mesa-${mesaId}-usuario${userNum}.png`;
-    // }
+            if (img) img.src = qrImageUrl;
+            if (urlText) urlText.textContent = appUrl;
+        }
+    } catch (e) {
+        console.error("Error generando QR key:", e);
+    }
 }
 
 

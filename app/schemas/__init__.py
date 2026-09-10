@@ -90,7 +90,12 @@ from app.schemas.pago import (
     ReporteIngresosPromedioPorMesa,
     ResumenNoche,
     CuentaInfo,
+    MesaVentaTurno,
+    MetodoPagoTurno,
+    ProductoVendidoTurno,
+    ReporteVentasTurno,
 )
+
 
 from app.schemas.token import (
     AdminApiKeyCreate,

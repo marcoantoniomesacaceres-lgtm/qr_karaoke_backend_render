@@ -61,12 +61,14 @@ function setupTablesListeners() {
 
     if (openPlayerBtn) {
         openPlayerBtn.addEventListener('click', () => {
-            window.open('/player', '_blank');
+            const activeLocalId = sessionStorage.getItem('active_local_id') || localStorage.getItem('selectedLocalId') || '';
+            const queryParam = activeLocalId ? `?local=${encodeURIComponent(activeLocalId)}` : '';
+            window.open(`/api/v1/player2/${queryParam}`, '_blank');
         });
     }
 }
 
-function handleGenerateQR(event) {
+async function handleGenerateQR(event) {
     event.preventDefault();
 
     const tableNumInput = document.getElementById('qr-table-number');
@@ -78,29 +80,40 @@ function handleGenerateQR(event) {
         return;
     }
 
-    const tableNum = tableNumInput.value.toString().padStart(2, '0'); // Ensure 05 format
-    const userNum = userSelect.value;
-
-    // Construct QR Code string: karaoke-mesa-XX-usuarioN
-    const qrCode = `karaoke-mesa-${tableNum}-usuario${userNum}`;
-    const tableName = `Mesa ${parseInt(tableNum)}`;
+    const tableNum = parseInt(tableNumInput.value);
+    const userNum = parseInt(userSelect.value) || 1;
+    const tableName = `Mesa ${tableNum}`;
     const userNick = `${tableName}-Usuario${userNum}`;
 
-    // Generate URL
-    const appBaseUrl = window.location.origin;
-    const appUrl = `${appBaseUrl}/user?table=${encodeURIComponent(qrCode)}`;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
+    try {
+        const table = await findTableByNumber(tableNum);
+        const mesaId = table ? table.id : tableNum;
+        let localId = table && table.local_id ? table.local_id : localStorage.getItem('selectedLocalId') || 1;
 
-    resultArea.innerHTML = `
-        <div class="qr-container" style="animation: fadeIn 0.5s;">
-            <img src="${qrImageUrl}" alt="QR Code" class="qr-image" style="border: 2px solid #333; padding: 10px; border-radius: 10px;">
-            <h3 style="margin: 10px 0 5px 0;">${userNick}</h3>
-            <p style="font-family: monospace; background: #f0f0f0; padding: 5px; border-radius: 4px;">${qrCode}</p>
-            <a href="${qrImageUrl}" download="qr-${qrCode}.png" class="btn-primary" style="display: inline-block; margin-top: 10px; text-decoration: none;">
-                ⬇️ Descargar QR
-            </a>
-        </div>
-    `;
+        const res = await apiFetch(`/mesas/generate-qr-key?mesa_id=${mesaId}&local_id=${localId}&user_num=${userNum}`);
+        if (!res || !res.key) {
+            showNotification('Error al generar clave segura del QR', 'error');
+            return;
+        }
+
+        const appBaseUrl = window.location.origin;
+        const appUrl = `${appBaseUrl}/user?key=${encodeURIComponent(res.key)}`;
+        const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
+
+        resultArea.innerHTML = `
+            <div class="qr-container" style="animation: fadeIn 0.5s;">
+                <img src="${qrImageUrl}" alt="QR Code" class="qr-image" style="border: 2px solid #333; padding: 10px; border-radius: 10px;">
+                <h3 style="margin: 10px 0 5px 0;">${userNick}</h3>
+                <p style="font-family: monospace; font-size: 11px; word-break: break-all; background: #f0f0f0; padding: 5px; border-radius: 4px;">key=${res.key}</p>
+                <a href="${qrImageUrl}" download="qr-mesa${tableNum}-u${userNum}.png" class="btn-primary" style="display: inline-block; margin-top: 10px; text-decoration: none;">
+                    ⬇️ Descargar QR
+                </a>
+            </div>
+        `;
+    } catch (e) {
+        console.error("Error al generar QR:", e);
+        showNotification('Error al generar código QR', 'error');
+    }
 }
 
 async function findTableByNumber(number) {

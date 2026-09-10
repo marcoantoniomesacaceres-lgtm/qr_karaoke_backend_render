@@ -143,93 +143,117 @@ def create_mesa_endpoint(
         # Si no es un IntegrityError, relanzamos como 500 para no ocultar errores inesperados
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/{qr_code}/conectar", response_model=schemas.Usuario, summary="Conectar un usuario a una mesa")
-def conectar_usuario_a_mesa(
-    qr_code: str, usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)
+
+# ========================================================================
+# ENDPOINTS DE CÓDIGOS QR ENCRIPTADOS (key=encrypt)
+# ========================================================================
+from app.utils.qr_crypto import generate_qr_token, decrypt_qr_token
+
+@router.get("/generate-qr-key", summary="Generar clave encriptada para el código QR de una mesa y usuario")
+def generar_qr_key(
+    mesa_id: int,
+    local_id: int = None,
+    user_num: int = 1,
+    db: Session = Depends(get_db)
 ):
     """
-    Busca una mesa por su QR y crea un nuevo usuario asociado a ella.
-    COMPATIBILIDAD: Acepta dos formatos de QR:
-    - Nuevo: 'karaoke-mesa-XX-usuarioN' (N = 1-10) - Asigna usuario específico
-    - Antiguo: 'karaoke-mesa-XX' - Asigna automáticamente al siguiente usuario disponible
+    Genera un token encriptado URL-Safe que encapsula (local_id, mesa_id, user_num).
     """
-    # Intentar extraer el número de mesa y usuario del QR code (formato nuevo)
-    match_nuevo = re.match(r'karaoke-mesa-(\d+)-usuario(\d+)', qr_code)
-    
-    if match_nuevo:
-        # Formato nuevo: karaoke-mesa-05-usuario1
-        mesa_numero = match_nuevo.group(1)
-        usuario_numero = match_nuevo.group(2)
-        
-        # Validar que el número de usuario esté entre 1 y 10
-        if not (1 <= int(usuario_numero) <= 10):
-            raise HTTPException(
-                status_code=400,
-                detail=f"El número de usuario debe estar entre 1 y 10. Recibido: {usuario_numero}"
-            )
-    else:
-        # Intentar formato antiguo: karaoke-mesa-05
-        match_antiguo = re.match(r'karaoke-mesa-(\d+)$', qr_code)
-        
-        if not match_antiguo:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"El código QR '{qr_code}' no tiene un formato válido. Debe ser 'karaoke-mesa-XX' o 'karaoke-mesa-XX-usuarioN'."
-            )
-        
-        mesa_numero = match_antiguo.group(1)
-        
-    # --- Búsqueda unificada de la mesa con fallbacks (mesa-2 vs mesa-02) ---
-    qr_code_mesa_base = f"karaoke-mesa-{mesa_numero}"
-    db_mesa = crud.get_mesa_by_qr(db, qr_code=qr_code_mesa_base)
-    
-    if not db_mesa:
-        # Intentar formato sin ceros (ej: mesa-2)
-        qr_code_mesa_base_int = f"karaoke-mesa-{int(mesa_numero)}"
-        db_mesa = crud.get_mesa_by_qr(db, qr_code=qr_code_mesa_base_int)
+    if local_id is None:
+        db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
+        if db_mesa and db_mesa.get("local_id"):
+            local_id = db_mesa.get("local_id")
+        else:
+            local_id = 1
 
-    if not db_mesa:
-        # Intentar formato con ceros (ej: mesa-02)
-        qr_code_mesa_base_pad = f"karaoke-mesa-{int(mesa_numero):02d}"
-        db_mesa = crud.get_mesa_by_qr(db, qr_code=qr_code_mesa_base_pad)
-        
-    if not db_mesa:
+    token = generate_qr_token(local_id=local_id, mesa_id=mesa_id, user_num=user_num)
+    return {
+        "key": token,
+        "local_id": local_id,
+        "mesa_id": mesa_id,
+        "usuario_numero": user_num
+    }
+
+
+@router.get("/resolve-key", summary="Desencriptar y resolver datos de un token QR")
+def resolver_qr_key(key: str, db: Session = Depends(get_db)):
+    """
+    Desencripta la clave QR y devuelve la información de la sede, mesa y usuario.
+    """
+    decrypted = decrypt_qr_token(key)
+    if not decrypted:
         raise HTTPException(
-            status_code=404, 
-            detail=f"La mesa '{qr_code_mesa_base}' no existe. Por favor, contacta al personal."
+            status_code=400,
+            detail="Código QR o clave inválida o manipulada."
         )
 
-    mesa_id = db_mesa.get('id')
-    mesa_nombre = db_mesa.get('nombre')
-    is_active = db_mesa.get('is_active', True)
+    local_id = decrypted["local_id"]
+    mesa_id = decrypted["mesa_id"]
+    usuario_numero = decrypted["usuario_numero"]
 
-    if not is_active:
+    db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
+    if not db_mesa:
         raise HTTPException(
-            status_code=403, 
-            detail="Esta mesa se encuentra desactivada temporalmente. Por favor, contacta al personal."
+            status_code=404,
+            detail=f"La mesa asociada al código QR no existe."
         )
 
-    # Si es formato antiguo o no tenemos usuario_numero, buscar el siguiente disponible
-    if not match_nuevo:
-        usuario_numero = None
-        for num in range(1, 11):
-            nick_test = f"{mesa_nombre}-Usuario{num}"
-            usuario_existente = cache.get_usuario_by_nick_from_cache(nick_test)
-            if not usuario_existente or not usuario_existente.get("is_active"):
-                usuario_numero = str(num)
-                break
-        
-        if not usuario_numero:
-            raise HTTPException(
-                status_code=429,
-                detail="La mesa ha alcanzado el máximo de 10 usuarios activos. Por favor, intenta más tarde."
-            )
-    
-    # Determinar el nick final: si el usuario ingresó un apodo personalizado, lo usamos.
-    # Si no, usamos el formato automático de UsuarioX.
-    # Para evitar colisiones en el caché global, el nick se almacena como "NombreMesa-Apodo".
+    local_nombre = f"Sede {local_id}"
+    try:
+        from app.db.models.local import Local
+        loc = db.query(Local).filter(Local.id == local_id).first()
+        if loc and loc.nombre:
+            local_nombre = loc.nombre
+    except Exception:
+        pass
+
+    return {
+        "key": key,
+        "local_id": local_id,
+        "local_nombre": local_nombre,
+        "mesa_id": mesa_id,
+        "mesa_nombre": db_mesa.get("nombre", f"Mesa {mesa_id}"),
+        "usuario_numero": usuario_numero,
+        "is_active": db_mesa.get("is_active", True)
+    }
+
+
+@router.post("/conectar-key", response_model=schemas.Usuario, summary="Conectar usuario mediante clave QR encriptada")
+def conectar_usuario_con_key(
+    key: str,
+    usuario: schemas.UsuarioCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Conecta al usuario a la mesa y local utilizando el token encriptado del QR.
+    """
+    decrypted = decrypt_qr_token(key)
+    if not decrypted:
+        raise HTTPException(
+            status_code=400,
+            detail="Código QR inválido o no reconocido."
+        )
+
+    local_id = decrypted["local_id"]
+    mesa_id = decrypted["mesa_id"]
+    usuario_numero = decrypted["usuario_numero"]
+
+    db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
+    if not db_mesa:
+        raise HTTPException(
+            status_code=404,
+            detail="La mesa asociada a este código QR no existe."
+        )
+
+    if not db_mesa.get("is_active", True):
+        raise HTTPException(
+            status_code=403,
+            detail="Esta mesa se encuentra desactivada temporalmente."
+        )
+
+    mesa_nombre = db_mesa.get("nombre", f"Mesa {mesa_id}")
     custom_nick = usuario.nick.strip() if usuario.nick else ""
-    
+
     if not custom_nick or custom_nick.lower() == "usuario" or custom_nick.startswith(f"{mesa_nombre}-Usuario"):
         nick_final = f"{mesa_nombre}-Usuario{usuario_numero}"
     else:
@@ -238,33 +262,50 @@ def conectar_usuario_a_mesa(
         else:
             nick_final = f"{mesa_nombre}-{custom_nick}"
 
-    # Asegurar sincronización con MySQL (ahora robusta a errores de tabla inexistente)
-    ensure_mesa_in_mysql(db, mesa_id, mesa_nombre, db_mesa.get('qr_code'))
-    
-    # Verificar si ya existe un usuario con este nick en el caché (no en DB)
+    ensure_mesa_in_mysql(db, mesa_id, mesa_nombre, db_mesa.get("qr_code", f"mesa-{mesa_id}"))
+
+    # Verificar si ya existe en caché
     db_usuario_existente = cache.get_usuario_by_nick_from_cache(nick_final)
-    
     if db_usuario_existente:
+        from app.db.crud.crud_usuarios import _to_obj
         if db_usuario_existente.get("is_active"):
-            # Return the existing cache user as object
-            from app.db.crud.crud_usuarios import _to_obj
             return _to_obj(db_usuario_existente)
         else:
-            # Reactivate in cache
             cache.update_usuario_en_cache(
                 db_usuario_existente["id"],
-                {"is_active": True, "last_active": datetime.datetime.utcnow().isoformat()}
+                {
+                    "is_active": True,
+                    "local_id": local_id,
+                    "last_active": datetime.datetime.utcnow().isoformat()
+                }
             )
-            from app.db.crud.crud_usuarios import _to_obj
             return _to_obj(cache.get_usuario_by_id_from_cache(db_usuario_existente["id"]))
-    
-    # Crear el nuevo usuario en caché
+
     try:
         usuario_data = schemas.UsuarioCreate(nick=nick_final)
-        return crud.create_usuario_en_mesa(db=db, usuario=usuario_data, mesa_id=mesa_id)
+        return crud.create_usuario_en_mesa(db=db, usuario=usuario_data, mesa_id=mesa_id, local_id=local_id)
     except Exception as e:
         logger.error(f"Error al crear usuario '{nick_final}' en mesa {mesa_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al crear usuario: {e}")
+
+
+@router.post("/{qr_code}/conectar", response_model=schemas.Usuario, summary="Conectar un usuario a una mesa")
+def conectar_usuario_a_mesa(
+    qr_code: str, usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)
+):
+    """
+    Busca una mesa por su clave QR encriptada y crea o conecta al usuario.
+    """
+    # 1. Intentar desencriptar como token encriptado
+    decrypted = decrypt_qr_token(qr_code)
+    if decrypted:
+        return conectar_usuario_con_key(key=qr_code, usuario=usuario, db=db)
+
+    # 2. Si no es token encriptado válido, rechazar
+    raise HTTPException(
+        status_code=400,
+        detail="Código QR no válido. Por favor escanea el código QR oficial de tu mesa."
+    )
 
 @router.get("/{mesa_id}/usuarios-conectados", response_model=List[schemas.UsuarioConectado], summary="Ver usuarios conectados a una mesa")
 def get_usuarios_conectados(mesa_id: int, db: Session = Depends(get_db)):

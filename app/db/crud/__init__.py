@@ -104,6 +104,7 @@ from app.db.crud.crud_admin import (
     reset_database_for_new_night,
     get_ganancias_totales,
     limpiar_datos_prueba,
+    get_ventas_turno,
     get_canciones_mas_cantadas,
     get_productos_mas_consumidos,
     get_usuarios_sin_consumo,
@@ -136,6 +137,7 @@ from app.db.crud.crud_admin import (
     start_next_song_if_autoplay_and_idle,
     get_estado_mesas,
 )
+
 
 __all__ = [
     # Usuarios
@@ -174,8 +176,9 @@ __all__ = [
     "get_recent_consumos", "delete_consumo", "update_consumo_cantidad",
     # Admin / Reportes
     "get_resumen_noche", "reset_database_for_new_night", "get_ganancias_totales",
-    "limpiar_datos_prueba", "get_canciones_mas_cantadas",
+    "limpiar_datos_prueba", "get_ventas_turno", "get_canciones_mas_cantadas",
     "get_productos_mas_consumidos", "get_usuarios_sin_consumo",
+
     "get_canciones_cantadas_por_usuario", "get_ingresos_promedio_por_usuario",
     "get_usuarios_una_cancion", "get_mesas_vacias",
     "get_ingresos_promedio_por_usuario_por_mesa", "get_tiempo_promedio_espera",

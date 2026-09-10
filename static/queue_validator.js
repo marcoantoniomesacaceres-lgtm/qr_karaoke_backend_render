@@ -86,14 +86,16 @@ class QueueValidator {
   }
 
   /**
-   * Obtiene y muestra el reporte completo de debug
+   * Obtiene y muestra el reporte completo de debug para la sede seleccionada
    */
   async refreshDebugReport() {
     const btn = document.getElementById('debug-btn-refresh');
     if (btn) btn.textContent = '⏳ ACTUALIZANDO...';
 
+    const localId = localStorage.getItem('selectedLocalId') || 1;
+
     try {
-      const report = await apiFetch('/admin/queue/debug');
+      const report = await apiFetch(`/admin/queue/debug?local_id=${localId}`);
       this.lastDebugReport = report;
       this.renderDebugReport(report);
     } catch (error) {
@@ -109,8 +111,10 @@ class QueueValidator {
     const panel = document.getElementById('queue-debug-panel');
     let html = '';
 
-    // ========== TÍTULO ==========
-    html += '<h3 style="color:#00ff00; margin-top:0;">🔍 QUEUE DEBUG REPORT [v2.2]</h3>';
+    // ========== TÍTULO Y SEDE ==========
+    const localLabel = report.local_nombre || `Sede #${report.local_id || 1}`;
+    html += '<h3 style="color:#00ff00; margin-top:0; margin-bottom: 4px;">🔍 QUEUE DEBUG REPORT</h3>';
+    html += `<div style="background: rgba(0, 255, 255, 0.15); border: 1px solid #00ffff; color: #00ffff; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-bottom: 6px;">📍 SEDE: ${localLabel}</div>`;
     html += `<div style="color:#ff6600; margin-bottom:10px;">⏱ ${new Date(report.timestamp).toLocaleTimeString()}</div>`;
 
     // ========== QUÉ VA A REPRODUCIR ==========
@@ -119,18 +123,17 @@ class QueueValidator {
     html += '<h4 style="color:#ffff00; margin: 4px 0;">🎵 QUÉ VA A REPRODUCIR:</h4>';
 
     if (playing.status === 'empty') {
-      html += '<span style="color:#ff0000;">❌ COLA VACÍA</span>';
+      html += '<span style="color:#ff0000;">❌ COLA VACÍA EN ESTA SEDE</span>';
     } else if (playing.status === 'waiting_for_approval') {
       html += `<span style="color:#ffaa00;">⏳ ESPERANDO APROBACIÓN</span><br/>`;
-      html += `First: <strong>${playing.first_lazy_waiting.titulo}</strong>`;
+      html += `First: <strong>${playing.first_lazy_waiting ? playing.first_lazy_waiting.titulo : ''}</strong>`;
     } else if (playing.status === 'ready_to_play') {
       html += `<span style="color:#00ff00;">✓ LISTA PARA REPRODUCIR</span><br/>`;
-      html += `Next: <strong>${playing.next_to_play.titulo}</strong>`;
+      html += `Next: <strong>${playing.next_to_play ? playing.next_to_play.titulo : ''}</strong>`;
     } else if (playing.status === 'something_is_playing') {
       html += `<span style="color:#00aaff;">▶ REPRODUCIENDO AHORA</span><br/>`;
-      html += `<strong>${playing.now_playing.titulo}</strong><br/>`;
-      html += `User: ${playing.now_playing.usuario}<br/>`;
-      html += `Progress: ${playing.now_playing.progress_percent}%<br/>`;
+      html += `<strong>${playing.now_playing ? playing.now_playing.titulo : ''}</strong><br/>`;
+      html += `User: ${playing.now_playing ? playing.now_playing.usuario : ''}<br/>`;
       html += `<br/><span style="color:#ffff00;">↓ SIGUIENTE:</span><br/>`;
       html += playing.next_after_current ? playing.next_after_current.titulo : '<span style="color:#ff0000;">NINGUNA</span>';
     }
@@ -138,11 +141,11 @@ class QueueValidator {
 
     // ========== NEXT 10 EN QUEUE ==========
     html += '<div style="border-bottom:1px solid #00ff00; padding-bottom:8px; margin-bottom:8px;">';
-    html += '<h4 style="color:#ffff00; margin: 4px 0;">📋 PRÓXIMAS EN COLA (REAL):</h4>';
+    html += '<h4 style="color:#ffff00; margin: 4px 0;">📋 PRÓXIMAS EN COLA (SEDE):</h4>';
     if (playing.next_20_in_queue && playing.next_20_in_queue.length > 0) {
       html += '<table style="width:100%; font-size:10px;">';
       playing.next_20_in_queue.slice(0, 10).forEach((song, idx) => {
-        html += `<tr><td style="color:#00ff00; width:25px;">#${idx + 1}</td><td>${song.titulo.substring(0, 25)}</td><td style="color:#aaa; text-align:right;">${song.usuario}</td></tr>`;
+        html += `<tr><td style="color:#00ff00; width:25px;">#${idx + 1}</td><td>${(song.titulo || '').substring(0, 25)}</td><td style="color:#aaa; text-align:right;">${song.usuario || ''}</td></tr>`;
       });
       html += '</table>';
     } else {
@@ -162,7 +165,7 @@ class QueueValidator {
     // ========== ESTADÍSTICAS BD ==========
     const db = report.database_state;
     html += '<div style="border-bottom:1px solid #00ff00; padding-bottom:8px;">';
-    html += '<h4 style="color:#ffff00; margin: 4px 0;">📊 ESTADO BD:</h4>';
+    html += '<h4 style="color:#ffff00; margin: 4px 0;">📊 ESTADO COLA DE SEDE:</h4>';
     html += `Reproduciendo: <strong>${db.reproduciendo_count}</strong> | Aprobadas: <strong style="color:#00ff00;">${db.aprobado_count}</strong> | Lazy: <strong>${db.pendiente_lazy_count}</strong>`;
     html += '</div>';
 
@@ -179,10 +182,14 @@ class QueueValidator {
 
     // Asignar eventos programáticamente
     setTimeout(() => {
-      document.getElementById('debug-btn-refresh')?.addEventListener('click', () => this.refreshDebugReport());
-      document.getElementById('debug-btn-compare')?.addEventListener('click', () => this.compareUIVsReality());
-      document.getElementById('debug-btn-json')?.addEventListener('click', () => this.showJsonPanel());
-      document.getElementById('debug-btn-close')?.addEventListener('click', () => this.toggleDebugPanel());
+      const btnRef = document.getElementById('debug-btn-refresh');
+      if (btnRef) btnRef.addEventListener('click', () => this.refreshDebugReport());
+      const btnComp = document.getElementById('debug-btn-compare');
+      if (btnComp) btnComp.addEventListener('click', () => this.compareUIVsReality());
+      const btnJson = document.getElementById('debug-btn-json');
+      if (btnJson) btnJson.addEventListener('click', () => this.showJsonPanel());
+      const btnClose = document.getElementById('debug-btn-close');
+      if (btnClose) btnClose.addEventListener('click', () => this.toggleDebugPanel());
     }, 10);
   }
 
@@ -193,10 +200,12 @@ class QueueValidator {
     const btn = document.getElementById('debug-btn-compare');
     if (btn) btn.textContent = '⏳ COMPARANDO...';
 
+    const localId = localStorage.getItem('selectedLocalId') || 1;
     const upcomingContainer = document.getElementById('upcoming-list');
     const nowPlayingContainer = document.getElementById('now-playing-container');
-    const uiCancionesList = Array.from(upcomingContainer?.querySelectorAll('[data-cancion-id]') || []);
-    const uiNowPlayingId = nowPlayingContainer?.querySelector('[data-cancion-id]')?.dataset.cancionId;
+    const uiCancionesList = Array.from((upcomingContainer && upcomingContainer.querySelectorAll('[data-cancion-id]')) || []);
+    const nowPlayingEl = nowPlayingContainer && nowPlayingContainer.querySelector('[data-cancion-id]');
+    const uiNowPlayingId = nowPlayingEl && nowPlayingEl.dataset ? nowPlayingEl.dataset.cancionId : null;
 
     const uiState = {
       now_playing: uiNowPlayingId ? { id: parseInt(uiNowPlayingId) } : null,
@@ -204,7 +213,7 @@ class QueueValidator {
     };
 
     try {
-      const comparison = await apiFetch('/admin/queue/compare-ui-vs-reality', {
+      const comparison = await apiFetch(`/admin/queue/compare-ui-vs-reality?local_id=${localId}`, {
         method: 'POST',
         body: JSON.stringify(uiState)
       });
@@ -254,7 +263,8 @@ class QueueValidator {
     panel.innerHTML = html;
 
     setTimeout(() => {
-      document.getElementById('debug-btn-back')?.addEventListener('click', () => this.refreshDebugReport());
+      const btnBack = document.getElementById('debug-btn-back');
+      if (btnBack) btnBack.addEventListener('click', () => this.refreshDebugReport());
     }, 10);
   }
 
@@ -270,7 +280,8 @@ class QueueValidator {
         <button id="debug-btn-json-back" style="width:100%; padding:10px; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">← VOLVER</button>
       `;
       setTimeout(() => {
-        document.getElementById('debug-btn-json-back')?.addEventListener('click', () => this.refreshDebugReport());
+        const btnJBack = document.getElementById('debug-btn-json-back');
+        if (btnJBack) btnJBack.addEventListener('click', () => this.refreshDebugReport());
       }, 10);
       return;
     }
@@ -297,23 +308,27 @@ class QueueValidator {
       ">${jsonStr}</pre>
     `;
     setTimeout(() => {
-      document.getElementById('debug-btn-json-back')?.addEventListener('click', () => this.refreshDebugReport());
-      document.getElementById('debug-btn-json-copy')?.addEventListener('click', () => {
-        navigator.clipboard.writeText(jsonStr).then(() => {
-          const btn = document.getElementById('debug-btn-json-copy');
-          if (btn) { btn.textContent = '✓ COPIADO!'; setTimeout(() => { if (btn) btn.textContent = '📋 COPIAR'; }, 2000); }
-        }).catch(() => {
-          // Fallback para navegadores sin clipboard API
-          const ta = document.createElement('textarea');
-          ta.value = jsonStr;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-          const btn = document.getElementById('debug-btn-json-copy');
-          if (btn) { btn.textContent = '✓ COPIADO!'; setTimeout(() => { if (btn) btn.textContent = '📋 COPIAR'; }, 2000); }
+      const btnJBack = document.getElementById('debug-btn-json-back');
+      if (btnJBack) btnJBack.addEventListener('click', () => this.refreshDebugReport());
+      const btnJCopy = document.getElementById('debug-btn-json-copy');
+      if (btnJCopy) {
+        btnJCopy.addEventListener('click', () => {
+          navigator.clipboard.writeText(jsonStr).then(() => {
+            const btn = document.getElementById('debug-btn-json-copy');
+            if (btn) { btn.textContent = '✓ COPIADO!'; setTimeout(() => { if (btn) btn.textContent = '📋 COPIAR'; }, 2000); }
+          }).catch(() => {
+            // Fallback para navegadores sin clipboard API
+            const ta = document.createElement('textarea');
+            ta.value = jsonStr;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            const btn = document.getElementById('debug-btn-json-copy');
+            if (btn) { btn.textContent = '✓ COPIADO!'; setTimeout(() => { if (btn) btn.textContent = '📋 COPIAR'; }, 2000); }
+          });
         });
-      });
+      }
     }, 10);
   }
 
@@ -321,7 +336,8 @@ class QueueValidator {
     const panel = document.getElementById('queue-debug-panel');
     panel.innerHTML = `<h3 style="color:#ff0000;">ERROR</h3><pre style="white-space:pre-wrap;">${text}</pre><button id="debug-btn-err-back" style="width:100%; padding:10px; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">← VOLVER</button>`;
     setTimeout(() => {
-      document.getElementById('debug-btn-err-back')?.addEventListener('click', () => this.refreshDebugReport());
+      const btnErrBack = document.getElementById('debug-btn-err-back');
+      if (btnErrBack) btnErrBack.addEventListener('click', () => this.refreshDebugReport());
     }, 10);
   }
 

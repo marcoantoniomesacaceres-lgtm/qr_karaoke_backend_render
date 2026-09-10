@@ -6,11 +6,18 @@ const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 const WEBSOCKET_URL = `${wsProtocol}://${window.location.host}/ws/cola`;
 
 // ============================================
+// ============================================
 // ESTADO DE LA APLICACIÓN
 // ============================================
 let state = {
     user: null,
+    qrKey: null,
     tableQrCode: null,
+    localId: 1,
+    localNombre: '',
+    mesaId: null,
+    mesaNombre: '',
+    usuarioNumero: 1,
     websocket: null,
     cart: [],
     currentTab: 'tab-queue'
@@ -223,17 +230,19 @@ function showNotification(message, type = 'success', duration = 3000) {
 // ============================================
 
 function connectWebSocket() {
-    console.log(`🔌 [WS Auditoría] Intentando establecer conexión a: ${WEBSOCKET_URL}`);
-    state.websocket = new WebSocket(WEBSOCKET_URL);
+    const localParam = state.localId ? `?local=${encodeURIComponent(state.localId)}` : '';
+    const wsUrl = `${WEBSOCKET_URL}${localParam}`;
+    console.log(`🔌 [WS Auditoría] Conectando a: ${wsUrl}`);
+    state.websocket = new WebSocket(wsUrl);
 
     state.websocket.onopen = () => {
-        console.log("🟢 [WS Auditoría] Conexión WebSocket establecida con éxito.");
+        console.log(`🟢 [WS Auditoría] Conexión WebSocket establecida para sede ${state.localId || 'General'}.`);
     };
 
     state.websocket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            console.log("📥 [WS Auditoría] Respuesta/Mensaje recibido del servidor:", data);
+            console.log("📥 [WS Auditoría] Mensaje recibido del servidor:", data);
 
             if (data.type) {
                 if (data.type === 'notification' || data.type === 'admin_notification') {
@@ -269,17 +278,17 @@ function connectWebSocket() {
                 renderQueue(data);
             }
         } catch (err) {
-            console.warn("⚠️ [WS Auditoría] Error al procesar mensaje JSON entrante:", err, "Contenido:", event.data);
+            console.warn("⚠️ [WS Auditoría] Error al procesar mensaje JSON entrante:", err);
         }
     };
 
     state.websocket.onclose = (event) => {
-        console.log(`🔴 [WS Auditoría] Conexión WebSocket cerrada. Código: ${event.code}, Razón: ${event.reason || 'Ninguna'}. Intentando reconectar en 5 segundos...`);
+        console.log(`🔴 [WS Auditoría] Conexión WebSocket cerrada. Intentando reconectar en 5 segundos...`);
         setTimeout(connectWebSocket, 5000);
     };
 
     state.websocket.onerror = (error) => {
-        console.error('❌ [WS Auditoría] Error detectado en la conexión:', error);
+        console.error('❌ [WS Auditoría] Error detectado en WebSocket:', error);
         state.websocket.close();
     };
 }
@@ -299,7 +308,7 @@ async function performConnect(nick) {
     errorMessage.textContent = '';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/mesas/${encodeURIComponent(state.tableQrCode)}/conectar`, {
+        const response = await fetch(`${API_BASE_URL}/mesas/conectar-key?key=${encodeURIComponent(state.qrKey)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nick: nick }),
@@ -310,7 +319,7 @@ async function performConnect(nick) {
         }
         state.user = data;
         sessionStorage.setItem('karaokeUser', JSON.stringify(state.user));
-        sessionStorage.setItem('karaokeTable', state.tableQrCode);
+        sessionStorage.setItem('karaokeKey', state.qrKey);
 
         await fetchUserProfile();
         showDashboard();
@@ -666,14 +675,15 @@ async function handleMoveSongDown(event) {
 
 async function fetchProducts() {
     catalogList.innerHTML = '<p>Cargando catálogo...</p>';
-    const localId = (state.user && state.user.mesa && state.user.mesa.local_id) || '';
+    const localId = state.localId || (state.user && state.user.local_id) || (state.user && state.user.mesa && state.user.mesa.local_id) || 1;
     const response = await fetch(`${API_BASE_URL}/productos/?local_id=${localId}`);
     const products = await response.json();
     renderCatalog(products);
 }
 
 async function fetchTableAccountStatus() {
-    if (!state.user || !state.user.mesa || !state.user.mesa.id) {
+    const mesaId = (state.user && state.user.mesa && state.user.mesa.id) || state.mesaId;
+    if (!mesaId) {
         console.warn("User or table information is missing, cannot fetch account status.");
         const container = document.getElementById('my-account-content');
         container.innerHTML = '<p class="error-msg">No se pudo cargar el estado de cuenta. Información de mesa no disponible.</p>';
@@ -684,7 +694,7 @@ async function fetchTableAccountStatus() {
     container.innerHTML = '<p>Cargando estado de cuenta...</p>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/mesas/${state.user.mesa.id}/payment-status`);
+        const response = await fetch(`${API_BASE_URL}/mesas/${mesaId}/payment-status`);
 
         if (!response.ok) {
             const err = await response.json();
@@ -736,8 +746,9 @@ async function fetchTableAccountStatus() {
 
 async function fetchQueue() {
     try {
-        console.log("📡 [WS Auditoría] Cargando cola de canciones vía HTTP...");
-        const response = await fetch(`${API_BASE_URL}/canciones/cola/extended`);
+        const localId = state.localId || (state.user && state.user.local_id) || 1;
+        console.log(`📡 [WS Auditoría] Cargando cola de canciones vía HTTP para local ${localId}...`);
+        const response = await fetch(`${API_BASE_URL}/canciones/cola/extended?local_id=${localId}`);
         if (!response.ok) {
             throw new Error(`Error ${response.status} al obtener la cola.`);
         }
@@ -782,15 +793,11 @@ async function fetchUserProfile() {
         state.user = profile;
 
         if (!state.user.mesa || !state.user.mesa.id) {
-            try {
-                const mesaResponse = await fetch(`${API_BASE_URL}/mesas/${encodeURIComponent(state.tableQrCode)}`);
-                if (mesaResponse.ok) {
-                    const mesaData = await mesaResponse.json();
-                    state.user.mesa = mesaData;
-                }
-            } catch (error) {
-                console.warn('Could not fetch mesa details:', error);
-            }
+            state.user.mesa = {
+                id: state.mesaId,
+                nombre: state.mesaNombre,
+                local_id: state.localId
+            };
         }
 
         sessionStorage.setItem('karaokeUser', JSON.stringify(state.user));
@@ -808,7 +815,10 @@ function updateProfileCard() {
 }
 
 function showDashboard() {
-    document.getElementById('table-name').textContent = state.tableQrCode;
+    const tableBadge = state.localNombre && state.mesaNombre
+        ? `${state.localNombre} • ${state.mesaNombre}`
+        : (state.mesaNombre || state.tableQrCode || 'Mesa');
+    document.getElementById('table-name').textContent = tableBadge;
     updateProfileCard();
 
     loginContainer.classList.add('hidden');
@@ -864,6 +874,7 @@ async function handleSendReaction(event) {
     const reaction = reactionBtn.dataset.emoji;
     const payload = {
         reaction: reaction,
+        local_id: state.localId || (state.user && state.user.local_id) || 1,
         sender: state.user ? state.user.nick : "Anónimo"
     };
     try {
@@ -885,19 +896,49 @@ function getQueryParam(param) {
 // ============================================
 // INICIALIZACIÓN
 // ============================================
-window.addEventListener('DOMContentLoaded', () => {
-    state.tableQrCode = getQueryParam('table');
-    if (!state.tableQrCode) {
-        document.getElementById('welcome-message').textContent = 'Error: No se encontró el código de la mesa.';
+window.addEventListener('DOMContentLoaded', async () => {
+    state.qrKey = getQueryParam('key') || getQueryParam('table');
+    if (!state.qrKey) {
+        document.getElementById('welcome-message').textContent = 'Error: Por favor escanea el código QR oficial de tu mesa.';
+        if (connectButton) connectButton.disabled = true;
         return;
     }
 
-    const storedUser = sessionStorage.getItem('karaokeUser');
-    const storedTable = sessionStorage.getItem('karaokeTable');
+    // Resolver la clave QR encriptada
+    try {
+        const resolveResp = await fetch(`${API_BASE_URL}/mesas/resolve-key?key=${encodeURIComponent(state.qrKey)}`);
+        if (resolveResp.ok) {
+            const data = await resolveResp.json();
+            state.localId = data.local_id;
+            state.localNombre = data.local_nombre;
+            state.mesaId = data.mesa_id;
+            state.mesaNombre = data.mesa_nombre;
+            state.usuarioNumero = data.usuario_numero;
+            state.tableQrCode = data.mesa_nombre;
 
-    if (storedUser && storedTable === state.tableQrCode) {
+            const welcomeEl = document.getElementById('welcome-message');
+            if (welcomeEl) {
+                welcomeEl.textContent = `📍 ${data.local_nombre} • ${data.mesa_nombre} (Usuario ${data.usuario_numero})`;
+            }
+            if (nickInput && !nickInput.value) {
+                nickInput.placeholder = `Ej: Cantante ${data.usuario_numero}`;
+            }
+        } else {
+            const err = await resolveResp.json();
+            document.getElementById('welcome-message').textContent = err.detail || 'Código QR inválido o expirado.';
+            if (connectButton) connectButton.disabled = true;
+            return;
+        }
+    } catch (e) {
+        console.error("Error resolviendo clave QR:", e);
+    }
+
+    const storedUser = sessionStorage.getItem('karaokeUser');
+    const storedKey = sessionStorage.getItem('karaokeKey');
+
+    if (storedUser && storedKey === state.qrKey) {
         state.user = JSON.parse(storedUser);
-        fetchUserProfile(); // Sincronizar el perfil con el servidor para obtener los puntos actualizados
+        fetchUserProfile();
         showDashboard();
     } else {
         // Si no hay sesión almacenada para esta mesa, intentar auto-conexión si el QR incluye '-usuarioN'

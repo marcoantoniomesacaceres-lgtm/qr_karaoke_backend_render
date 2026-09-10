@@ -505,15 +505,23 @@
 
             // Tables rendering moved to `static/admin_pages/tables.js` (renderTablesList)
 
-            function generateQrForTable(canvas, tableQrCode) {
+            async function generateQrForTable(canvas, tableQrCode, tableId) {
                 let url;
-                // Si el qrCode es una ruta (empieza con '/'), la usamos directamente.
-                // Si no, asumimos que es un código de mesa.
-                if (tableQrCode.startsWith('/')) {
+                if (tableQrCode && tableQrCode.startsWith('/')) {
                     url = `${window.location.origin}${tableQrCode}`;
-                } else {
-                    // URL para las mesas
-                    url = `${window.location.origin}/user?table=${tableQrCode}`;
+                } else if (tableId && !isNaN(tableId)) {
+                    try {
+                        const localId = localStorage.getItem('selectedLocalId') || 1;
+                        const res = await fetch(`/api/v1/mesas/generate-qr-key?mesa_id=${tableId}&local_id=${localId}&user_num=1`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            url = `${window.location.origin}/user?key=${encodeURIComponent(data.key)}`;
+                        }
+                    } catch (e) {}
+                }
+                
+                if (!url) {
+                    url = `${window.location.origin}/user?key=${tableQrCode}`;
                 }
 
                 QRCode.toCanvas(canvas, url, { width: 256, errorCorrectionLevel: 'H' }, function (error) {
@@ -521,7 +529,6 @@
                         console.error(error);
                         canvas.parentElement.innerHTML = '<p style="color: var(--error-color);">Error al generar el QR.</p>';
                     } else {
-                        // Una vez generado el QR, añadimos la URL debajo sin borrar el canvas
                         const urlElement = document.createElement('p');
                         urlElement.className = 'item-meta';
                         urlElement.style.wordBreak = 'break-all';
@@ -531,23 +538,31 @@
                 });
             }
 
-            function showTableDetails(tableId, tableName, tableQrCode, isActive) {
+            async function showTableDetails(tableId, tableName, tableQrCode, isActive) {
                 const container = document.getElementById('qr-code-container');
-                container.innerHTML = ''; // Limpiar contenido anterior
+                container.innerHTML = '';
 
-                // Mostrar el nombre de la mesa
                 const nameElement = document.createElement('p');
                 nameElement.style.fontWeight = 'bold';
                 nameElement.textContent = tableName;
                 container.appendChild(nameElement);
 
-                // Mostrar la URL directa (si aplica) y botón para abrir reproductor
                 try {
                     let url;
                     if (tableQrCode && tableQrCode.startsWith('/')) {
                         url = `${window.location.origin}${tableQrCode}`;
-                    } else if (tableQrCode) {
-                        url = `${window.location.origin}/user?table=${tableQrCode}`;
+                    } else if (tableId && !isNaN(tableId)) {
+                        try {
+                            const localId = localStorage.getItem('selectedLocalId') || 1;
+                            const res = await fetch(`/api/v1/mesas/generate-qr-key?mesa_id=${tableId}&local_id=${localId}&user_num=1`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                url = `${window.location.origin}/user?key=${encodeURIComponent(data.key)}`;
+                            }
+                        } catch (e) {}
+                    }
+                    if (!url) {
+                        url = `${window.location.origin}/user?key=${tableQrCode}`;
                     }
 
                     if (url) {

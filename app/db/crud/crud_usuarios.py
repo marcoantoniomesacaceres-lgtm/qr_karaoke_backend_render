@@ -32,6 +32,7 @@ def _to_obj(u: dict) -> SimpleNamespace:
         id=int(u.get("id") or 0),
         nick=u.get("nick", ""),
         mesa_id=u.get("mesa_id"),
+        local_id=u.get("local_id", 1),
         puntos=u.get("puntos", 0),
         nivel=u.get("nivel", "bronce"),
         is_active=u.get("is_active", True),
@@ -61,7 +62,7 @@ def get_usuario_by_nick(db: Session, nick: str):
     return _to_obj(u)
 
 
-def create_usuario(db: Session, usuario: UsuarioCreate):
+def create_usuario(db: Session, usuario: UsuarioCreate, local_id: int = 1):
     """Crea un nuevo usuario de sesión en el CACHE."""
     usuario_data = {
         "nick": usuario.nick,
@@ -72,6 +73,7 @@ def create_usuario(db: Session, usuario: UsuarioCreate):
         "is_banned": False,
         "song_credits": 1,
         "mesa_id": None,
+        "local_id": local_id,
         "last_active": now_bogota().isoformat(),
         "credits_added_at": now_bogota().isoformat(),
         "last_song_added_at": None,
@@ -80,8 +82,18 @@ def create_usuario(db: Session, usuario: UsuarioCreate):
     return _to_obj(cache.get_usuario_by_id_from_cache(uid))
 
 
-def create_usuario_en_mesa(db: Session, usuario: UsuarioCreate, mesa_id: int):
-    """Crea un nuevo usuario y lo asocia a una mesa (en CACHE)."""
+def create_usuario_en_mesa(db: Session, usuario: UsuarioCreate, mesa_id: int, local_id: int = None):
+    """Crea un nuevo usuario y lo asocia a una mesa y local (en CACHE)."""
+    if local_id is None:
+        try:
+            mesa = cache.get_mesa_by_id(mesa_id)
+            if mesa and mesa.get("local_id"):
+                local_id = mesa.get("local_id")
+        except Exception:
+            pass
+    if local_id is None:
+        local_id = 1
+
     usuario_data = {
         "nick": usuario.nick,
         "puntos": 0,
@@ -91,6 +103,7 @@ def create_usuario_en_mesa(db: Session, usuario: UsuarioCreate, mesa_id: int):
         "is_banned": False,
         "song_credits": 1,
         "mesa_id": mesa_id,
+        "local_id": local_id,
         "last_active": now_bogota().isoformat(),
         "credits_added_at": now_bogota().isoformat(),
         "last_song_added_at": None,

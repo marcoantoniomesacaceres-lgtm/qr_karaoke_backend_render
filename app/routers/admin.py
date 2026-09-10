@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Response, HTTPException, Body, BackgroundTasks
+from fastapi import APIRouter, Depends, Response, HTTPException, Body, BackgroundTasks, Request, Query
 import os, time, logging
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app import models
 from app import crud, schemas
 from app import config
@@ -21,6 +21,21 @@ public_router = APIRouter()
 
 # Logger
 logger = logging.getLogger(__name__)
+
+
+def get_admin_local_id(request: Request, local_id: Optional[int] = None, admin: Optional[dict] = None) -> Optional[int]:
+    """Resolves local_id from query parameter, X-Local-ID header, or admin token."""
+    if local_id is not None:
+        return local_id
+    header_val = request.headers.get("X-Local-ID")
+    if header_val:
+        try:
+            return int(header_val)
+        except ValueError:
+            pass
+    if admin and isinstance(admin, dict) and admin.get("local_id"):
+        return admin.get("local_id")
+    return None
 
 
 def trigger_server_restart():
@@ -212,104 +227,169 @@ def get_queue_state(db: Session = Depends(get_db)):
 
 
 @router.get("/queue/debug", summary="DIAGNÓSTICO: Ver exactamente qué va a reproducir")
-def queue_debug(db: Session = Depends(get_db)):
+def queue_debug(local_id: Optional[int] = None, db: Session = Depends(get_db)):
     """
     🔍 **[Admin - DEBUG]** HERRAMIENTA DE DIAGNÓSTICO
-    
-    Muestra EXACTAMENTE:
-    1. Qué está reproduciendo AHORA
-    2. Qué va a reproducir DESPUÉS
-    3. Estado completo de la BD
-    4. Discrepancias detectadas
-    
-    **PARA ENCONTRAR CANCIONES ESCONDIDAS**
-    
-    Si subes una canción y no aparece en la cola pero debería reproducir:
-    1. Llama a este endpoint
-    2. Ve la sección "next_20_in_queue"
-    3. Verás si la canción está REALMENTE en BD o fue eliminada
-    
-    SECCIONES:
-    - `what_will_play`: Próxima canción REAL que sonará
-    - `database_state`: Todo lo que hay en BD
-    - `integrity_checks`: Validaciones
-    - `issues`: Problemas detectados
+    Muestra el estado completo de la cola en tiempo real desde el Cache JSON.
     """
-    from queue_debugger import QueueDebugger
-    
-    report = QueueDebugger.get_full_debug_report(db)
-    
-    return report
+    now_playing_list = cache.get_songs_by_estado("reproduciendo", local_id=local_id)
+    aprobados = cache.get_songs_by_estado("aprobado", local_id=local_id)
+    lazy = cache.get_songs_by_estado("pendiente_lazy", local_id=local_id)
+    pendientes = cache.get_songs_by_estado("pendiente", local_id=local_id)
+    cantadas = cache.get_songs_by_estado("cantada", local_id=local_id)
+
+    # Ordenar aprobados y lazy
+    aprobados = sorted(aprobados, key=lambda x: (x.get("orden", 9999), x.get("created_at", "")))
+    lazy = sorted(lazy, key=lambda x: (x.get("orden", 9999), x.get("created_at", "")))
+
+    now_playing = now_playing_list[0] if now_playing_list else None
+    combined_upcoming = aprobados + lazy
+    next_to_play = combined_upcoming[0] if combined_upcoming else None
+
+    # Determinar status
+    if now_playing:
+        status = "something_is_playing"
+    elif next_to_play:
+        status = "ready_to_play"
+    elif lazy:
+        status = "waiting_for_approval"
+    else:
+        status = "empty"
+
+    def format_song(s):
+        if not s:
+            return None
+        nick = "Desconocido"
+        if s.get("usuario"):
+            u = s["usuario"]
+            nick = u.get("nick") if isinstance(u, dict) else str(u)
+        elif s.get("usuario_id"):
+            u = cache.get_usuario_by_id_from_cache(s["usuario_id"])
+            if u:
+                nick = u.get("nick", "Desconocido")
+        return {
+            "id": s.get("id"),
+            "titulo": s.get("titulo", "Desconocido"),
+            "usuario": nick,
+            "estado": s.get("estado"),
+            "progress_percent": 0
+        }
+
+    what_will_play = {
+        "status": status,
+        "now_playing": format_song(now_playing),
+        "next_to_play": format_song(next_to_play),
+        "next_after_current": format_song(combined_upcoming[0] if now_playing and combined_upcoming else (combined_upcoming[1] if len(combined_upcoming) > 1 else None)),
+        "first_lazy_waiting": format_song(lazy[0] if lazy else None),
+        "next_20_in_queue": [format_song(s) for s in combined_upcoming[:20]]
+    }
+
+    integrity_checks = {
+        "now_playing_not_in_approved": now_playing is None or (now_playing.get("id") not in [s.get("id") for s in aprobados]),
+        "no_duplicates": len(set(s.get("id") for s in combined_upcoming)) == len(combined_upcoming),
+        "all_approved_have_correct_status": all(s.get("estado") == "aprobado" for s in aprobados)
+    }
+
+    database_state = {
+        "reproduciendo_count": len(now_playing_list),
+        "aprobado_count": len(aprobados),
+        "pendiente_lazy_count": len(lazy),
+        "pendiente_count": len(pendientes),
+        "cantada_count": len(cantadas)
+    }
+
+    local_nombre = None
+    if local_id:
+        try:
+            from app.db.models.local import Local
+            loc = db.query(Local).filter(Local.id == local_id).first()
+            if loc:
+                local_nombre = loc.nombre
+        except Exception:
+            pass
+        if not local_nombre:
+            local_nombre = f"Sede #{local_id}"
+
+    return {
+        "timestamp": now_bogota().isoformat(),
+        "local_id": local_id,
+        "local_nombre": local_nombre,
+        "what_will_play": what_will_play,
+        "integrity_checks": integrity_checks,
+        "database_state": database_state,
+        "issues": []
+    }
 
 
 @router.get("/queue/next-to-play", summary="¿Cuál es la PRÓXIMA canción que va a reproducir?")
-def next_song_to_play(db: Session = Depends(get_db)):
+def next_song_to_play(local_id: Optional[int] = None, db: Session = Depends(get_db)):
     """
     🎵 **[Admin]** LA PRÓXIMA CANCIÓN QUE EL PLAYER VA A TOCAR
-    
-    Respuesta clara y directa:
-    - Si está reproduciendo algo: qué está sonando + qué sigue
-    - Si NO está reproduciendo: qué va a sonar
-    - Si no hay cola: mensaje explicativo
-    
-    USAR CUANDO:
-    - "¿Por qué no suena mi canción?"
-    - "¿Qué va a sonar después de esta?"
-    - Verificar que la cola sea la correcta
     """
-    from queue_debugger import QueueDebugger
-    
-    result = QueueDebugger.get_next_song_to_play(db)
-    
-    return result
+    now_playing_list = cache.get_songs_by_estado("reproduciendo", local_id=local_id)
+    aprobados = cache.get_songs_by_estado("aprobado", local_id=local_id)
+    lazy = cache.get_songs_by_estado("pendiente_lazy", local_id=local_id)
 
+    combined = sorted(aprobados + lazy, key=lambda x: (x.get("orden", 9999), x.get("created_at", "")))
+    now_playing = now_playing_list[0] if now_playing_list else None
+    next_song = combined[0] if combined else None
 
-@router.post("/queue/compare-ui-vs-reality", summary="Comparar UI vs realidad (para encontrar canciones escondidas)")
-def compare_ui_vs_reality(ui_state: dict, db: Session = Depends(get_db)):
-    """
-    🔎 **[Admin - DEBUG]** COMPARA LO QUE LA UI MUESTRA VS LA REALIDAD
-    
-    USO:
-    1. Desde el frontend, captura el estado de la cola que muestra
-    2. Envía el state aquí
-    3. Este endpoint compara con la BD
-    4. Te dice si hay:
-       - Canciones ESCONDIDAS (en BD pero no en UI)
-       - Canciones FANTASMA (en UI pero no en BD)
-       - Orden DIFERENTE
-       - now_playing INCORRECTO
-    
-    EJEMPLO REQUEST BODY:
-    {
-      "now_playing": { "id": 105 },
-      "upcoming": [
-        { "id": 106, "titulo": "Canción 2" },
-        { "id": 107, "titulo": "Canción 3" }
-      ]
+    return {
+        "now_playing": now_playing.get("titulo") if now_playing else None,
+        "next_song": next_song.get("titulo") if next_song else None,
+        "has_queue": bool(combined),
+        "total_in_queue": len(combined)
     }
+
+
+@router.post("/queue/compare-ui-vs-reality", summary="Comparar UI vs realidad")
+def compare_ui_vs_reality(ui_state: dict, local_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """
+    🔎 **[Admin - DEBUG]** COMPARA LO QUE LA UI MUESTRA VS LA REALIDAD EN CACHE
+    """
+    real_now_list = cache.get_songs_by_estado("reproduciendo", local_id=local_id)
+    real_aprobados = cache.get_songs_by_estado("aprobado", local_id=local_id)
+    real_lazy = cache.get_songs_by_estado("pendiente_lazy", local_id=local_id)
+    real_upcoming = real_aprobados + real_lazy
+
+    real_now_id = real_now_list[0].get("id") if real_now_list else None
+    real_upcoming_ids = [s.get("id") for s in real_upcoming]
+
+    ui_now = ui_state.get("now_playing") or {}
+    ui_now_id = ui_now.get("id") if isinstance(ui_now, dict) else None
+    ui_upcoming = ui_state.get("upcoming") or []
+    ui_upcoming_ids = [s.get("id") for s in ui_upcoming if isinstance(s, dict) and s.get("id")]
+
+    discrepancies = []
     
-    EJEMPLO RESPUESTA:
-    {
-      "discrepancies": [
-        {
-          "type": "hidden_songs",
-          "severity": "CRITICAL",
-          "hidden_song_ids": [108, 109],
-          "hidden_songs_details": [...]
+    # Canciones en backend que no están en la UI
+    hidden_ids = [sid for sid in real_upcoming_ids if sid not in ui_upcoming_ids]
+    if hidden_ids:
+        discrepancies.append({
+            "type": "hidden_songs",
+            "severity": "CRITICAL",
+            "hidden_song_ids": hidden_ids,
+            "message": f"Hay {len(hidden_ids)} canciones en cola que no se muestran en la UI."
+        })
+
+    # Canciones en UI que no están en el backend
+    ghost_ids = [sid for sid in ui_upcoming_ids if sid not in real_upcoming_ids]
+    if ghost_ids:
+        discrepancies.append({
+            "type": "ghost_songs",
+            "severity": "WARNING",
+            "ghost_song_ids": ghost_ids,
+            "message": f"Hay {len(ghost_ids)} canciones fantasma en la UI."
+        })
+
+    return {
+        "timestamp": now_bogota().isoformat(),
+        "discrepancies": discrepancies,
+        "summary": {
+            "issues_found": len(discrepancies),
+            "critical_issues": sum(1 for d in discrepancies if d.get("severity") == "CRITICAL")
         }
-      ],
-      "summary": {
-        "issues_found": 1,
-        "critical_issues": 1
-      }
     }
-    """
-    from queue_debugger import QueueDebugger
-    
-    comparison = QueueDebugger.get_ui_vs_reality_comparison(db, ui_state)
-    
-    return comparison
-
 
 
 @router.post("/broadcast-message", status_code=202, summary="Enviar mensaje global a todos los usuarios")
@@ -327,12 +407,13 @@ async def broadcast_message(notificacion: schemas.Notificacion, db: Session = De
 
 
 @router.get("/reports/top-songs", response_model=List[schemas.CancionMasCantada], summary="Obtener las canciones más cantadas")
-def get_top_songs_report(db: Session = Depends(get_db), limit: int = 10):
+def get_top_songs_report(request: Request, local_id: Optional[int] = Query(None), limit: int = 10, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de las canciones más cantadas de la noche,
     ordenadas por popularidad.
     """
-    top_songs_data = crud.get_canciones_mas_cantadas(db, limit=limit)
+    active_local = get_admin_local_id(request, local_id, admin)
+    top_songs_data = crud.get_canciones_mas_cantadas(db, limit=limit, local_id=active_local)
     
     # Mapeamos el resultado de la consulta al schema de respuesta
     report = [
@@ -347,12 +428,13 @@ def get_top_songs_report(db: Session = Depends(get_db), limit: int = 10):
     return report
 
 @router.get("/reports/top-products", response_model=List[schemas.ProductoMasConsumido], summary="Obtener los productos más consumidos")
-def get_top_products_report(db: Session = Depends(get_db), limit: int = 10):
+def get_top_products_report(request: Request, local_id: Optional[int] = Query(None), limit: int = 10, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de los productos más consumidos de la noche,
     ordenados por la cantidad total vendida.
     """
-    top_products_data = crud.get_productos_mas_consumidos(db, limit=limit)
+    active_local = get_admin_local_id(request, local_id, admin)
+    top_products_data = crud.get_productos_mas_consumidos(db, limit=limit, local_id=active_local)
     
     report = [
         schemas.ProductoMasConsumido(
@@ -365,12 +447,13 @@ def get_top_products_report(db: Session = Depends(get_db), limit: int = 10):
     return report
 
 @router.get("/reports/average-wait-time", response_model=schemas.ReporteTiempoEsperaPromedio, summary="Obtener tiempo de espera promedio de canciones")
-def get_average_wait_time_report(db: Session = Depends(get_db)):
+def get_average_wait_time_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve el tiempo promedio en segundos que tarda una canción
     desde que es añadida por un usuario hasta que es marcada como 'cantada'.
     """
-    avg_wait_time = crud.get_tiempo_promedio_espera(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    avg_wait_time = crud.get_tiempo_promedio_espera(db, local_id=active_local)
     return schemas.ReporteTiempoEsperaPromedio(tiempo_espera_promedio_segundos=int(avg_wait_time))
 
 @router.post("/unban-nick", status_code=200, summary="Perdonar un nick baneado")
@@ -394,12 +477,13 @@ def get_banned_nicks_list(db: Session = Depends(get_db)):
     return crud.get_banned_nicks(db)
 
 @router.get("/reports/hourly-activity", response_model=List[schemas.ReporteActividadPorHora], summary="Obtener actividad por hora")
-def get_hourly_activity_report(db: Session = Depends(get_db)):
+def get_hourly_activity_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de las horas del día con más canciones cantadas,
     ordenado de mayor a menor actividad.
     """
-    activity_data = crud.get_actividad_por_hora(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    activity_data = crud.get_actividad_por_hora(db, local_id=active_local)
     
     report = [
         schemas.ReporteActividadPorHora(
@@ -408,6 +492,7 @@ def get_hourly_activity_report(db: Session = Depends(get_db)):
         )
         for hora, count in activity_data
     ]
+
     
     return report
 
@@ -454,12 +539,13 @@ def deactivate_table(mesa_id: int, db: Session = Depends(get_db)):
     return db_mesa
 
 @router.get("/reports/income-by-category", response_model=List[schemas.ReporteIngresosPorCategoria], summary="Obtener los ingresos por categoría de producto")
-def get_income_by_category_report(db: Session = Depends(get_db)):
+def get_income_by_category_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de los ingresos totales generados por cada
     categoría de producto (ej: Licores, Comidas, Snacks), ordenado de mayor a menor.
     """
-    income_data = crud.get_ingresos_por_categoria(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    income_data = crud.get_ingresos_por_categoria(db, local_id=active_local)
     
     report = [
         schemas.ReporteIngresosPorCategoria(
@@ -472,12 +558,13 @@ def get_income_by_category_report(db: Session = Depends(get_db)):
     return report
 
 @router.get("/reports/top-rejected-users", response_model=List[schemas.ReporteUsuarioRechazado], summary="Obtener usuarios con más canciones rechazadas")
-def get_top_rejected_users_report(db: Session = Depends(get_db), limit: int = 10):
+def get_top_rejected_users_report(request: Request, local_id: Optional[int] = Query(None), limit: int = 10, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de los usuarios a los que más se les han
     rechazado canciones, ordenados de mayor a menor.
     """
-    rejected_users_data = crud.get_usuarios_mas_rechazados(db, limit=limit)
+    active_local = get_admin_local_id(request, local_id, admin)
+    rejected_users_data = crud.get_usuarios_mas_rechazados(db, limit=limit, local_id=active_local)
     
     report = [
         schemas.ReporteUsuarioRechazado(
@@ -499,12 +586,13 @@ def get_user_song_history(usuario_id: int, db: Session = Depends(get_db)):
     return crud.get_canciones_por_usuario(db, usuario_id=usuario_id)
 
 @router.get("/reports/top-rejected-songs", response_model=List[schemas.ReporteCancionesRechazadas], summary="Obtener las canciones más rechazadas")
-def get_top_rejected_songs_report(db: Session = Depends(get_db), limit: int = 10):
+def get_top_rejected_songs_report(request: Request, local_id: Optional[int] = Query(None), limit: int = 10, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de las canciones que más se han rechazado,
     ordenadas por la cantidad de veces que fueron rechazadas.
     """
-    rejected_songs_data = crud.get_canciones_mas_rechazadas(db, limit=limit)
+    active_local = get_admin_local_id(request, local_id, admin)
+    rejected_songs_data = crud.get_canciones_mas_rechazadas(db, limit=limit, local_id=active_local)
     
     report = [
         schemas.ReporteCancionesRechazadas(
@@ -518,13 +606,15 @@ def get_top_rejected_songs_report(db: Session = Depends(get_db), limit: int = 10
     return report
 
 @router.get("/reports/empty-tables", response_model=List[schemas.MesaSimple], summary="Obtener mesas sin usuarios")
-def get_empty_tables_report(db: Session = Depends(get_db)):
+def get_empty_tables_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve una lista de todas las mesas que no tienen
     ningún usuario conectado.
     """
-    empty_tables = crud.get_mesas_vacias(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    empty_tables = crud.get_mesas_vacias(db, local_id=active_local)
     return empty_tables
+
 
 @router.delete("/users/{usuario_id}", status_code=204, summary="Eliminar un usuario de una mesa")
 async def delete_user(usuario_id: int, db: Session = Depends(get_db)):
@@ -556,24 +646,26 @@ async def ban_user(usuario_id: int, db: Session = Depends(get_db)):
     return Response(status_code=204)
 
 @router.get("/reports/average-income-per-table", response_model=List[schemas.ReporteIngresosPromedioPorMesa], summary="Obtener los ingresos promedio por usuario en cada mesa")
-def get_average_income_per_table_report(db: Session = Depends(get_db)):
+def get_average_income_per_table_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte con el ingreso promedio por usuario para cada mesa,
     ordenado por el ingreso total de la mesa.
     """
-    income_data = crud.get_ingresos_promedio_por_usuario_por_mesa(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    income_data = crud.get_ingresos_promedio_por_usuario_por_mesa(db, local_id=active_local)
     
     report = [schemas.ReporteIngresosPromedioPorMesa(mesa_nombre=nombre, ingresos_promedio_por_usuario=promedio) for nombre, promedio in income_data]
     
     return report
 
 @router.get("/reports/songs-by-table", response_model=List[schemas.ReporteCancionesPorMesa], summary="Obtener cantidad de canciones por mesa")
-def get_songs_by_table_report(db: Session = Depends(get_db)):
+def get_songs_by_table_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de cuántas canciones se han cantado en cada mesa,
     ordenado de mayor a menor.
     """
-    songs_data = crud.get_canciones_cantadas_por_mesa(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    songs_data = crud.get_canciones_cantadas_por_mesa(db, local_id=active_local)
     
     report = [
         schemas.ReporteCancionesPorMesa(
@@ -606,12 +698,13 @@ def un_silence_user(usuario_id: int, db: Session = Depends(get_db)):
     return db_usuario
 
 @router.get("/reports/average-income-per-user", response_model=schemas.ReporteIngresosPromedio, summary="Obtener los ingresos promedio por usuario")
-def get_average_income_per_user_report(db: Session = Depends(get_db)):
+def get_average_income_per_user_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte con el ingreso promedio por cada usuario
     que ha realizado al menos un consumo.
     """
-    ingreso_promedio = crud.get_ingresos_promedio_por_usuario(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    ingreso_promedio = crud.get_ingresos_promedio_por_usuario(db, local_id=active_local)
     return schemas.ReporteIngresosPromedio(ingresos_promedio_por_usuario=ingreso_promedio)
 
 @router.put("/users/{usuario_id}/move-table", response_model=schemas.UsuarioPublico, summary="Mover un usuario a otra mesa")
@@ -635,12 +728,13 @@ def move_user_to_table(usuario_id: int, mover_data: schemas.UsuarioMoverMesa, db
     return usuario_actualizado
 
 @router.get("/reports/one-hit-wonders", response_model=List[schemas.UsuarioPublico], summary="Obtener usuarios que han cantado una sola canción")
-def get_one_hit_wonders_report(db: Session = Depends(get_db)):
+def get_one_hit_wonders_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve una lista de todos los usuarios que han cantado
     exactamente una canción durante la noche.
     """
-    one_hit_wonders = crud.get_usuarios_una_cancion(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    one_hit_wonders = crud.get_usuarios_una_cancion(db, local_id=active_local)
     return one_hit_wonders
 
 @router.post("/users/{usuario_id}/add-points", response_model=schemas.UsuarioPublico, summary="Añadir puntos a un usuario")
@@ -671,12 +765,13 @@ def edit_user_nick(usuario_id: int, nick_update: schemas.UsuarioNickUpdate, db: 
     return db_usuario
 
 @router.get("/reports/songs-by-user", response_model=List[schemas.ReporteCancionesPorUsuario], summary="Obtener cantidad de canciones por usuario")
-def get_songs_by_user_report(db: Session = Depends(get_db)):
+def get_songs_by_user_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de cuántas canciones ha cantado cada usuario,
     ordenado de mayor a menor.
     """
-    songs_data = crud.get_canciones_cantadas_por_usuario(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    songs_data = crud.get_canciones_cantadas_por_usuario(db, local_id=active_local)
     
     report = [
         schemas.ReporteCancionesPorUsuario(
@@ -703,13 +798,15 @@ async def reorder_queue(orden: schemas.ReordenarCola, db: Session = Depends(get_
     return {"mensaje": "La cola ha sido reordenada manualmente."}
 
 @router.get("/reports/inactive-users", response_model=List[schemas.UsuarioPublico], summary="Obtener usuarios sin consumo")
-def get_inactive_users_report(db: Session = Depends(get_db)):
+def get_inactive_users_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve una lista de todos los usuarios que no han
     realizado ningún consumo durante la noche.
     """
-    inactive_users = crud.get_usuarios_sin_consumo(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    inactive_users = crud.get_usuarios_sin_consumo(db, local_id=active_local)
     return inactive_users
+
 
 @router.post("/songs/{cancion_id}/move-to-top", status_code=200, summary="Mover una canción al principio de la cola")
 async def move_song_to_top_endpoint(cancion_id: int, db: Session = Depends(get_db)):
@@ -1144,39 +1241,58 @@ async def revert_approved_song(cancion_id: int, db: Session = Depends(get_db), a
         "queue_state": state
     }
 
+@router.get("/reports/ventas-turno", response_model=schemas.ReporteVentasTurno, summary="Obtener reporte de ventas del turno (5:00 AM - Cierre)")
+def get_ventas_turno_report(
+    request: Request,
+    fecha: Optional[str] = Query(None, description="Fecha del turno en formato YYYY-MM-DD"),
+    local_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    admin: dict = Depends(verify_token)
+):
+    """
+    **[Admin]** Devuelve el reporte de ventas del turno para la sede seleccionada,
+    desde las 5:00 AM del día hasta la hora de cierre configurada para esa sede.
+    """
+    active_local = get_admin_local_id(request, local_id, admin)
+    return crud.get_ventas_turno(db, local_id=active_local, fecha_str=fecha)
+
 @router.get("/reports/total-income", response_model=schemas.ReporteIngresos, summary="Obtener los ingresos totales de la noche")
-def get_total_income_report(db: Session = Depends(get_db)):
+def get_total_income_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte con la suma total de los ingresos por consumos.
     """
-    total_ingresos = crud.get_total_ingresos(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    total_ingresos = crud.get_total_ingresos(db, local_id=active_local)
     return schemas.ReporteIngresos(ingresos_totales=total_ingresos)
 
 @router.get("/reports/income-by-table", response_model=List[schemas.ReporteIngresosPorMesa], summary="Obtener los ingresos por mesa")
-def get_income_by_table_report(db: Session = Depends(get_db)):
+def get_income_by_table_report(request: Request, local_id: Optional[int] = Query(None), db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
-    **[Admin]** Devuelve un reporte de los ingresos totales generados por cada mesa,
-    ordenado de mayor a menor.
+    **[Admin]** Devuelve un reporte de los ingresos totales generados por cada mesa
+    incluyendo su ventana horaria de actividad (HH:MM - HH:MM).
     """
-    income_data = crud.get_ingresos_por_mesa(db)
+    active_local = get_admin_local_id(request, local_id, admin)
+    income_data = crud.get_ingresos_por_mesa(db, local_id=active_local)
     
     report = [
         schemas.ReporteIngresosPorMesa(
             mesa_nombre=nombre,
-            ingresos_totales=total
+            ingresos_totales=total,
+            horario=horario
         )
-        for nombre, total in income_data
+        for nombre, total, horario in income_data
     ]
     
     return report
 
 @router.get("/reports/least-sold-products", response_model=List[schemas.ProductoMasConsumido], summary="Obtener los productos menos vendidos")
-def get_least_sold_products_report(db: Session = Depends(get_db), limit: int = 5):
+def get_least_sold_products_report(request: Request, local_id: Optional[int] = Query(None), limit: int = 5, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un reporte de los productos que menos se han vendido,
     ordenados de menor a mayor cantidad.
     """
-    least_sold_data = crud.get_productos_menos_consumidos(db, limit=limit)
+    active_local = get_admin_local_id(request, local_id, admin)
+    least_sold_data = crud.get_productos_menos_consumidos(db, limit=limit, local_id=active_local)
     
     report = [
         schemas.ProductoMasConsumido(
@@ -1189,21 +1305,23 @@ def get_least_sold_products_report(db: Session = Depends(get_db), limit: int = 5
     return report
 
 @router.get("/reports/inactive-consumers", response_model=List[schemas.UsuarioPublico], summary="Obtener usuarios con consumo inactivo")
-def get_inactive_consumers_report(db: Session = Depends(get_db), horas: int = 2):
+def get_inactive_consumers_report(request: Request, local_id: Optional[int] = Query(None), horas: int = 2, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve una lista de todos los usuarios cuyo último consumo
     fue hace más de X horas (por defecto 2), o que nunca han consumido.
     """
-    users = crud.get_usuarios_inactivos_consumo(db, horas=horas)
+    active_local = get_admin_local_id(request, local_id, admin)
+    users = crud.get_usuarios_inactivos_consumo(db, horas=horas, local_id=active_local)
     return users
 
 @router.get("/reports/top-consumers-one-song", response_model=List[schemas.ReporteGastoUsuarioPorCategoria], summary="Obtener 'One-Hit Wonders' con mayor consumo")
-def get_top_consumers_one_song_report(db: Session = Depends(get_db), limit: int = 10):
+def get_top_consumers_one_song_report(request: Request, local_id: Optional[int] = Query(None), limit: int = 10, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve un ranking de los usuarios que más han consumido
     pero que solo han cantado una canción.
     """
-    users_data = crud.get_top_consumers_one_song(db, limit=limit)
+    active_local = get_admin_local_id(request, local_id, admin)
+    users_data = crud.get_top_consumers_one_song(db, limit=limit, local_id=active_local)
     
     report = [
         schemas.ReporteGastoUsuarioPorCategoria(
@@ -1216,13 +1334,15 @@ def get_top_consumers_one_song_report(db: Session = Depends(get_db), limit: int 
     return report
 
 @router.get("/reports/consumers-no-singers", response_model=List[schemas.UsuarioPublico], summary="Obtener usuarios que consumen pero no cantan")
-def get_consumers_no_singers_report(db: Session = Depends(get_db), umbral: float = 100.0):
+def get_consumers_no_singers_report(request: Request, local_id: Optional[int] = Query(None), umbral: float = 100.0, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
     """
     **[Admin]** Devuelve una lista de todos los usuarios que han gastado más
     del umbral especificado pero no han cantado ninguna canción.
     """
-    users = crud.get_usuarios_consumen_pero_no_cantan(db, umbral_consumo=umbral)
+    active_local = get_admin_local_id(request, local_id, admin)
+    users = crud.get_usuarios_consumen_pero_no_cantan(db, umbral_consumo=umbral, local_id=active_local)
     return users
+
 
 @router.get("/tables/{mesa_id}/top-categories", response_model=List[schemas.ReporteCategoriaMasVendida], summary="Obtener categorías más vendidas en una mesa")
 def get_top_categories_by_table_report(mesa_id: int, db: Session = Depends(get_db), limit: int = 5):

@@ -377,8 +377,8 @@ function renderPlayerSection(dashboardContainer) {
     header.innerHTML = `
         <div class="bees-card-icon">🎤</div>
         <div class="bees-card-header-content">
-            <h3>Player</h3>
-            <p>Gestión del karaoke</p>
+            <h3>Player 2.0 (Karaoke TV)</h3>
+            <p>Reproductor de karaoke para pantallas y televisores</p>
         </div>
     `;
     card.appendChild(header);
@@ -386,7 +386,7 @@ function renderPlayerSection(dashboardContainer) {
     const btn = document.createElement('button');
     btn.id = 'open-player-dashboard-main';
     btn.className = 'bees-btn bees-btn-primary';
-    btn.innerHTML = '🎤 Abrir Dashboard Player';
+    btn.innerHTML = '🎤 Abrir Player 2.0';
     card.appendChild(btn);
     dashboardContainer.appendChild(card);
 }
@@ -405,14 +405,17 @@ function setupDashboardListeners() {
         reactionBtns.addEventListener('click', handleSendReaction);
     }
 
-    // Player
+    // Player 2.0
     const openPlayerBtn = document.getElementById('open-player-dashboard-main');
     if (openPlayerBtn) {
         openPlayerBtn.addEventListener('click', () => {
-            window.open('/player', '_blank');
+            const activeLocalId = sessionStorage.getItem('active_local_id') || localStorage.getItem('selectedLocalId') || '';
+            const queryParam = activeLocalId ? `?local=${encodeURIComponent(activeLocalId)}` : '';
+            window.open(`/api/v1/player2/${queryParam}`, '_blank');
         });
     }
 }
+
 
 async function handleBroadcast() {
     const input = document.getElementById('broadcast-message-input');

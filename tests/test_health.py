@@ -26,8 +26,13 @@ def test_admin_page_is_served(client):
 
 
 def test_player_page_is_served(client):
-    """GET /player should serve the karaoke projector/player HTML page (200)."""
-    response = client.get("/player")
+    """GET /player and /api/v1/player2/ should serve the Player 2.0 page."""
+    response = client.get("/api/v1/player2/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
+
+    response_redirect = client.get("/player", follow_redirects=True)
+    assert response_redirect.status_code == 200
+    assert "text/html" in response_redirect.headers["content-type"]
+
 
