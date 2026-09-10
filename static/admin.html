@@ -402,11 +402,32 @@
         /* Footer */
         footer {
             margin-top: 6rem;
-            padding: 3rem 5% 1.5rem;
+            padding: 3rem 5% 2rem;
             border-top: 1px solid rgba(255,255,255,0.05);
             text-align: center;
             color: var(--text-muted);
             font-size: 0.9rem;
+        }
+
+        .footer-links {
+            margin-top: 0.8rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -540,7 +561,18 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2026 QrMusic. Todos los derechos reservados. El ritmo y sabor del local en manos de tus clientes.</p>
+        <p>&copy; 2026 HI-TECH PEOPLE S.A.S. - QrMusic. Todos los derechos reservados.</p>
+        <div class="footer-links">
+            <a href="/terminos" target="_blank">Términos y Condiciones de Servicio</a>
+            <span>•</span>
+            <a href="/privacidad" target="_blank">Política de Privacidad (Habeas Data)</a>
+            <span>•</span>
+            <a href="mailto:soporte@myqrmusic.com">soporte@myqrmusic.com</a>
+            <span>•</span>
+            <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">Términos de YouTube</a>
+            <span>•</span>
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Privacidad de Google</a>
+        </div>
     </footer>
 
     <script>

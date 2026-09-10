@@ -137,6 +137,16 @@ async def read_admin_dashboard():
 async def read_player():
     return RedirectResponse(url="/api/v1/player2/")
 
+@app.get("/terminos", response_class=FileResponse, include_in_schema=False)
+@app.get("/terminos/", response_class=FileResponse, include_in_schema=False)
+async def read_terminos():
+    return FileResponse(os.path.join("static", "terminos.html"))
+
+@app.get("/privacidad", response_class=FileResponse, include_in_schema=False)
+@app.get("/privacidad/", response_class=FileResponse, include_in_schema=False)
+async def read_privacidad():
+    return FileResponse(os.path.join("static", "privacidad.html"))
+
 
 # ===============================
 # WEBSOCKET
