@@ -8,6 +8,7 @@ from sqlalchemy import func
 from app.db.models import Pago as PagoModel
 from app.schemas import ConsumoCreate, CarritoCreate
 from app.utils.cache_manager import cache_manager as cache
+from app.utils.timezone_utils import now_bogota
 
 
 def get_total_consumido_por_usuario(db: Session, usuario_id: int):
@@ -24,22 +25,17 @@ def get_consumos_mesa(db: Session, mesa_id: int):
 
 
 def create_consumo_para_usuario(db: Session, consumo: ConsumoCreate, usuario_id: int):
-    """
-    Crea un nuevo consumo. El consumo se asigna a la MESA, no al usuario individual.
-    """
-    from app.db.crud.crud_usuarios import get_usuario_by_id
+    """Registra un consumo para un usuario (CACHE)."""
+    from app.db.crud.crud_usuarios import get_usuario_by_id, add_puntos_a_usuario
     from app.db.crud.crud_productos import get_producto_by_id
 
-    usuario = get_usuario_by_id(db, usuario_id)
+    usuario = get_usuario_by_id(db, usuario_id=usuario_id)
     if not usuario:
-        return None, "Usuario no encontrado."
+        return None, "Usuario no encontrado"
 
-    if not usuario.mesa_id:
-        return None, "El usuario no está asociado a ninguna mesa."
-
-    db_producto = get_producto_by_id(db, consumo.producto_id)
+    db_producto = get_producto_by_id(db, producto_id=consumo.producto_id)
     if not db_producto:
-        return None, "Producto no encontrado."
+        return None, "Producto no encontrado"
 
     if db_producto.stock < consumo.cantidad:
         return None, f"Stock insuficiente. Disponible: {db_producto.stock}"
@@ -52,7 +48,7 @@ def create_consumo_para_usuario(db: Session, consumo: ConsumoCreate, usuario_id:
         "mesa_id": usuario.mesa_id,
         "usuario_id": usuario_id,
         "producto_id": consumo.producto_id,
-        "created_at": datetime.datetime.now().isoformat(),
+        "created_at": now_bogota().isoformat(),
         "is_dispatched": False,
         "is_cancelled": False
     }
@@ -130,9 +126,19 @@ def get_table_payment_status(db: Session, mesa_id: int):
     consumos_raw = cache.get_consumos_by_mesa(mesa_id)
     total_consumido = sum(Decimal(str(c.get("valor_total", 0))) for c in consumos_raw)
 
-    total_pagado = db.query(func.sum(PagoModel.monto)).filter(
-        PagoModel.mesa_id == mesa_id
-    ).scalar() or Decimal('0.00')
+    mesa_created_at_str = mesa.get("created_at")
+    pagos_query = db.query(PagoModel).filter(PagoModel.mesa_id == mesa_id)
+    if mesa_created_at_str:
+        try:
+            mesa_created_dt = datetime.datetime.fromisoformat(mesa_created_at_str)
+            if mesa_created_dt.tzinfo is not None:
+                mesa_created_dt = mesa_created_dt.replace(tzinfo=None)
+            mesa_created_dt = mesa_created_dt.replace(microsecond=0)
+            pagos_query = pagos_query.filter(PagoModel.created_at >= mesa_created_dt)
+        except Exception:
+            pass
+
+    total_pagado = pagos_query.with_entities(func.sum(PagoModel.monto)).scalar() or Decimal('0.00')
 
     saldo_pendiente = total_consumido - Decimal(str(total_pagado))
 
@@ -142,17 +148,17 @@ def get_table_payment_status(db: Session, mesa_id: int):
         try:
             created_at = datetime.datetime.fromisoformat(c.get("created_at", ""))
         except Exception:
-            created_at = datetime.datetime.now()
+            created_at = now_bogota()
         consumos_items.append({
+            "id": c.get("id"),
+            "producto_id": c.get("producto_id"),
             "producto_nombre": producto.nombre if producto else "Producto Eliminado",
             "cantidad": c.get("cantidad", 1),
             "valor_total": Decimal(str(c.get("valor_total", 0))),
             "created_at": created_at,
         })
 
-    pagos_detalle = db.query(PagoModel).filter(
-        PagoModel.mesa_id == mesa_id
-    ).order_by(PagoModel.created_at.asc()).all()
+    pagos_detalle = pagos_query.order_by(PagoModel.created_at.asc()).all()
 
     return {
         "mesa_id": mesa_id,
@@ -301,3 +307,19 @@ def update_consumo_cantidad(db: Session, consumo_id: int, delta: int):
 
     consumo.update(updates)
     return consumo, None
+
+
+def set_consumo_cantidad(db: Session, consumo_id: int, nueva_cantidad: int):
+    """Establece directamente la cantidad de un consumo calculando el delta."""
+    consumo = cache.get_consumo_by_id(consumo_id)
+    if not consumo:
+        return None, "Consumo no encontrado"
+
+    if nueva_cantidad < 1:
+        return None, "La cantidad mínima es 1. Para eliminar use el botón eliminar."
+
+    delta = nueva_cantidad - int(consumo.get("cantidad", 1))
+    if delta == 0:
+        return consumo, None
+
+    return update_consumo_cantidad(db, consumo_id, delta)

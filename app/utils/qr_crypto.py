@@ -12,10 +12,10 @@ QR_SECRET_KEY = os.getenv("QR_SECRET_KEY", os.getenv("SECRET_KEY", "qrmusic_supe
 _KEY_BYTES = hashlib.sha256(QR_SECRET_KEY.encode()).digest()
 
 
-def generate_qr_token(local_id: int, mesa_id: int, user_num: int = 1) -> str:
+def generate_qr_token(local_id: int, mesa_id: int, user_num: int = 1, session_id: str = "") -> str:
     """
     Genera un token encriptado y autenticado URL-Safe para el QR de la mesa.
-    Contiene: local_id, mesa_id y usuario_numero.
+    Contiene: local_id, mesa_id, usuario_numero y session_id.
     """
     try:
         aesgcm = AESGCM(_KEY_BYTES)
@@ -23,7 +23,8 @@ def generate_qr_token(local_id: int, mesa_id: int, user_num: int = 1) -> str:
         payload = json.dumps({
             "lid": int(local_id or 1),
             "mid": int(mesa_id),
-            "u": int(user_num or 1)
+            "u": int(user_num or 1),
+            "sid": str(session_id or "")
         }).encode("utf-8")
         
         ciphertext = aesgcm.encrypt(nonce, payload, None)
@@ -34,10 +35,10 @@ def generate_qr_token(local_id: int, mesa_id: int, user_num: int = 1) -> str:
         raise e
 
 
-def decrypt_qr_token(token: str) -> Optional[Dict[str, int]]:
+def decrypt_qr_token(token: str) -> Optional[Dict[str, Any]]:
     """
     Desencripta y valida un token QR encriptado con AES-GCM.
-    Retorna un diccionario con: local_id, mesa_id, usuario_numero.
+    Retorna un diccionario con: local_id, mesa_id, usuario_numero, session_id.
     Si el token es inválido o alterado, retorna None.
     """
     if not token or not isinstance(token, str):
@@ -60,7 +61,8 @@ def decrypt_qr_token(token: str) -> Optional[Dict[str, int]]:
         return {
             "local_id": int(data.get("lid", 1)),
             "mesa_id": int(data.get("mid", 0)),
-            "usuario_numero": int(data.get("u", 1))
+            "usuario_numero": int(data.get("u", 1)),
+            "session_id": str(data.get("sid", ""))
         }
     except Exception as e:
         logger.warning(f"Error al desencriptar token QR '{clean_token[:15]}...': {e}")

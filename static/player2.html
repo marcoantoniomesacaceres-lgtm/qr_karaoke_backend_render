@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QrMusic TV Player 2 - Setup</title>
+    <title>My Qr Music TV Player 2 - Setup</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -288,7 +288,7 @@
                 <div class="step-item">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <div class="step-title">Enlace de QrMusic</div>
+                        <div class="step-title">Enlace de My Qr Music</div>
                         <div class="step-desc">Haz clic para instalar el Userscript conector de sincronización.</div>
                     </div>
                     <a href="/static/qrmusic_userscript.user.js" target="_blank" class="step-action-btn install-btn">⚡ Instalar Script</a>
@@ -306,7 +306,7 @@
             <div style="margin-top: 35px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 25px;">
                 <a href="https://www.youtube.com" class="step-action-btn install-btn" style="padding: 14px 35px; font-size: 16px; display: inline-block;">📺 Abrir el Reproductor (TV Mode)</a>
                 <p style="font-size: 12px; color: var(--text-secondary); margin-top: 12px;">
-                    <em>Al hacer clic, se abrirá YouTube y el Userscript tomará el control total, ocultando YouTube y mostrando nuestra pantalla de espera exclusiva de QrMusic.</em>
+                    <em>Al hacer clic, se abrirá YouTube y el Userscript tomará el control total, ocultando YouTube y mostrando nuestra pantalla de espera exclusiva de My Qr Music.</em>
                 </p>
             </div>
         </div>
@@ -378,12 +378,12 @@
             if (activeLocalId || currentLocalParam) {
                 wsUrl += `?local=${encodeURIComponent(activeLocalId || currentLocalParam)}`;
             }
-            console.log(`[QrMusic Setup] Conectando a WebSocket: ${wsUrl}`);
+            console.log(`[My Qr Music Setup] Conectando a WebSocket: ${wsUrl}`);
             
             socket = new WebSocket(wsUrl);
             
             socket.onopen = () => {
-                console.log("[QrMusic Setup] WebSocket conectado a sede:", activeLocalNombre || currentLocalParam || 'General');
+                console.log("[My Qr Music Setup] WebSocket conectado a sede:", activeLocalNombre || currentLocalParam || 'General');
                 document.getElementById('setup-view').style.display = 'none';
                 document.getElementById('ready-view').style.display = 'block';
             };
@@ -391,14 +391,14 @@
             socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log("[QrMusic Setup] Mensaje recibido:", data);
+                    console.log("[My Qr Music Setup] Mensaje recibido:", data);
                     
                     // A. Redirección nativa a YouTube al recibir primera canción
                     if (data.type === 'play_song') {
                         const payload = data.payload || {};
                         const youtube_id = payload.youtube_id;
                         if (youtube_id) {
-                            console.log(`[QrMusic Setup] Redirigiendo a YouTube para reproducir: ${youtube_id}`);
+                            console.log(`[My Qr Music Setup] Redirigiendo a YouTube para reproducir: ${youtube_id}`);
                             window.location.href = `https://www.youtube.com/watch?v=${youtube_id}`;
                         }
                     } 
@@ -419,17 +419,17 @@
                         }
                     }
                 } catch (err) {
-                    console.error("[QrMusic Setup] Error procesando mensaje:", err);
+                    console.error("[My Qr Music Setup] Error procesando mensaje:", err);
                 }
             };
 
             socket.onclose = () => {
-                console.log("[QrMusic Setup] WebSocket cerrado. Reconectando en 3 segundos...");
+                console.log("[My Qr Music Setup] WebSocket cerrado. Reconectando en 3 segundos...");
                 setTimeout(connectWebSocket, 3000);
             };
 
             socket.onerror = (err) => {
-                console.error("[QrMusic Setup] Error en WebSocket:", err);
+                console.error("[My Qr Music Setup] Error en WebSocket:", err);
             };
         };
 

@@ -518,6 +518,55 @@ def delete_table(mesa_id: int, db: Session = Depends(get_db)):
     crud.delete_mesa(db, mesa_id=mesa_id)  # already clears users via cache_manager
     return Response(status_code=204)
 
+@router.post("/tables/{mesa_id}/close-session", summary="Cerrar definitivamente la sesión de una mesa")
+async def close_table_session(mesa_id: int, db: Session = Depends(get_db)):
+    """
+    **[Admin]** Cierra la sesión de la mesa (botón 'X').
+    Valida que no tenga deuda pendiente (saldo_pendiente == 0).
+    Desconecta a los usuarios vinculados, limpia las canciones y consumos activos de esa sesión,
+    elimina la mesa del listado activo y emite notificación WebSocket a los clientes de esa mesa.
+    """
+    db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
+    if not db_mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada.")
+
+    # 1. Validar que la cuenta esté a paz y salvo
+    status_dict = crud.get_table_payment_status(db, mesa_id=mesa_id)
+    if status_dict:
+        saldo_pendiente = float(status_dict.get("saldo_pendiente", 0))
+        if saldo_pendiente > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No se puede cerrar la sesión de la mesa porque tiene un saldo pendiente de ${saldo_pendiente:,.2f}. Por favor registre el pago primero."
+            )
+
+    local_id = db_mesa.get("local_id")
+
+    # 2. Desconectar usuarios y cancelar canciones activas de esta mesa en cola
+    try:
+        from app.utils.cache_manager import cache_manager as _cache
+        usuarios_mesa = _cache.get_usuarios_by_mesa_from_cache(mesa_id)
+        user_ids = {u.get("id") for u in usuarios_mesa if u.get("id")}
+        for song in _cache.get_all_songs():
+            if song.get("usuario_id") in user_ids and song.get("estado") in ("pendiente", "pendiente_lazy", "aprobado"):
+                _cache.update_song_in_cache(song["id"], {"estado": "rechazada"})
+    except Exception as e:
+        logger.warning(f"Error limpiando canciones de mesa {mesa_id}: {e}")
+
+    # 3. Eliminar mesa de caché activo (limpia cuenta, consumos activos y usuarios)
+    crud.delete_mesa(db, mesa_id=mesa_id)
+
+    # 4. Notificar a los clientes de esa mesa por WebSocket para cerrar sesión y mostrar mensaje de despedida
+    mensaje_despedida = "Muchas gracias por acompañarnos, este QR ya no funciona."
+    await websocket_manager.manager.broadcast_table_session_closed(
+        mesa_id=mesa_id,
+        mensaje=mensaje_despedida,
+        local_id=local_id
+    )
+    await websocket_manager.manager.broadcast_queue_update(local_id=local_id)
+
+    return {"message": f"Sesión de la mesa {mesa_id} cerrada exitosamente."}
+
 @router.post("/tables/{mesa_id}/activate", response_model=schemas.Mesa, summary="Activar una mesa")
 def activate_table(mesa_id: int, db: Session = Depends(get_db)):
     """
@@ -1155,6 +1204,107 @@ async def move_lazy_song_down(cancion_id: int, db: Session = Depends(get_db), ad
         "queue_state": queue_state
     }
 
+@router.post("/canciones/lazy/{cancion_id}/move-top", status_code=200, summary="Mover canción lazy al tope")
+async def move_lazy_song_top(cancion_id: int, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
+    log_admin_action(admin.get("sub"), "move_lazy_song_top", f"ID: {cancion_id}")
+    """
+    **[Admin]** Mueve una canción en la cola lazy a la primera posición (tope).
+    """
+    from datetime import datetime, timedelta
+    from app.utils.cache_manager import cache_manager as cm
+    
+    all_songs = cm.get_all_songs()
+
+    def get_sort_key(s):
+        try:
+            val = s.get('orden_manual')
+            return int(val) if val is not None else 999999
+        except (ValueError, TypeError):
+            return 999999
+
+    lazy = sorted(
+        [s for s in all_songs if s.get('estado') == 'pendiente_lazy'],
+        key=lambda s: (get_sort_key(s), str(s.get('created_at', '')))
+    )
+    
+    idx = next((i for i, s in enumerate(lazy) if int(s.get('id', 0)) == int(cancion_id)), None)
+    
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Canción lazy no encontrada.")
+        
+    if idx > 0:
+        try:
+            target = lazy.pop(idx)
+            lazy.insert(0, target)
+            for i, s in enumerate(lazy):
+                cm.update_song_in_cache(s['id'], {'orden_manual': i + 1})
+            logger.info(f"Canción lazy {cancion_id} movida al tope de la cola")
+        except Exception as e:
+            logger.error(f"Error al mover canción lazy al tope: {e}")
+
+    try:
+        from app.db import crud
+        queue_state = crud.get_cola_completa_con_lazy(db)
+    except:
+        queue_state = {}
+    
+    await websocket_manager.manager.broadcast_queue_update()
+    
+    return {
+        "mensaje": "Canción movida al tope.",
+        "queue_state": queue_state
+    }
+
+@router.post("/canciones/lazy/{cancion_id}/move-bottom", status_code=200, summary="Mover canción lazy al final")
+async def move_lazy_song_bottom(cancion_id: int, db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
+    log_admin_action(admin.get("sub"), "move_lazy_song_bottom", f"ID: {cancion_id}")
+    """
+    **[Admin]** Mueve una canción en la cola lazy a la última posición (final).
+    """
+    from datetime import datetime, timedelta
+    from app.utils.cache_manager import cache_manager as cm
+    
+    all_songs = cm.get_all_songs()
+
+    def get_sort_key(s):
+        try:
+            val = s.get('orden_manual')
+            return int(val) if val is not None else 999999
+        except (ValueError, TypeError):
+            return 999999
+
+    lazy = sorted(
+        [s for s in all_songs if s.get('estado') == 'pendiente_lazy'],
+        key=lambda s: (get_sort_key(s), str(s.get('created_at', '')))
+    )
+    
+    idx = next((i for i, s in enumerate(lazy) if int(s.get('id', 0)) == int(cancion_id)), None)
+    
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Canción lazy no encontrada.")
+        
+    if idx < len(lazy) - 1:
+        try:
+            target = lazy.pop(idx)
+            lazy.append(target)
+            for i, s in enumerate(lazy):
+                cm.update_song_in_cache(s['id'], {'orden_manual': i + 1})
+            logger.info(f"Canción lazy {cancion_id} movida al final de la cola")
+        except Exception as e:
+            logger.error(f"Error al mover canción lazy al final: {e}")
+
+    try:
+        from app.db import crud
+        queue_state = crud.get_cola_completa_con_lazy(db)
+    except:
+        queue_state = {}
+    
+    await websocket_manager.manager.broadcast_queue_update()
+    
+    return {
+        "mensaje": "Canción movida al final.",
+        "queue_state": queue_state
+    }
 
 @router.post("/canciones/lazy/approve-next", status_code=200, summary="Aprobar siguiente canción lazy")
 async def approve_next_lazy_song(db: Session = Depends(get_db), admin: dict = Depends(verify_token)):
@@ -1520,6 +1670,27 @@ async def admin_decrease_consumo(consumo_id: int, db: Session = Depends(get_db))
 
     return consumo
 
+@router.put('/consumos/{consumo_id}', status_code=200, summary='Modificar cantidad de un consumo')
+async def admin_set_consumo_cantidad(
+    consumo_id: int,
+    payload: schemas.ConsumoCantidadUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    **[Admin]** Modifica directamente la cantidad de un consumo existente.
+    """
+    consumo, error = crud.set_consumo_cantidad(db, consumo_id, nueva_cantidad=payload.cantidad)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    try:
+        await websocket_manager.manager.broadcast_consumo_updated(consumo)
+        await websocket_manager.manager.broadcast_queue_update()
+    except Exception:
+        pass
+
+    return consumo
+
 @router.get("/reports/gold-users", response_model=List[schemas.UsuarioPublico], summary="Obtener usuarios de nivel Oro")
 def get_gold_users_report(db: Session = Depends(get_db)):
     """
@@ -1610,19 +1781,13 @@ async def create_pago_endpoint(pago: schemas.PagoCreate, db: Session = Depends(g
     # 1️⃣ Guardar en BD (FUENTE OFICIAL)
     db_pago = crud.create_pago(db, pago)
 
-    # 2️⃣ Recalcular estado dinámicamente
+    # 2️⃣ Recalcular estado dinámicamente y emitir actualización
     estado = crud.get_table_payment_status(db, pago.mesa_id)
 
-    # 3️⃣ Si ya pagó todo → cerrar mesa y limpiar usuarios de sesión
-    if estado and float(estado.get("saldo_pendiente", 1)) <= 0:
-        mesa = cache.get_mesa_by_id(pago.mesa_id)
-        if mesa:
-            mesa["is_active"] = False
-            mesa["closed_at"] = datetime.now().isoformat()
-            cache.update_mesa(pago.mesa_id, mesa)
-        # Limpiar usuarios de sesión — la mesa se libera para la próxima noche
-        cache.clear_usuarios_de_mesa(pago.mesa_id)
-        logger.info(f"Mesa {pago.mesa_id} pagada completamente. Usuarios de sesión limpiados.")
+    try:
+        await websocket_manager.manager.broadcast_account_update(pago.mesa_id)
+    except Exception:
+        pass
 
     return db_pago
 
@@ -1766,6 +1931,46 @@ async def admin_add_song_to_mesa(
     
     return cancion_aprobada
 
+
+@router.post("/tables/{mesa_id}/pedidos", response_model=List[schemas.Consumo], summary="Crear pedido directamente en una mesa desde Admin")
+async def admin_create_pedido_for_mesa(
+    mesa_id: int,
+    carrito: schemas.CarritoCreate,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(verify_token)
+):
+    """
+    **[Admin]** Permite crear un pedido (conjunto de consumos) directamente para una mesa.
+    Asocia el pedido a un usuario conectado a la mesa o al usuario de administración de la mesa.
+    """
+    log_admin_action(admin.get("sub"), "admin_create_pedido_mesa", f"Mesa: {mesa_id}, Items: {len(carrito.items)}")
+    db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
+    if not db_mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada.")
+
+    # Buscar usuarios conectados a la mesa
+    usuarios_conectados = [
+        u for u in cache.get_usuarios_by_mesa_from_cache(mesa_id)
+        if u.get("is_active") and not str(u.get("nick", "")).endswith("_ADMIN")
+    ]
+    if usuarios_conectados:
+        target_user_id = usuarios_conectados[0]["id"]
+    else:
+        admin_user = crud.get_o_crear_usuario_admin_para_mesa(db, mesa_id=mesa_id)
+        target_user_id = admin_user.id
+
+    consumos, error = crud.create_pedido_from_carrito(db=db, carrito=carrito, usuario_id=target_user_id)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    # Notificaciones Websocket
+    try:
+        await websocket_manager.manager.broadcast_queue_update()
+    except Exception:
+        pass
+
+    return consumos
+
 # --- Gestión de Claves de API ---
 
 @router.post("/api-keys", response_model=schemas.AdminApiKeyView, status_code=201, summary="Crear una nueva clave de API")
@@ -1842,25 +2047,6 @@ def get_account_details(cuenta_id: int, db: Session = Depends(get_db)):
     if not status:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
     return status
-
-@router.post("/tables/{mesa_id}/close-session", status_code=200, summary="Cerrar sesión de una mesa")
-def close_table_session(mesa_id: int, db: Session = Depends(get_db)):
-    """
-    **[Admin]** Cierra la sesión de una mesa de forma completa:
-    - Verifica que la cuenta esté a paz y salvo
-    - Elimina todas las canciones pendientes (lazy queue)
-    - Desactiva todos los usuarios de la mesa
-    - Desactiva la mesa
-    - Cierra la cuenta actual
-    
-    Retorna un mensaje de confirmación o error si la mesa tiene saldo pendiente.
-    """
-    result = crud.close_table_session(db, mesa_id=mesa_id)
-    
-    if not result.get("success", False):
-        raise HTTPException(status_code=400, detail=result.get("message", "Error al cerrar la sesión."))
-    
-    return result
 
 
 # ============================================================================

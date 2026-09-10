@@ -60,6 +60,7 @@ from app.schemas.consumo import (
     ConsumoBase,
     ConsumoCreate,
     Consumo,
+    ConsumoCantidadUpdate,
     CarritoItem,
     CarritoCreate,
     ConsumoReciente,
@@ -143,7 +144,7 @@ __all__ = [
     "MesaBase", "MesaCreate", "Mesa", "MesaSimple", "MesaInfo",
     "MesaEstado", "MesaEstadoPago", "ResumenMesa", "MesaConsumoResumen",
     # Consumo
-    "ConsumoBase", "ConsumoCreate", "Consumo", "CarritoItem", "CarritoCreate",
+    "ConsumoBase", "ConsumoCreate", "Consumo", "ConsumoCantidadUpdate", "CarritoItem", "CarritoCreate",
     "ConsumoReciente", "ConsumoHistorial", "ConsumoItemDetalle",
     # Producto
     "ProductoBase", "ProductoCreate", "Producto", "ProductoValorUpdate",

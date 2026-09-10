@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="/static/admin_pages/bees-base.css">
     <link rel="stylesheet" href="/static/admin_pages/dashboard.css">
     <link rel="stylesheet" href="/static/admin_pages/inventory.css">
-    <link rel="stylesheet" href="/static/admin_pages/queue.css">
+    <link rel="stylesheet" href="/static/admin_pages/queue.css?v=20260910_queue">
     <link rel="stylesheet" href="/static/admin_pages/reports.css">
-    <link rel="stylesheet" href="/static/admin_pages/accounts.css">
+    <link rel="stylesheet" href="/static/admin_pages/accounts.css?v=6">
     <link rel="stylesheet" href="/static/admin_pages/tables.css">
     <link rel="stylesheet" href="/static/admin_pages/settings.css">
-    <link rel="stylesheet" href="/static/admin_pages/admin_modals.css?v=2">
+    <link rel="stylesheet" href="/static/admin_pages/admin_modals.css?v=6">
 </head>
 
 <body>
@@ -74,8 +74,9 @@
                         <label for="payment-method">Método de Pago</label>
                         <select id="payment-method" name="metodo_pago">
                             <option value="Efectivo">Efectivo</option>
+                            <option value="Pago QR">Pago QR</option>
                             <option value="Tarjeta">Tarjeta</option>
-                            <option value="Transferencia">Transferencia</option>
+                            <option value="Consumo Interno">Consumo Interno</option>
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
@@ -812,10 +813,10 @@
         });
     </script>
     <script src="/static/admin_pages/dashboard.js"></script>
-    <script src="/static/admin_pages/queue.js"></script>
+    <script src="/static/admin_pages/queue.js?v=20260910_queue"></script>
     <script src="/static/admin_pages/inventory.js"></script>
-    <script src="/static/admin_pages/accounts.js?v=2"></script>
-    <script src="/static/admin_pages/reports.js"></script>
+    <script src="/static/admin_pages/accounts.js?v=7"></script>
+    <script src="/static/admin_pages/reports.js?v=20260910_pagoqr"></script>
     <script src="/static/admin_pages/settings.js"></script>
 </body>
 

@@ -58,12 +58,15 @@ class UsuarioConectado(BaseModel):
 class MesaBase(BaseModel):
     nombre: str
     qr_code: str
+    local_id: Optional[int] = None
+    session_id: Optional[str] = None
 
 class MesaCreate(MesaBase):
     pass # Para crear, usamos los mismos campos que la base
 
 class Mesa(MesaBase):
     id: int
+    session_id: Optional[str] = None
     is_active: bool # Añadir este campo
     usuarios: List[Usuario] = [] # Al pedir una mesa, mostrará la lista de sus usuarios
 
@@ -274,6 +277,7 @@ class ReporteVentasTurno(BaseModel):
     hora_fin_turno: str
     total_ventas: float
     total_pagado: float
+    total_consumo_interno: Optional[float] = 0.0
     saldo_pendiente: float
     total_pedidos: int
     total_canciones: int
@@ -417,8 +421,13 @@ class ReporteCategoriaMasVendida(BaseModel):
     cantidad_total: int
 
 # --- Nuevos Schemas para Consumo por Mesa ---
+class ConsumoCantidadUpdate(BaseModel):
+    cantidad: int
+
 class ConsumoItemDetalle(BaseModel):
     """Detalle de un producto consumido por una mesa."""
+    id: Optional[int] = None
+    producto_id: Optional[int] = None
     producto_nombre: str
     cantidad: int
     valor_total: Decimal
@@ -511,7 +520,7 @@ class CuentaInfo(BaseModel):
     closed_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
-# --- Schemas para SaaS QrMusic ---
+# --- Schemas para SaaS My Qr Music ---
 
 class LocalBase(BaseModel):
     nombre: str

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-QrMusic Player 2 - Native WebView Player using PyWebView.
+My Qr Music Player 2 - Native WebView Player using PyWebView.
 Strategy: Native OS WebView (Edge Chromium / WebView2) in absolute fullscreen.
 This completely hides URL bars, borders, and avoids YouTube's anti-bot detection.
 """
@@ -11,7 +11,7 @@ import time
 import threading
 import urllib.request
 import argparse
-import asyncio
+import logging
 
 try:
     import webview
@@ -27,9 +27,11 @@ except ImportError:
     print("[INFO] Please run: pip install websockets")
     sys.exit(1)
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("MyQrMusicPlayer2")
 
-# Setup arguments
-parser = argparse.ArgumentParser(description="QrMusic Native Player 2")
+# Parser CLI
+parser = argparse.ArgumentParser(description="My Qr Music Native Player 2")
 parser.add_argument("--server", default="http://localhost:8000", help="HTTP Server URL")
 parser.add_argument("--ws", default="ws://localhost:8000/ws/cola", help="WebSocket Server URL")
 parser.add_argument("--local", default=None, help="Local ID or Slug")
@@ -79,7 +81,7 @@ def on_loaded():
     """Injected when page loads. Sets up styles, watermark, bottom overlay, and ad blockers."""
     js_code = """
         (function() {
-            console.log("[PLAYER 2] Initializing QrMusic WebView daemon...");
+            console.log("[PLAYER 2] Initializing My Qr Music WebView daemon...");
 
             // CSS injection compatible with YouTube's strict TrustedHTML policy.
             const injectStyles = () => {
@@ -174,6 +176,14 @@ def on_loaded():
                             display: flex !important;
                             flex-direction: column !important;
                             text-align: left !important;
+                            opacity: 0 !important;
+                            transform: translateY(35px) scale(0.96) !important;
+                            transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+                        }
+
+                        #qrmusic-now-playing-box.show {
+                            opacity: 1 !important;
+                            transform: translateY(0) scale(1) !important;
                         }
 
                         /* BLOQUE DERECHO: SIGUIENTE EN COLA (Alineado a la derecha) */
@@ -197,6 +207,14 @@ def on_loaded():
                             display: flex !important;
                             flex-direction: column !important;
                             text-align: right !important;
+                            opacity: 0 !important;
+                            transform: translateY(35px) scale(0.96) !important;
+                            transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+                        }
+
+                        #qrmusic-next-song-box.show {
+                            opacity: 1 !important;
+                            transform: translateY(0) scale(1) !important;
                         }
 
                         /* Tipografía Duplicada (2x) para Pantalla Gigante (100") */
@@ -384,6 +402,34 @@ def on_loaded():
                         });
                     }
                 });
+
+                // Update box visibility timed
+                const v = document.querySelector('video');
+                const nowBox = document.getElementById('qrmusic-now-playing-box');
+                const nextBox = document.getElementById('qrmusic-next-song-box');
+                if (nowBox && nextBox) {
+                    if (!v || isNaN(v.currentTime) || v.paused) {
+                        nowBox.classList.remove('show');
+                        nextBox.classList.remove('show');
+                    } else {
+                        const t = v.currentTime;
+                        const d = v.duration;
+                        let show = (t <= 10.0);
+                        if (d && d > 20.0) {
+                            const mid = d / 2.0;
+                            if ((t >= (mid - 5.0) && t <= (mid + 5.0)) || (t >= (d - 20.0) && t <= (d - 10.0))) {
+                                show = true;
+                            }
+                        }
+                        if (show) {
+                            nowBox.classList.add('show');
+                            nextBox.classList.add('show');
+                        } else {
+                            nowBox.classList.remove('show');
+                            nextBox.classList.remove('show');
+                        }
+                    }
+                }
             }, 50);
         })();
     """
@@ -480,7 +526,7 @@ if __name__ == "__main__":
     
     # 1. Create the native GUI window in full screen
     window = webview.create_window(
-        title="QrMusic Native Player 2",
+        title="My Qr Music Native Player 2",
         url="https://www.youtube.com",
         js_api=PlayerAPI(),
         fullscreen=True,

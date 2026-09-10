@@ -1,6 +1,6 @@
 -- =====================================================================
 -- SCRIPT DE CREACIÓN Y MODIFICACIÓN DE LA ESTRUCTURA DE LA BASE DE DATOS
--- PROYECTO: QrMusic (Backend)
+-- PROYECTO: My Qr Music (Backend)
 -- MOTOR DE BASE DE DATOS: MySQL / MariaDB
 -- =====================================================================
 

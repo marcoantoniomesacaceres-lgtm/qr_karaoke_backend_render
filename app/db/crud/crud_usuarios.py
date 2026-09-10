@@ -113,17 +113,15 @@ def create_usuario_en_mesa(db: Session, usuario: UsuarioCreate, mesa_id: int, lo
 
 
 def get_o_crear_usuario_admin_para_mesa(db: Session, mesa_id: int):
-    """Obtiene o crea un usuario admin/DJ para una mesa específica (CACHE).
-    
-    Este usuario es un usuario de sistema — NO se asocia a mesa_id para que no
-    aparezca en la lista de usuarios conectados de la mesa.
-    """
+    """Obtiene o crea un usuario admin/DJ para una mesa específica (CACHE)."""
     nick = f"MESA_{mesa_id}_ADMIN"
     existing = cache.get_usuario_by_nick_from_cache(nick)
     if existing:
+        if not existing.get("mesa_id"):
+            cache.update_usuario_en_cache(existing["id"], {"mesa_id": mesa_id})
+            existing["mesa_id"] = mesa_id
         return _to_obj(existing)
-    # mesa_id = None → system user, not a real seated user
-    return create_usuario(db, UsuarioCreate(nick=nick))
+    return create_usuario_en_mesa(db, UsuarioCreate(nick=nick), mesa_id=mesa_id)
 
 
 def get_all_usuarios(db: Session):

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Dashboard - QrMusic</title>
+    <title>SaaS Dashboard - My Qr Music</title>
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -385,7 +385,7 @@
 
     <!-- Header -->
     <header>
-        <a href="#" class="logo">QrMusic <span>SaaS</span></a>
+        <a href="#" class="logo">My Qr Music <span>SaaS</span></a>
         <div class="user-profile">
             <div class="user-info">
                 <div class="user-name" id="profile-name">Cargando...</div>
@@ -398,7 +398,7 @@
     <!-- Main Workspace -->
     <main class="workspace">
         <div class="welcome-hero">
-            <h1 id="welcome-title">Bienvenido a QrMusic</h1>
+            <h1 id="welcome-title">Bienvenido a My Qr Music</h1>
             <p id="welcome-subtitle">Accediendo a tu panel administrativo corporativo...</p>
         </div>
 
@@ -420,7 +420,7 @@
                 <div id="empty-locales-state" class="empty-state" style="display: none;">
                     <div class="empty-icon">🏬</div>
                     <h3>No tienes locales registrados</h3>
-                    <p>Para comenzar a usar QrMusic, registra tu primer local de inmediato.</p>
+                    <p>Para comenzar a usar My Qr Music, registra tu primer local de inmediato.</p>
                 </div>
 
                 <!-- Formulario Registro Local -->
@@ -637,7 +637,7 @@
             document.querySelectorAll('.dashboard-view').forEach(view => view.classList.remove('active'));
             if (role === 'owner') {
                 document.getElementById('view-owner').classList.add('active');
-                document.getElementById('welcome-title').textContent = 'Panel de Socio QrMusic';
+                document.getElementById('welcome-title').textContent = 'Panel de Socio My Qr Music';
                 document.getElementById('welcome-subtitle').textContent = 'Administra tus establecimientos comerciales y equipos.';
                 loadLocales();
             } else if (role === 'dj') {

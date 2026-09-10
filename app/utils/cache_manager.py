@@ -465,10 +465,11 @@ class CacheManager: # Define la clase central encargada de gestionar los datos e
         except Exception as e: # Fallo de escritura
             print(f"Error guardando caché de mesas: {e}") # Log error
     
-    def create_mesa_in_cache(self, nombre: str, qr_code: str) -> int: # Crea físicamente una mesa nueva en el sistema
+    def create_mesa_in_cache(self, nombre: str, qr_code: str, local_id: Optional[int] = None, session_id: Optional[str] = None) -> int: # Crea físicamente una mesa nueva en el sistema
         """Crea una mesa en caché y retorna el mesa_id""" # Docstring descriptivo
         with self.lock: # Bloqueo hilos
             import re # Importa expresiones regulares para extraer números
+            import uuid
             
             # Intentar extraer el ID lógico de la mesa desde el qr_code o el nombre
             mesa_id = None # Inicializa variable
@@ -496,10 +497,14 @@ class CacheManager: # Define la clase central encargada de gestionar los datos e
             # Esto borra cualquier archivo JSON residual si el ID fue usado anteriormente
             self.clear_mesa_cache(mesa_id)
             
+            generated_session_id = session_id or uuid.uuid4().hex[:8]
+            
             self.mesas_data[mesa_id] = { # Crea el objeto mesa en el catálogo de memoria
                 "id": mesa_id, # Su ID único
                 "nombre": nombre, # Nombre visual
                 "qr_code": qr_code, # Código QR único
+                "local_id": local_id, # ID del local asignado
+                "session_id": generated_session_id, # ID único de sesión activa
                 "is_active": True, # Estado habilitado por defecto
                 "created_at": now_bogota().isoformat() # Fecha de creación (Bogotá)
             }
@@ -542,6 +547,7 @@ class CacheManager: # Define la clase central encargada de gestionar los datos e
                 self._save_mesas_data() # Actualiza el archivo JSON (conecta con _save_mesas_data)
                 self.clear_mesa_cache(mesa_id) # Borra su cuenta financiera asociada (conecta con clear_mesa_cache)
                 self.clear_usuarios_de_mesa(mesa_id)  # Borra los usuarios de sesión de esta mesa
+                self._clear_consumos_de_mesa_locked(mesa_id) # Borra los consumos activos de esta sesión
                 return True # Eliminado
             return False # No existía
     
@@ -642,6 +648,20 @@ class CacheManager: # Define la clase central encargada de gestionar los datos e
                 self._save_consumos_data() # Guarda cambios al disco (conecta con _save_consumos_data)
                 return True # Eliminado
             return False # No encontrado
+
+    def clear_consumos_de_mesa(self, mesa_id: int) -> int:
+        """Elimina todos los consumos asociados a una mesa en caché."""
+        with self.lock:
+            return self._clear_consumos_de_mesa_locked(mesa_id)
+
+    def _clear_consumos_de_mesa_locked(self, mesa_id: int) -> int:
+        target_id = int(mesa_id)
+        to_del = [cid for cid, c in self.consumos_data.items() if int(c.get("mesa_id", 0)) == target_id]
+        for cid in to_del:
+            del self.consumos_data[cid]
+        if to_del:
+            self._save_consumos_data()
+        return len(to_del)
     
     # ========================================================================
     # FUNCIONES DE CACHÉ DE SONG CREDITS (Fichas para pedir canciones)
@@ -851,7 +871,12 @@ class CacheManager: # Define la clase central encargada de gestionar los datos e
     
     def create_mesa(self, mesa_data: dict) -> int: # Redirige llamados viejos a la nueva función de mesas
         """Alias para create_mesa_in_cache""" # Docstring descriptivo
-        return self.create_mesa_in_cache(mesa_data.get("nombre"), mesa_data.get("qr_code")) # Conecta con create_mesa_in_cache
+        return self.create_mesa_in_cache(
+            nombre=mesa_data.get("nombre"),
+            qr_code=mesa_data.get("qr_code"),
+            local_id=mesa_data.get("local_id"),
+            session_id=mesa_data.get("session_id")
+        ) # Conecta con create_mesa_in_cache
     
     def update_mesa(self, mesa_id: int, updates: dict) -> bool: # Redirige actualizaciones de mesa
         """Alias para update_mesa_in_cache""" # Docstring simple

@@ -41,18 +41,18 @@
 }
 
 .modal-card-xlarge {
-    width: 900px;
-    max-width: 95%;
+    width: 980px;
+    max-width: 96vw;
 }
 
 .modal-card-scrollable {
-    max-height: 80vh;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
 }
 
 .modal-card-scrollable-high {
-    max-height: 80vh;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;

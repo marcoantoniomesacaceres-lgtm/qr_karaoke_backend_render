@@ -9,6 +9,7 @@ class MesaBase(BaseModel):
     nombre: str
     qr_code: str
     local_id: Optional[int] = None
+    session_id: Optional[str] = None
 
 
 class MesaCreate(MesaBase):
@@ -17,6 +18,7 @@ class MesaCreate(MesaBase):
 
 class Mesa(MesaBase):
     id: int
+    session_id: Optional[str] = None
     is_active: bool
     usuarios: List['Usuario'] = []
     model_config = ConfigDict(from_attributes=True)

@@ -176,6 +176,29 @@ class ConnectionManager:
         payload = {"type": "resume_playback", "local_id": local_id}
         await self._broadcast(json.dumps(payload), local_id=local_id)
 
+    async def broadcast_table_session_closed(self, mesa_id: int, mensaje: str = "Muchas gracias por acompañarnos, este QR ya no funciona.", local_id: Optional[int] = None):
+        """
+        Envía un evento de cierre de sesión de mesa para desconectar los dispositivos de esa mesa.
+        """
+        payload = {
+            "type": "table_session_closed",
+            "mesa_id": mesa_id,
+            "mensaje": mensaje,
+            "local_id": local_id
+        }
+        await self._broadcast(json.dumps(payload), local_id=local_id)
+
+    async def broadcast_consumo_updated(self, consumo_data: dict, local_id: Optional[int] = None):
+        """
+        Notifica que un consumo fue actualizado en cantidad o valor.
+        """
+        payload = {
+            "type": "consumo_updated",
+            "payload": consumo_data,
+            "local_id": local_id
+        }
+        await self._broadcast(json.dumps(payload), local_id=local_id)
+
     async def broadcast_notification(self, mensaje: str, local_id: Optional[int] = None):
         """
         Envía un mensaje de notificación a las pantallas conectadas.

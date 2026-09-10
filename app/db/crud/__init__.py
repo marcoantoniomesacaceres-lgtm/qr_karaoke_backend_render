@@ -97,6 +97,7 @@ from app.db.crud.crud_consumos import (
     get_recent_consumos,
     delete_consumo,
     update_consumo_cantidad,
+    set_consumo_cantidad,
 )
 
 from app.db.crud.crud_admin import (
@@ -173,7 +174,7 @@ __all__ = [
     "get_total_consumido_por_usuario", "get_consumos_mesa",
     "create_consumo_para_usuario", "create_pedido_from_carrito",
     "get_table_payment_status", "get_all_tables_payment_status",
-    "get_recent_consumos", "delete_consumo", "update_consumo_cantidad",
+    "get_recent_consumos", "delete_consumo", "update_consumo_cantidad", "set_consumo_cantidad",
     # Admin / Reportes
     "get_resumen_noche", "reset_database_for_new_night", "get_ganancias_totales",
     "limpiar_datos_prueba", "get_ventas_turno", "get_canciones_mas_cantadas",

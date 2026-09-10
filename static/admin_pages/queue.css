@@ -10,10 +10,243 @@
 }
 
 #approved-songs-list,
+#lazy-songs-list,
 #admin-search-results {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+/* ============================================
+   TARJETAS DE COLA DE CANCIONES (QUEUE CARDS)
+   ============================================ */
+.queue-item-container {
+  list-style: none;
+  margin-bottom: 16px;
+}
+
+.queue-song-card {
+  display: flex;
+  align-items: stretch;
+  background: var(--page-input-bg);
+  border: 1.5px solid var(--page-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.queue-song-card:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  border-color: var(--bees-yellow);
+}
+
+.queue-song-card-active {
+  border-color: var(--bees-green);
+  box-shadow: 0 4px 14px rgba(76, 175, 80, 0.15);
+}
+
+/* Cinta vertical izquierda con número de turno */
+.queue-turn-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  background: linear-gradient(180deg, var(--bees-yellow) 0%, var(--bees-yellow-dark) 100%);
+  color: var(--bees-black);
+  font-weight: 900;
+  font-size: 1.85em;
+  user-select: none;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  border-right: 2px solid rgba(0, 0, 0, 0.08);
+}
+
+.queue-turn-ribbon-active {
+  background: linear-gradient(180deg, var(--bees-green) 0%, #388E3C 100%);
+  color: #FFFFFF;
+  font-size: 1.4em;
+}
+
+/* Contenido principal de la tarjeta */
+.queue-song-main {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.queue-song-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.queue-song-thumb {
+  width: 68px;
+  height: 50px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.queue-song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-song-title {
+  font-weight: 700;
+  font-size: 1.05em;
+  color: var(--page-text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-song-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85em;
+  color: var(--page-text-secondary);
+}
+
+.queue-song-requester {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Cuadro a la derecha con número de mesa visiblemente más grande */
+.queue-table-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+  color: var(--bees-yellow);
+  border: 2px solid var(--bees-yellow);
+  border-radius: 12px;
+  padding: 6px 14px;
+  min-width: 85px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.queue-table-icon {
+  font-size: 0.85em;
+  line-height: 1;
+  margin-bottom: 2px;
+  opacity: 0.9;
+}
+
+.queue-table-text {
+  font-size: 1.15em;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Panel de botones de acción con iconos */
+.queue-actions-panel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--page-border);
+  padding-top: 10px;
+}
+
+.queue-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  font-size: 1.15em;
+  cursor: pointer;
+  background: var(--page-bg);
+  color: var(--page-text);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.queue-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.queue-action-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+}
+
+.queue-action-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  box-shadow: none;
+  background: #E2E8F0 !important;
+  border-color: #CBD5E1 !important;
+  color: #A0AEC0 !important;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.queue-btn-top {
+  background: #EBF8FF;
+  border-color: #90CDF4;
+  color: #2B6CB0;
+}
+.queue-btn-top:hover:not(:disabled) {
+  background: #BEE3F8;
+}
+
+.queue-btn-up {
+  background: #E6FFFA;
+  border-color: #81E6D9;
+  color: #234E52;
+}
+.queue-btn-up:hover:not(:disabled) {
+  background: #B2F5EA;
+}
+
+.queue-btn-down {
+  background: #FFFAF0;
+  border-color: #FBD38D;
+  color: #7B341E;
+}
+.queue-btn-down:hover:not(:disabled) {
+  background: #FEEBC8;
+}
+
+.queue-btn-bottom {
+  background: #FAF5FF;
+  border-color: #D6BCFA;
+  color: #553C9A;
+}
+.queue-btn-bottom:hover:not(:disabled) {
+  background: #E9D8FD;
+}
+
+.queue-btn-delete {
+  background: #FFF5F5;
+  border-color: #FEB2B2;
+  color: #C53030;
+}
+.queue-btn-delete:hover:not(:disabled) {
+  background: #FED7D7;
 }
 
 /* Responsive */
@@ -31,6 +264,18 @@
   #queue>div:first-of-type {
     grid-template-columns: 1fr !important;
     gap: 16px;
+  }
+
+  .queue-song-header {
+    flex-wrap: wrap;
+  }
+  .queue-table-box {
+    align-self: flex-start;
+    padding: 4px 10px;
+  }
+  .queue-turn-ribbon {
+    min-width: 44px;
+    font-size: 1.5em;
   }
 }
 
@@ -72,7 +317,6 @@
 
 .player-btn-large {
   background-color: var(--page-input-bg);
-  /* O un color de acento suave */
   width: 56px;
   height: 56px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

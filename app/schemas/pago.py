@@ -92,6 +92,7 @@ class ReporteVentasTurno(BaseModel):
     hora_fin_turno: str
     total_ventas: float
     total_pagado: float
+    total_consumo_interno: Optional[float] = 0.0
     saldo_pendiente: float
     total_pedidos: int
     total_canciones: int

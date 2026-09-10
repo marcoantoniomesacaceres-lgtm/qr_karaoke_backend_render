@@ -275,6 +275,7 @@ function renderVentasTurnoReport(data, container) {
     const kpis = [
         { label: 'Total Ventas', value: `$${parseFloat(data.total_ventas || 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, color: 'var(--bees-yellow)', icon: '💰' },
         { label: 'Total Recaudado', value: `$${parseFloat(data.total_pagado || 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, color: '#10b981', icon: '💵' },
+        { label: 'Total Consumo Interno', value: `$${parseFloat(data.total_consumo_interno || 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, color: '#a855f7', icon: '🏢' },
         { 
             label: 'Saldo Pendiente', 
             value: `$${parseFloat(data.saldo_pendiente || 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 

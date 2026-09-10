@@ -10,6 +10,17 @@ let orderCart = {};
 // Variable para trackear la mesa seleccionada en el modal de QR
 let currentQRTableId = null;
 
+function formatFechaHora(dateStr) {
+    if (!dateStr) return '';
+    let d;
+    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.match(/[+-]\d{2}:\d{2}$/)) {
+        d = new Date(dateStr.replace('T', ' '));
+    } else {
+        d = new Date(dateStr);
+    }
+    return isNaN(d.getTime()) ? String(dateStr) : d.toLocaleString('es-CO');
+}
+
 function renderAccounts(accounts, accountsGrid) {
     accountsGrid.innerHTML = '';
     if (accounts.length === 0) {
@@ -37,24 +48,15 @@ function renderAccounts(accounts, accountsGrid) {
         const saldo = Number(acc.saldo_pendiente) || 0;
         const isActive = acc.activa !== false; // Asumimos activa por defecto
 
-        // Extraer el número lógico de la mesa del nombre
-        // Si el nombre sigue el patrón "Mesa X", extraemos X
-        // Si no, usamos mesa_id como fallback
-        // Extraer el número lógico de la mesa
-        // 1. Intentar desde el QR code (karaoke-mesa-XX)
-        // 2. Intentar desde el nombre (Mesa XX)
-        // 3. Fallback al ID de la base de datos
-        let numeroMesa = acc.mesa_id;
-
+        // Extraer el número lógico de la mesa (si lo tiene)
+        let numeroMesa = null;
         if (acc.qr_code) {
             const matchQr = acc.qr_code.match(/karaoke-mesa-(\d+)/i);
             if (matchQr && matchQr[1]) {
                 numeroMesa = parseInt(matchQr[1], 10);
             }
         }
-
-        // Si no pudimos sacar del QR (o no había), intentamos del nombre si aún es el ID
-        if (numeroMesa === acc.mesa_id && acc.mesa_nombre) {
+        if (!numeroMesa && acc.mesa_nombre) {
             const matchNombre = acc.mesa_nombre.match(/Mesa\s+(\d+)/i);
             if (matchNombre && matchNombre[1]) {
                 numeroMesa = parseInt(matchNombre[1], 10);
@@ -73,38 +75,34 @@ function renderAccounts(accounts, accountsGrid) {
                     ${titulo}
                     <span class="mesa-status ${isActive ? 'active' : 'inactive'}"></span>
                 </h3>
-                ${isActive ? `<button class="btn-close-table" data-mesa-id="${acc.mesa_id}" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); line-height: 1;" title="Desactivar Mesa">&times;</button>` : ''}
+                ${isActive ? `<button class="btn-close-table" data-mesa-id="${acc.mesa_id}" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); line-height: 1;" title="Cerrar Sesión de Mesa">&times;</button>` : ''}
             </div>
             
             <!-- Cuerpo con info -->
-            <div class="mesa-card-body">
+            <div class="mesa-card-body" style="padding-bottom: 2px;">
                 <div class="mesa-info">
                     <div class="info-row">
-                        <label>Número de Mesa:</label>
-                        <span>${numeroMesa}</span>
+                        <label>${numeroMesa ? 'Número de Mesa:' : 'Espacio / Nombre:'}</label>
+                        <span>${numeroMesa ? numeroMesa : (acc.mesa_nombre || `Mesa ${acc.mesa_id}`)}</span>
                     </div>
                     <div class="info-row">
                         <label>Saldo:</label>
-                        <span class="mesa-saldo-text ${saldoClass}" style="font-size: 1.4em; font-weight: bold;">$${saldo.toFixed(2)}</span>
+                        <span class="mesa-saldo-text ${saldoClass}" style="font-size: 1.35em; font-weight: bold;">$${saldo.toFixed(2)}</span>
                     </div>
-                </div>
-                
-                <!-- Gestión de QR (Botón en lugar de imagen directa) -->
-                <div class="mesa-qr-container">
-                    <button class="btn-manage-qr" data-mesa-id="${acc.mesa_id}">
-                        📱 Gestionar QR
-                    </button>
                 </div>
             </div>
             
-            <!-- Resumen de cuenta -->
+            <!-- Fila única con los 3 botones de acción en iconos grandes -->
             <div class="mesa-account-summary">
                 <div class="mesa-account-actions-row">
-                    <button class="btn-payment" data-id="${acc.mesa_id}">
-                        💵 Registrar Pago
+                    <button class="btn-payment mesa-action-icon-btn" data-id="${acc.mesa_id}" title="Registrar Pago">
+                        💵
                     </button>
-                    <button class="btn-view-details" data-mesa-id="${acc.mesa_id}">
-                        Pedidos
+                    <button class="btn-view-details mesa-action-icon-btn" data-mesa-id="${acc.mesa_id}" title="Detalle de Pedidos">
+                        🛒
+                    </button>
+                    <button class="btn-manage-qr mesa-action-icon-btn" data-mesa-id="${acc.mesa_id}" title="Gestionar QR">
+                        📱
                     </button>
                 </div>
             </div>
@@ -520,8 +518,8 @@ async function loadAccountsPage() {
 
 
 function handlePaymentModal(event) {
-    const button = event.target;
-    if (!button.matches('.btn-payment')) return;
+    const button = event.target.closest('.btn-payment');
+    if (!button) return;
 
     const accountId = button.dataset.id;
     const modal = document.getElementById('payment-modal');
@@ -693,7 +691,7 @@ function showHistoryModal(history) {
             item.className = 'history-item';
             item.className = 'history-item';
 
-            const closedDate = new Date(acc.closed_at || acc.created_at).toLocaleString();
+            const closedDate = formatFechaHora(acc.closed_at || acc.created_at);
 
             const info = document.createElement('span');
             info.textContent = `Cuenta #${acc.id} - Cerrada: ${closedDate}`;
@@ -716,17 +714,18 @@ function showHistoryModal(history) {
 async function showAccountDetails(cuentaId) {
     try {
         const details = await apiFetch(`/admin/accounts/${cuentaId}`);
-        renderDetailsModal(details);
+        await renderDetailsModal(details);
     } catch (e) {
         showNotification(e.message, 'error');
     }
 }
 
-function renderDetailsModal(details) {
+async function renderDetailsModal(details) {
     const modal = document.getElementById('account-details-modal');
     const content = document.getElementById('details-content');
     if (!modal || !content) return;
 
+    const mesaId = details.mesa_id;
     const consumos = details.consumos || [];
     const pagos = details.pagos || [];
     // Parsear los valores numéricos correctamente (pueden venir como Decimal serializado, número o string)
@@ -736,138 +735,124 @@ function renderDetailsModal(details) {
     const saldoPendiente = Number(saldoRaw != null ? saldoRaw : 0).toLocaleString('es-CO', { minimumFractionDigits: 2 });
 
     content.innerHTML = `
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <!-- Resumen Section -->
-            <div style="flex: 1; min-width: 250px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color, #444);">
-                <h4 style="margin-top: 0; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid #444; padding-bottom: 10px;">Resumen</h4>
-                <p style="margin: 10px 0; display: flex; justify-content: space-between;"><strong>Mesa:</strong> <span>${details.mesa_nombre || `Mesa ${details.mesa_id}`}</span></p>
-                <p style="margin: 10px 0; display: flex; justify-content: space-between;"><strong>Total Consumido:</strong> <span style="color: #ff9800;">$${totalConsumido}</span></p>
-                <p style="margin: 10px 0; display: flex; justify-content: space-between;"><strong>Total Pagado:</strong> <span style="color: #4caf50;">$${totalPagado}</span></p>
-                <p style="margin: 10px 0; display: flex; justify-content: space-between; font-size: 1.1em; font-weight: bold; border-top: 1px solid #444; padding-top: 10px;">
-                    <strong>Saldo Pendiente:</strong> 
-                    <span style="color: ${Number(saldoRaw) > 0 ? '#dc3545' : '#28a745'}">$${saldoPendiente}</span>
-                </p>
+        <div class="details-modal-grid" style="display: flex; gap: 18px; flex-wrap: wrap; width: 100%; box-sizing: border-box; align-items: flex-start;">
+            <!-- COLUMNA IZQUIERDA: Resumen, Pagos, Consumos -->
+            <div style="flex: 1 1 45%; min-width: 290px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
                 
-                <div style="margin-top: 25px;">
-                    <button id="btn-details-create-order" class="form-btn" style="width: 100%; background-color: var(--bees-green, #28a745); color: white; padding: 12px; font-weight: bold; font-size: 1.05em; border-radius: 8px;">🛒 Crear Pedido</button>
-                    <div id="details-order-panel" style="display: none; margin-top: 15px; background: var(--page-input-bg, #2a2a2a); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color, #444);"></div>
-                </div>
-            </div>
-
-            <!-- Detalles Section -->
-            <div style="flex: 1.5; min-width: 300px; display: flex; flex-direction: column; gap: 20px;">
-                <!-- Consumos -->
-                <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color, #444);">
-                    <h4 style="margin-top: 0; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid #444; padding-bottom: 10px; display: flex; justify-content: space-between;">
-                        <span>🛒 Consumos</span>
-                        <span style="font-size: 0.8em; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 10px; color: white;">${consumos.length}</span>
+                <!-- 1. Resumen Card -->
+                <div style="background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px solid var(--border-color, #444);">
+                    <h4 style="margin-top: 0; margin-bottom: 12px; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; font-size: 1.05rem;">
+                        📊 Resumen de Cuenta
                     </h4>
-                    <ul class="details-consumos-list" style="list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto;">
-                        ${consumos.length ? consumos.map(c => `
-                            <li style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <span style="font-weight: bold; color: #eee;">${c.cantidad}x</span> 
-                                    <span>${c.producto_nombre || `Producto #${c.producto_id}`}</span>
-                                    <div style="font-size: 0.8em; color: #888; margin-top: 3px;">${new Date(c.created_at).toLocaleString()}</div>
-                                </div>
-                                <span style="font-weight: bold; color: #ff9800;">$${c.valor_total}</span>
-                            </li>
-                        `).join('') : '<li style="text-align: center; color: #888; padding: 20px;">Sin consumos registrados</li>'}
-                    </ul>
+                    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem;">
+                        <p style="margin: 0; display: flex; justify-content: space-between;">
+                            <strong style="color: #ccc;">Mesa / Espacio:</strong>
+                            <span style="font-weight: bold; color: #fff;">${details.mesa_nombre || `Mesa ${details.mesa_id}`}</span>
+                        </p>
+                        <p style="margin: 0; display: flex; justify-content: space-between;">
+                            <strong style="color: #ccc;">Total Consumido:</strong>
+                            <span style="font-weight: bold; color: #ff9800;">$${totalConsumido}</span>
+                        </p>
+                        <p style="margin: 0; display: flex; justify-content: space-between;">
+                            <strong style="color: #ccc;">Total Pagado:</strong>
+                            <span style="font-weight: bold; color: #4caf50;">$${totalPagado}</span>
+                        </p>
+                        <p style="margin: 4px 0 0 0; display: flex; justify-content: space-between; font-size: 1.05rem; font-weight: bold; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                            <span>Saldo Pendiente:</span>
+                            <span style="color: ${Number(saldoRaw) > 0 ? '#ef4444' : '#22c55e'};">$${saldoPendiente}</span>
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Pagos -->
-                <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color, #444);">
-                    <h4 style="margin-top: 0; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid #444; padding-bottom: 10px; display: flex; justify-content: space-between;">
-                        <span>💳 Pagos</span>
-                        <span style="font-size: 0.8em; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 10px; color: white;">${pagos.length}</span>
+                <!-- 2. Pagos Card (Abajo del Resumen) -->
+                <div style="background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px solid var(--border-color, #444);">
+                    <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem;">
+                        <span>💳 Pagos Realizados</span>
+                        <span style="font-size: 0.8rem; background: rgba(76, 175, 80, 0.2); color: #4caf50; padding: 2px 8px; border-radius: 10px; font-weight: normal;">${pagos.length}</span>
                     </h4>
-                    <ul style="list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto;">
+                    <ul style="list-style: none; padding: 0; margin: 0; max-height: 160px; overflow-y: auto;">
                         ${pagos.length ? pagos.map(p => `
-                            <li style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
-                                <div style="font-size: 0.85em; color: #888;">${new Date(p.created_at).toLocaleString()}</div>
-                                <span style="font-weight: bold; color: #4caf50;">$${p.monto}</span>
+                            <li style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                                <div style="color: #aaa; font-size: 0.85em;">${formatFechaHora(p.created_at)} <span style="color: var(--bees-yellow, #fdb913); font-size: 0.85em; font-weight: 600; margin-left: 4px;">• ${p.metodo_pago || p.metodo || 'Efectivo'}</span></div>
+                                <span style="font-weight: bold; color: #4caf50;">$${Number(p.monto).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</span>
                             </li>
-                        `).join('') : '<li style="text-align: center; color: #888; padding: 20px;">Sin pagos registrados</li>'}
+                        `).join('') : '<li style="text-align: center; color: #777; padding: 12px; font-size: 0.9rem;">Sin pagos registrados</li>'}
+                    </ul>
+                </div>
+
+                <!-- 3. Consumos Card (Abajo de Pagos) -->
+                <div style="background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px solid var(--border-color, #444);">
+                    <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem;">
+                        <span>🍽️ Consumos de la Mesa</span>
+                        <span style="font-size: 0.8rem; background: rgba(255, 152, 0, 0.2); color: #ff9800; padding: 2px 8px; border-radius: 10px; font-weight: normal;">${consumos.length}</span>
+                    </h4>
+                    <ul class="details-consumos-list" style="list-style: none; padding: 0; margin: 0; max-height: 220px; overflow-y: auto;">
+                        ${consumos.length ? consumos.map(c => `
+                            <li style="padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.9rem;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <span style="font-weight: bold; color: #f5f5f5;">${c.cantidad}x</span> 
+                                    <span style="color: #ddd;">${c.producto_nombre || `Producto #${c.producto_id}`}</span>
+                                    <div style="font-size: 0.78em; color: #888; margin-top: 2px;">${formatFechaHora(c.created_at)}</div>
+                                </div>
+                                <span style="font-weight: bold; color: #ff9800; min-width: 60px; text-align: right;">$${Number(c.valor_total).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</span>
+                                ${c.id ? `
+                                <div style="display: flex; gap: 4px; margin-left: 4px;">
+                                    <button class="btn-edit-consumo" data-consumo-id="${c.id}" data-mesa-id="${details.mesa_id}" data-qty="${c.cantidad}" data-nombre="${c.producto_nombre || 'Producto'}" title="Editar cantidad" style="background: rgba(253, 185, 19, 0.15); border: 1px solid rgba(253, 185, 19, 0.4); color: #fdb913; cursor: pointer; border-radius: 4px; padding: 3px 6px; font-size: 0.85em;">✏️</button>
+                                    <button class="btn-delete-consumo" data-consumo-id="${c.id}" data-mesa-id="${details.mesa_id}" data-nombre="${c.producto_nombre || 'Producto'}" title="Eliminar producto" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; cursor: pointer; border-radius: 4px; padding: 3px 6px; font-size: 0.85em;">❌</button>
+                                </div>
+                                ` : ''}
+                            </li>
+                        `).join('') : '<li style="text-align: center; color: #777; padding: 12px; font-size: 0.9rem;">Sin consumos registrados</li>'}
                     </ul>
                 </div>
             </div>
-        </div>
-    `;
 
-    // Add listener for the toggle button
-    const btnCreateOrder = document.getElementById('btn-details-create-order');
-    const orderPanel = document.getElementById('details-order-panel');
+            <!-- COLUMNA DERECHA: Panel de Pedido -->
+            <div style="flex: 1 1 50%; min-width: 320px; background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px solid var(--border-color, #444); display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+                <h4 style="margin-top: 0; margin-bottom: 4px; color: var(--bees-yellow, #fdb913); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; font-size: 1.05rem;">
+                    🛒 Tomar Pedido para la Mesa
+                </h4>
 
-    if (btnCreateOrder && orderPanel) {
-        btnCreateOrder.onclick = async () => {
-            if (orderPanel.style.display === 'none') {
-                // Open
-                orderPanel.style.display = 'block';
-                btnCreateOrder.textContent = '❌ Cancelar Pedido';
-                btnCreateOrder.style.backgroundColor = 'var(--bees-red, #dc3545)';
-
-                // Initialize form if empty
-                if (orderPanel.innerHTML.trim() === '') {
-                    await renderDetailsOrderForm(orderPanel, details.mesa_id);
-                }
-            } else {
-                // Close
-                orderPanel.style.display = 'none';
-                btnCreateOrder.textContent = '🛒 Crear Pedido';
-                btnCreateOrder.style.backgroundColor = 'var(--bees-green, #28a745)';
-            }
-        };
-    }
-
-    // modal.style.display = 'flex';
-    modal.classList.remove('hidden');
-    modal.classList.add('active');
-}
-
-// Helper functions for the inline details order form
-async function renderDetailsOrderForm(container, mesaId) {
-    container.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <!-- Products -->
-                <div style="flex: 1; min-width: 200px;">
-                    <input type="text" id="details-product-search" placeholder="🔍 Buscar producto..." class="form-input" style="width: 100%; margin-bottom: 10px;">
-                    <div id="details-products-grid" style="display: flex; flex-direction: column; gap: 5px; max-height: 300px; min-height: 100px; overflow-y: auto; padding-right: 5px; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 5px;">
-                        <div style="text-align: center; padding: 20px; color: #888;">Cargando productos...</div>
-                    </div>
+                <!-- Buscador de productos -->
+                <div>
+                    <input type="text" id="details-product-search" placeholder="🔍 Buscar producto..." class="form-input" style="width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid #555; color: #fff; font-size: 0.9rem;">
                 </div>
-                
-                <!-- Cart & User -->
-                <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 10px;">
-                    <div>
-                        <label style="font-size: 0.85em; color: #aaa;">Usuario:</label>
-                        <select id="details-user-select" class="form-select" style="width: 100%;">
-                            <option value="">Cargando...</option>
-                        </select>
-                    </div>
-                    
-                    <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 8px; overflow-y: auto; max-height: 150px; border: 1px solid #444;">
+
+                <!-- Catálogo de productos interactivo -->
+                <div style="font-size: 0.85rem; color: #aaa; margin-bottom: -6px;">Toca un producto para agregarlo:</div>
+                <div id="details-products-grid" style="display: flex; flex-direction: column; gap: 4px; max-height: 180px; min-height: 100px; overflow-y: auto; padding-right: 4px; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="text-align: center; padding: 15px; color: #888;">Cargando productos...</div>
+                </div>
+
+                <!-- Carrito actual -->
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                    <div style="font-size: 0.85rem; font-weight: bold; color: #ccc; margin-bottom: 6px;">📋 Items seleccionados:</div>
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 6px; padding: 6px; overflow-y: auto; max-height: 140px; border: 1px solid rgba(255,255,255,0.05);">
                         <ul id="details-cart-list" style="list-style: none; padding: 0; margin: 0;">
-                            <li style="text-align: center; color: #888; font-size: 0.9em;">Carrito vacío</li>
+                            <li style="text-align: center; color: #777; font-size: 0.85em; padding: 10px;">Carrito vacío (selecciona productos arriba)</li>
                         </ul>
                     </div>
-                    
-                    <div style="display: flex; justify-content: space-between; font-weight: bold; color: white;">
-                        <span>Total:</span>
-                        <span id="details-total-amount">$0.00</span>
-                    </div>
-                    
-                    <button id="btn-details-confirm-order" class="form-btn" style="background-color: var(--bees-green, #28a745); width: 100%; margin-top: 5px;">Hacer Pedido</button>
                 </div>
+
+                <!-- Total del Pedido -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.05rem; color: white; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                    <span>Total del Pedido:</span>
+                    <span id="details-total-amount" style="color: var(--bees-yellow, #fdb913); font-size: 1.15rem;">$0.00</span>
+                </div>
+
+                <!-- Botón Hacer Pedido -->
+                <button id="btn-details-confirm-order" class="form-btn" style="background-color: var(--bees-green, #28a745); color: white; width: 100%; padding: 12px; font-weight: bold; font-size: 1rem; border-radius: 8px; border: none; cursor: pointer; transition: background-color 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+                    🛒 Hacer Pedido
+                </button>
             </div>
         </div>
     `;
 
-    // Reset global cart for this context
+    // Reset local order cart
     orderCart = {};
+    updateDetailsCartUI();
 
-    // Bind Events IMMEDIATELY to prevent "frozen" button if async loading hangs
+    // Bind search input
     const searchInput = document.getElementById('details-product-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -877,38 +862,18 @@ async function renderDetailsOrderForm(container, mesaId) {
         });
     }
 
+    // Bind confirm button
     const confirmBtn = document.getElementById('btn-details-confirm-order');
     if (confirmBtn) {
         confirmBtn.addEventListener('click', () => handleDetailsOrderSubmit(mesaId));
     }
 
-    // Load Products
+    // Load products and populate grid
     await loadProductsForOrder();
     renderDetailsProductGrid(availableProducts);
 
-    // Load Users
-    const userSelect = document.getElementById('details-user-select');
-    if (userSelect) { // Check if element exists
-        try {
-            const users = await apiFetch(`/mesas/${mesaId}/usuarios-conectados`);
-            userSelect.innerHTML = '';
-            if (users.length === 0) {
-                const opt = document.createElement('option');
-                opt.value = "";
-                opt.textContent = "No hay usuarios";
-                userSelect.appendChild(opt);
-            } else {
-                users.forEach(u => {
-                    const opt = document.createElement('option');
-                    opt.value = u.id;
-                    opt.textContent = `${u.nick} (Lvl ${u.nivel})`;
-                    userSelect.appendChild(opt);
-                });
-            }
-        } catch (e) {
-            userSelect.innerHTML = '<option value="">Error</option>';
-        }
-    }
+    modal.classList.remove('hidden');
+    modal.classList.add('active');
 }
 
 function renderDetailsProductGrid(products) {
@@ -917,19 +882,19 @@ function renderDetailsProductGrid(products) {
     grid.innerHTML = '';
 
     if (products.length === 0) {
-        grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #aaa;">No se encontraron productos.</div>';
+        grid.innerHTML = '<div style="text-align: center; padding: 15px; color: #888; font-size: 0.85rem;">No se encontraron productos.</div>';
         return;
     }
 
     products.forEach(p => {
         const row = document.createElement('div');
-        row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: #333; border-bottom: 1px solid #444; padding: 10px; cursor: pointer; transition: background 0.2s; border-radius: 4px;';
-        row.onmouseover = () => row.style.background = '#444';
-        row.onmouseout = () => row.style.background = '#333';
+        row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.05); padding: 7px 10px; cursor: pointer; transition: background 0.15s; border-radius: 5px;';
+        row.onmouseover = () => row.style.background = 'rgba(255,255,255,0.12)';
+        row.onmouseout = () => row.style.background = 'rgba(255,255,255,0.06)';
 
         row.innerHTML = `
-            <div style="font-weight: bold; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px;">${p.nombre}</div>
-            <div style="color: var(--bees-yellow, #f5c518); font-weight: bold; min-width: 60px; text-align: right;">$${p.valor}</div>
+            <div style="font-weight: 500; color: #f0f0f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; font-size: 0.9rem;">${p.nombre}</div>
+            <div style="color: var(--bees-yellow, #f5c518); font-weight: bold; min-width: 60px; text-align: right; font-size: 0.9rem;">$${Number(p.valor).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</div>
         `;
 
         row.onclick = () => {
@@ -953,156 +918,95 @@ function updateDetailsCartUI() {
     const items = Object.values(orderCart);
 
     if (items.length === 0) {
-        list.innerHTML = '<li style="text-align: center; color: #888; font-size: 0.9em;">Carrito vacío</li>';
+        list.innerHTML = '<li style="text-align: center; color: #777; font-size: 0.85em; padding: 10px;">Carrito vacío (selecciona productos arriba)</li>';
     } else {
         items.forEach(item => {
             const li = document.createElement('li');
-            li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 0.9em; border-bottom: 1px solid #444; padding-bottom: 5px;';
+            li.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.9rem; background: rgba(255,255,255,0.04); padding: 6px 8px; border-radius: 5px; border-bottom: 1px solid rgba(255,255,255,0.05);';
             li.innerHTML = `
-                <div style="flex: 1; color: white; font-weight: bold;">${item.quantity}x ${item.nombre}</div>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <button class="btn-remove-item" style="background: none; border: none; color: #ff4444; cursor: pointer; font-weight: bold;">&times;</button>
+                <div style="flex: 1; min-width: 0; margin-right: 8px;">
+                    <div style="font-weight: bold; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.nombre}</div>
+                    <div style="font-size: 0.8em; color: #aaa;">$${Number(item.valor).toLocaleString('es-CO', { minimumFractionDigits: 2 })} c/u</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <button class="btn-cart-minus" style="width: 22px; height: 22px; border-radius: 4px; border: none; background: #555; color: white; cursor: pointer; font-weight: bold; font-size: 0.85rem; line-height: 1;">-</button>
+                    <span style="font-weight: bold; min-width: 18px; text-align: center; color: #fff;">${item.quantity}</span>
+                    <button class="btn-cart-plus" style="width: 22px; height: 22px; border-radius: 4px; border: none; background: var(--bees-yellow, #fdb913); color: #000; cursor: pointer; font-weight: bold; font-size: 0.85rem; line-height: 1;">+</button>
+                    <button class="btn-cart-delete" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; margin-left: 2px; padding: 0;" title="Quitar">❌</button>
                 </div>
             `;
-            li.querySelector('.btn-remove-item').onclick = () => {
+            li.querySelector('.btn-cart-minus').onclick = () => {
                 orderCart[item.id].quantity--;
                 if (orderCart[item.id].quantity <= 0) delete orderCart[item.id];
                 updateDetailsCartUI();
             };
+            li.querySelector('.btn-cart-plus').onclick = () => {
+                orderCart[item.id].quantity++;
+                updateDetailsCartUI();
+            };
+            li.querySelector('.btn-cart-delete').onclick = () => {
+                delete orderCart[item.id];
+                updateDetailsCartUI();
+            };
             list.appendChild(li);
-            total += item.valor * item.quantity;
+            total += Number(item.valor) * item.quantity;
         });
     }
-    totalEl.textContent = `$${total.toFixed(2)}`;
+    totalEl.textContent = `$${total.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`;
 }
 
 async function handleDetailsOrderSubmit(mesaId) {
     const confirmBtn = document.getElementById('btn-details-confirm-order');
-    const userSelect = document.getElementById('details-user-select');
-    const usuarioId = userSelect ? userSelect.value : null;
-
-    if (!usuarioId) {
-        showNotification("Selecciona un usuario válido.", "error");
-        return;
-    }
-
     const items = Object.values(orderCart);
     if (items.length === 0) {
-        showNotification("El carrito está vacío.", "error");
+        showNotification("El carrito está vacío. Agrega al menos un producto.", "error");
         return;
     }
 
-    // Get user nickname for display
-    let userNick = "Usuario";
-    if (userSelect && userSelect.selectedIndex !== -1) {
-        userNick = userSelect.options[userSelect.selectedIndex].text;
-    }
-
-    // Calculate total
     const total = items.reduce((sum, item) => sum + (parseFloat(item.valor) * item.quantity), 0);
+    const mesaAccount = currentAccounts.find(a => a.mesa_id == mesaId);
+    const mesaLabel = mesaAccount ? (mesaAccount.mesa_nombre || `Mesa ${mesaId}`) : `Mesa ${mesaId}`;
 
-    // Construct confirmation message
-    let msg = `¿Confirmar pedido para ${userNick}?\n\n`;
+    let msg = `¿Confirmar pedido para ${mesaLabel}?\n\n`;
     items.forEach(item => {
-        msg += `${item.quantity}x ${item.nombre} - $${(parseFloat(item.valor) * item.quantity).toFixed(2)}\n`;
+        msg += `• ${item.quantity}x ${item.nombre} ($${(parseFloat(item.valor) * item.quantity).toLocaleString('es-CO', { minimumFractionDigits: 2 })})\n`;
     });
-    msg += `\nTotal: $${total.toFixed(2)}`;
+    msg += `\nTotal: $${total.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`;
 
-    // Simple native confirmation to avoid UI freezing issues
-    if (confirm(msg)) {
-        if (confirmBtn) confirmBtn.disabled = true;
-        await processDetailsOrder(mesaId, usuarioId, items);
+    if (!confirm(msg)) return;
+
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Enviando pedido...';
     }
-}
 
-function showOrderConfirmationModal(mesaId, usuarioId, userNick, items) {
-    const modal = document.getElementById('confirm-order-creation-modal');
-    if (!modal) return;
-
-    // Populate Modal Data
-    document.getElementById('confirm-order-user').textContent = userNick;
-
-    const itemsList = document.getElementById('confirm-order-items');
-    itemsList.innerHTML = '';
-
-    let total = 0;
-    items.forEach(item => {
-        const li = document.createElement('li');
-        li.style.marginBottom = '5px';
-        li.innerHTML = `<strong>${item.quantity}x</strong> ${item.nombre} <span style="float:right; color:#ddd;">$${(item.valor * item.quantity).toFixed(2)}</span>`;
-        itemsList.appendChild(li);
-        total += item.valor * item.quantity;
-    });
-
-    document.getElementById('confirm-order-total').textContent = `$${total.toFixed(2)}`;
-
-    // Show Modal
-    modal.classList.remove('hidden');
-    modal.classList.add('active');
-
-    // Setup Buttons
-    const btnConfirm = document.getElementById('btn-confirm-order-final');
-    const btnCancel = document.getElementById('btn-cancel-order-final');
-
-    // Remove old listeners to prevent multiple firings
-    const newBtnConfirm = btnConfirm.cloneNode(true);
-    const newBtnCancel = btnCancel.cloneNode(true);
-    btnConfirm.parentNode.replaceChild(newBtnConfirm, btnConfirm);
-    btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
-
-    // Cancel Handler
-    newBtnCancel.addEventListener('click', () => {
-        modal.classList.remove('active');
-        modal.classList.add('hidden');
-    });
-
-    // Confirm Handler
-    newBtnConfirm.addEventListener('click', async () => {
-        modal.classList.remove('active');
-        modal.classList.add('hidden');
-        await processDetailsOrder(mesaId, usuarioId, items);
-    });
-}
-
-async function processDetailsOrder(mesaId, usuarioId, items) {
     try {
-        for (const item of items) {
-            const payload = {
+        const payload = {
+            items: items.map(item => ({
                 producto_id: item.id,
                 cantidad: item.quantity
-            };
-            await apiFetch(`/consumos/${usuarioId}`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-        }
+            }))
+        };
 
-        showNotification("Pedido creado.", "success");
+        await apiFetch(`/admin/tables/${mesaId}/pedidos`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
 
-        // Refresh details
-        const account = currentAccounts.find(a => a.mesa_id == mesaId);
-        if (account && account.cuenta_id) {
-            await showAccountDetails(account.cuenta_id);
-        } else {
-            // Fallback reload page if we can't refresh details easily
-            await loadAccountsPage();
-            // Close details modal if we reload page
-            const detailsModal = document.getElementById('account-details-modal');
-            if (detailsModal) {
-                detailsModal.classList.remove('active');
-                detailsModal.classList.add('hidden');
-            }
-        }
-
+        showNotification("Pedido creado exitosamente.", "success");
+        orderCart = {};
+        updateDetailsCartUI();
+        await reloadAccountDetails(mesaId);
     } catch (e) {
-        showNotification(e.message || "Error", "error");
+        showNotification(e.message || "Error al crear el pedido", "error");
     } finally {
-        const btn = document.getElementById('btn-details-confirm-order');
-        if (btn) {
-            btn.disabled = false;
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '🛒 Hacer Pedido';
         }
     }
 }
+
 
 async function handleCreateMesaSubmit(event) {
     event.preventDefault();
@@ -1110,36 +1014,37 @@ async function handleCreateMesaSubmit(event) {
     const numeroInput = form.querySelector('#mesa-numero');
     const nombreInput = form.querySelector('#mesa-nombre');
 
-    const numeroMesa = (numeroInput && numeroInput.value) || '';
-    let nombreMesa = (nombreInput && nombreInput.value) || '';
+    const numeroMesa = (numeroInput && numeroInput.value ? numeroInput.value.trim() : '');
+    const nombreMesa = (nombreInput && nombreInput.value ? nombreInput.value.trim() : '');
 
     // Validar que al menos uno de los dos campos tenga valor
-    if ((!numeroMesa || numeroMesa.trim() === '') && (!nombreMesa || nombreMesa.trim() === '')) {
+    if (!numeroMesa && !nombreMesa) {
         showNotification('Por favor ingresa un número o un nombre para la mesa.', 'error');
         return;
     }
 
-    // Si no hay nombre personalizado, usar el número como nombre
-    if (!nombreMesa || nombreMesa.trim() === '') {
-        nombreMesa = `Mesa ${numeroMesa}`;
+    let finalNombre = '';
+    let qrCode = '';
+
+    if (numeroMesa && nombreMesa) {
+        finalNombre = `${nombreMesa} (Mesa ${numeroMesa})`;
+        qrCode = `karaoke-mesa-${numeroMesa}`;
+    } else if (numeroMesa) {
+        finalNombre = `Mesa ${numeroMesa}`;
+        qrCode = `karaoke-mesa-${numeroMesa}`;
     } else {
-        nombreMesa = nombreMesa.trim();
+        finalNombre = nombreMesa;
+        const safeSlug = nombreMesa.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        qrCode = `karaoke-mesa-${safeSlug || 'espacio'}`;
     }
 
     try {
-        // Generar el código QR (sin relleno de ceros para que coincida con el ID en cache)
-        let qrCode;
-        if (numeroMesa && numeroMesa.trim() !== '') {
-            qrCode = `karaoke-mesa-${numeroMesa.toString()}`;
-        } else {
-            // Si solo hay nombre, generar QR basado en el nombre (sanitizado)
-            const safeName = nombreMesa.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-            qrCode = `karaoke-mesa-${safeName}`;
-        }
-
         const activeLocalId = sessionStorage.getItem('active_local_id');
         const payload = {
-            nombre: nombreMesa,
+            nombre: finalNombre,
             qr_code: qrCode,
             local_id: activeLocalId ? parseInt(activeLocalId, 10) : null
         };
@@ -1148,7 +1053,7 @@ async function handleCreateMesaSubmit(event) {
             body: JSON.stringify(payload)
         });
 
-        showNotification(`Mesa "${nombreMesa}" creada exitosamente.`, 'success');
+        showNotification(`Mesa "${finalNombre}" creada exitosamente.`, 'success');
 
         // Cerrar el modal
         const modal = document.getElementById('create-mesa-modal');
@@ -1473,7 +1378,65 @@ function setupAccountsListeners() {
     if (historyModal) historyModal.onclick = (e) => { if (e.target === historyModal) { historyModal.classList.remove('active'); historyModal.classList.add('hidden'); } };
 
     if (closeDetailsXBtn) closeDetailsXBtn.onclick = () => { if (detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
-    if (detailsModal) detailsModal.onclick = (e) => { if (e.target === detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
+    if (detailsModal) {
+        detailsModal.onclick = (e) => { if (e.target === detailsModal) { detailsModal.classList.remove('active'); detailsModal.classList.add('hidden'); } };
+
+        // Event delegation for edit and delete buttons inside detailsModal
+        detailsModal.addEventListener('click', async (e) => {
+            const editBtn = e.target.closest('.btn-edit-consumo');
+            if (editBtn) {
+                const consumoId = editBtn.dataset.consumoId;
+                const mesaId = editBtn.dataset.mesaId;
+                const currentQty = parseInt(editBtn.dataset.qty, 10) || 1;
+                const prodNombre = editBtn.dataset.nombre || 'este producto';
+
+                const newQtyStr = prompt(`Ingresa la nueva cantidad para "${prodNombre}":`, currentQty);
+                if (newQtyStr === null) return;
+                const newQty = parseInt(newQtyStr, 10);
+                if (isNaN(newQty) || newQty <= 0) {
+                    showNotification('Por favor ingresa una cantidad válida mayor a 0.', 'error');
+                    return;
+                }
+                if (newQty === currentQty) return;
+
+                try {
+                    await apiFetch(`/admin/consumos/${consumoId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ cantidad: newQty })
+                    });
+                    showNotification(`Cantidad de "${prodNombre}" actualizada a ${newQty}.`, 'success');
+                    await reloadAccountDetails(mesaId);
+                } catch (err) {
+                    console.error('Error updating consumo:', err);
+                    showNotification(err.message || 'Error al actualizar la cantidad.', 'error');
+                }
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.btn-delete-consumo');
+            if (deleteBtn) {
+                const consumoId = deleteBtn.dataset.consumoId;
+                const mesaId = deleteBtn.dataset.mesaId;
+                const prodNombre = deleteBtn.dataset.nombre || 'este producto';
+
+                if (!confirm(`¿Estás seguro de eliminar "${prodNombre}" del pedido?\nSe reintegrará el inventario/stock y se actualizará la cuenta de la mesa.`)) {
+                    return;
+                }
+
+                try {
+                    await apiFetch(`/admin/consumos/${consumoId}`, {
+                        method: 'DELETE'
+                    });
+                    showNotification(`"${prodNombre}" eliminado del pedido exitosamente.`, 'success');
+                    await reloadAccountDetails(mesaId);
+                } catch (err) {
+                    console.error('Error deleting consumo:', err);
+                    showNotification(err.message || 'Error al eliminar el producto.', 'error');
+                }
+                return;
+            }
+        });
+    }
 
     // Setup Order Modal
     injectOrderModal();
@@ -1501,6 +1464,33 @@ function setupAccountsListeners() {
 
     // Setup mesa card listeners (delegated)
     setupMesaCardListeners();
+}
+
+async function reloadAccountDetails(mesaId) {
+    try {
+        await loadAccountsPage();
+        const updatedAccount = currentAccounts.find(a => a.mesa_id == mesaId);
+        if (updatedAccount) {
+            const details = {
+                mesa_id: updatedAccount.mesa_id,
+                mesa_nombre: updatedAccount.mesa_nombre || `Mesa ${updatedAccount.mesa_id}`,
+                total_consumido: updatedAccount.total_consumido,
+                total_pagado: updatedAccount.total_pagado,
+                saldo_pendiente: updatedAccount.saldo_pendiente,
+                consumos: updatedAccount.consumos || [],
+                pagos: updatedAccount.pagos || []
+            };
+            await renderDetailsModal(details);
+        } else {
+            const detailsModal = document.getElementById('account-details-modal');
+            if (detailsModal) {
+                detailsModal.classList.remove('active');
+                detailsModal.classList.add('hidden');
+            }
+        }
+    } catch (e) {
+        console.error("Error refreshing account details:", e);
+    }
 }
 
 // ========== MESA CARD LISTENERS & HANDLERS ==========
@@ -1534,18 +1524,30 @@ function setupMesaCardListeners() {
             await updateMesaStatus(mesaId, 'activate');
         }
 
-        // Close Table Button (X) - Replaces Deactivate
+        // Close Table Session Button (X)
         if (target.matches('.btn-close-table') || target.closest('.btn-close-table')) {
             const btn = target.matches('.btn-close-table') ? target : target.closest('.btn-close-table');
             const mesaId = btn.dataset.mesaId;
 
-            // Check for outstanding balance before deactivating
+            // Check for outstanding balance before closing session
             const account = currentAccounts.find(a => a.mesa_id == mesaId);
             if (account && Number(account.saldo_pendiente) > 0) {
-                showNotification(`⚠️ No se puede desactivar la Mesa ${mesaId} porque tiene una deuda pendiente de $${account.saldo_pendiente}. Por favor registre el pago primero.`, 'error');
+                showNotification(`⚠️ No se puede cerrar la sesión de la Mesa ${mesaId} porque tiene una deuda pendiente de $${Number(account.saldo_pendiente).toLocaleString('es-CO', { minimumFractionDigits: 2 })}. Por favor registre el pago primero.`, 'error');
                 return;
             }
-            await updateMesaStatus(mesaId, 'deactivate');
+
+            if (!confirm(`¿Estás seguro de CERRAR la sesión de la Mesa ${mesaId}?\nEsta acción desconectará a los clientes, invalidará el QR y dejará la mesa lista para iniciar desde cero en una próxima sesión.`)) {
+                return;
+            }
+
+            try {
+                await apiFetch(`/admin/tables/${mesaId}/close-session`, { method: 'POST' });
+                showNotification(`Sesión de Mesa ${mesaId} cerrada exitosamente.`, 'success');
+                await loadAccountsPage();
+            } catch (error) {
+                console.error(`Error closing session for table ${mesaId}:`, error);
+                showNotification(error.message || `Error al cerrar la sesión de la mesa`, 'error');
+            }
         }
 
         // View Details Button
@@ -1570,7 +1572,7 @@ function setupMesaCardListeners() {
                     consumos: account.consumos || [],
                     pagos: account.pagos || []
                 };
-                renderDetailsModal(details);
+                await renderDetailsModal(details);
             } else {
                 // Si por alguna razón no está en currentAccounts, intentar por API
                 try {

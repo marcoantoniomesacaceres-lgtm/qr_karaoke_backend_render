@@ -305,10 +305,15 @@ def get_ventas_turno(db: Session, local_id: Optional[int] = None, fecha_str: Opt
     # Desglose de métodos de pago
     metodos_counter = Counter()
     metodos_trans = Counter()
+    total_consumo_interno = 0.0
     for p in pagos_turno:
         metodo = p.metodo_pago or "Efectivo"
-        metodos_counter[metodo] += float(p.monto)
+        monto_pago = float(p.monto)
+        metodos_counter[metodo] += monto_pago
         metodos_trans[metodo] += 1
+        if metodo and ("consumo interno" in metodo.lower() or "consumo_interno" in metodo.lower()):
+            total_consumo_interno += monto_pago
+
     metodos_pago_list = [
         {"metodo": m, "total": float(tot), "transacciones": metodos_trans[m]}
         for m, tot in metodos_counter.items()
@@ -393,6 +398,7 @@ def get_ventas_turno(db: Session, local_id: Optional[int] = None, fecha_str: Opt
         "hora_fin_turno": end_dt.strftime("%Y-%m-%d %H:%M"),
         "total_ventas": float(total_ventas),
         "total_pagado": float(total_pagado),
+        "total_consumo_interno": float(total_consumo_interno),
         "saldo_pendiente": float(saldo_pendiente),
         "total_pedidos": len(consumos_turno),
         "total_canciones": len(songs_turno),

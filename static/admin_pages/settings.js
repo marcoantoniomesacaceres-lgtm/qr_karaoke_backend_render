@@ -229,7 +229,7 @@ function renderSettings(settings, container) {
                     <input type="hidden" id="local-id-field" value="">
                     <div class="bees-form-group" style="margin-bottom: 12px;">
                         <label style="color: #a29bfe; font-size: 13px; font-weight: 600;">Nombre del Establecimiento</label>
-                        <input type="text" id="local-nombre" required placeholder="Ej: QrMusic Bar - Sede Norte" style="width: 100%; background: #1e1738; color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px;">
+                        <input type="text" id="local-nombre" required placeholder="Ej: My Qr Music Bar - Sede Norte" style="width: 100%; background: #1e1738; color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px;">
                     </div>
                     <div class="bees-form-group" style="margin-bottom: 12px;">
                         <label style="color: #a29bfe; font-size: 13px; font-weight: 600;">Identificador URL (Slug)</label>

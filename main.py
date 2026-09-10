@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-app = FastAPI(title="Karaoke 'LA CANTA QUE RANA'", lifespan=lifespan)
+app = FastAPI(title="My Qr Music", lifespan=lifespan)
 
 # ===============================
 # CORS MIDDLEWARE

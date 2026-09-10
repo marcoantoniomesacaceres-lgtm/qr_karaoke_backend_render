@@ -53,7 +53,13 @@ class ConsumoHistorial(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ConsumoCantidadUpdate(BaseModel):
+    cantidad: int
+
+
 class ConsumoItemDetalle(BaseModel):
+    id: Optional[int] = None
+    producto_id: Optional[int] = None
     producto_nombre: str
     cantidad: int
     valor_total: Decimal

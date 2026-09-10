@@ -9,6 +9,7 @@ from app.services import websocket_manager
 import asyncio
 import datetime
 from app.utils.cache_manager import cache_manager  # NUEVO: Importar cache manager
+from app.utils.timezone_utils import now_bogota
 from fastapi.encoders import jsonable_encoder  # Para serializar datos
 
 router = APIRouter()
@@ -58,7 +59,7 @@ async def registrar_consumo_endpoint(
             'producto_nombre': db_consumo.producto.nombre if hasattr(db_consumo, 'producto') and db_consumo.producto else "Producto",
             'usuario_nick': db_consumo.usuario.nick if hasattr(db_consumo, 'usuario') and db_consumo.usuario else "Usuario",
             'mesa_nombre': mesa_nombre,
-            'created_at': getattr(db_consumo, 'created_at', datetime.datetime.now()).isoformat() if hasattr(getattr(db_consumo, 'created_at', None), 'isoformat') else str(getattr(db_consumo, 'created_at', ''))
+            'created_at': getattr(db_consumo, 'created_at', now_bogota()).isoformat() if hasattr(getattr(db_consumo, 'created_at', None), 'isoformat') else str(getattr(db_consumo, 'created_at', ''))
         } 
         # Fire-and-forget the notification to avoid affecting the HTTP response
         asyncio.create_task(websocket_manager.manager.broadcast_consumo_created(consumo_payload))
@@ -104,7 +105,7 @@ async def usuario_pide_producto(
             'producto_nombre': db_consumo.producto.nombre if hasattr(db_consumo, 'producto') and db_consumo.producto else "Producto",
             'usuario_nick': db_consumo.usuario.nick if hasattr(db_consumo, 'usuario') and db_consumo.usuario else "Usuario",
             'mesa_nombre': mesa_nombre,
-            'created_at': getattr(db_consumo, 'created_at', datetime.datetime.now()).isoformat() if hasattr(getattr(db_consumo, 'created_at', None), 'isoformat') else str(getattr(db_consumo, 'created_at', ''))
+            'created_at': getattr(db_consumo, 'created_at', now_bogota()).isoformat() if hasattr(getattr(db_consumo, 'created_at', None), 'isoformat') else str(getattr(db_consumo, 'created_at', ''))
         } 
         asyncio.create_task(websocket_manager.manager.broadcast_consumo_created(consumo_payload))
     except Exception:
@@ -146,11 +147,11 @@ async def usuario_pide_carrito(
             
             pedido_payload = {
                 'type': 'consolidated_pedido',
-                'id': f"pedido-{datetime.datetime.now().timestamp()}-{usuario_id}", 
+                'id': f"pedido-{now_bogota().timestamp()}-{usuario_id}", 
                 'consumo_ids': [getattr(c, 'id', None) for c in consumos_creados],
                 'usuario_nick': primer_consumo.usuario.nick if hasattr(primer_consumo, 'usuario') and primer_consumo.usuario else 'Desconocido',
                 'mesa_nombre': mesa_nombre,
-                'created_at': getattr(primer_consumo, 'created_at', datetime.datetime.now()).isoformat() if hasattr(getattr(primer_consumo, 'created_at', None), 'isoformat') else str(getattr(primer_consumo, 'created_at', '')),
+                'created_at': getattr(primer_consumo, 'created_at', now_bogota()).isoformat() if hasattr(getattr(primer_consumo, 'created_at', None), 'isoformat') else str(getattr(primer_consumo, 'created_at', '')),
                 'items': [
                     {'producto_nombre': c.producto.nombre if hasattr(c, 'producto') and c.producto else "Producto", 'cantidad': getattr(c, 'cantidad', 1)} for c in consumos_creados
                 ]

@@ -279,8 +279,6 @@ async function loadQueueData() {
 function renderApprovedSongs(songs, listElement) {
     if (!listElement) return;
 
-    // Queremos mostrar como máximo UNA canción: la que está reproduciéndose
-    // si existe, o en su defecto la primera canción aprobada (siguiente en sonar).
     let item = null;
     let isPlaying = false;
     
@@ -312,6 +310,7 @@ function renderApprovedSongs(songs, listElement) {
 
     if (!item) {
         const emptyItem = document.createElement('li');
+        emptyItem.className = 'queue-item-container';
         emptyItem.innerHTML = '<div class="bees-alert bees-alert-info"><span class="bees-alert-icon">ℹ️</span><div>La cola de canciones está vacía.</div></div>';
         listElement.appendChild(emptyItem);
         return;
@@ -319,51 +318,59 @@ function renderApprovedSongs(songs, listElement) {
 
     const song = item;
     const li = document.createElement('li');
-    li.style.marginBottom = '16px';
+    li.className = 'queue-item-container';
 
-    let addedBy = 'Desconocido';
+    let userNick = 'Anónimo';
+    let mesaText = 'General';
     if (song.usuario) {
-        addedBy = song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick;
+        if (song.usuario.nick) userNick = song.usuario.nick;
+        if (song.usuario.mesa && song.usuario.mesa.nombre) {
+            mesaText = song.usuario.mesa.nombre;
+        } else if (song.usuario.mesa_id) {
+            mesaText = `Mesa ${song.usuario.mesa_id}`;
+        }
+    } else if (song.mesa_nombre) {
+        mesaText = song.mesa_nombre;
+    } else if (song.mesa_id) {
+        mesaText = `Mesa ${song.mesa_id}`;
     }
 
-    const statusBadge = isPlaying
-        ? '<span class="bees-badge bees-badge-success">▶️ Reproduciendo</span>'
-        : '<span class="bees-badge bees-badge-info">#1</span>';
-
     const isPaused = !playerState.isPlaying;
-    // SVG Icons
     const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
     const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
     const restartIcon = `<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>`;
     const nextIcon = `<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>`;
 
-    // Determinamos la acción del botón central: 
-    // Si ya está reproduciendo, toggle pausa. Si no, iniciar reproducción.
     const middleAction = isPlaying ? 'pause-resume-toggle' : 'play-song';
     const middleTitle = isPlaying ? (isPaused ? 'Reanudar' : 'Pausar') : 'Reproducir Ahora';
     const middleIcon = isPlaying ? (isPaused ? playIcon : pauseIcon) : playIcon;
 
-    buttonsHtml = `
-        <div class="admin-player-controls">
-            <button class="player-btn" data-id="${song.id}" data-action="restart" title="Reiniciar">${restartIcon}</button>
-            <button class="player-btn player-btn-large" data-id="${song.id}" data-action="${middleAction}" title="${middleTitle}">${middleIcon}</button>
-            <button class="player-btn" data-id="${song.id}" data-action="play-next" title="Siguiente">${nextIcon}</button>
-        </div>
-    `;
-
     li.innerHTML = `
-        <div style="background: var(--page-input-bg); border-radius: 12px; padding: 16px; border-left: 4px solid ${isPlaying ? 'var(--bees-green)' : 'var(--bees-yellow)'};">
-            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                <img src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura" style="width: 60px; height: 45px; border-radius: 6px; object-fit: cover;">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; color: var(--page-text); margin-bottom: 4px; word-break: break-word;">${song.titulo}</div>
-                    <div style="font-size: 12px; color: var(--page-text-secondary);">Agregada por: <strong>${addedBy}</strong></div>
+        <div class="queue-song-card queue-song-card-active">
+            <div class="queue-turn-ribbon queue-turn-ribbon-active">
+                <span class="queue-turn-number">▶️</span>
+            </div>
+            <div class="queue-song-main">
+                <div class="queue-song-header">
+                    <img class="queue-song-thumb" src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura" onerror="this.onerror=null;this.src='https://placehold.co/120x90/1A1A1A/FFD700?text=Song';">
+                    <div class="queue-song-info">
+                        <div class="queue-song-title" title="${song.titulo}">${song.titulo}</div>
+                        <div class="queue-song-meta">
+                            <span class="queue-song-requester">👤 <strong>${userNick}</strong></span>
+                            <span class="bees-badge ${isPlaying ? 'bees-badge-success' : 'bees-badge-warning'}" style="font-size:0.75em; padding:2px 8px;">${isPlaying ? '▶️ En Reproducción' : '⏸️ Listo para sonar'}</span>
+                        </div>
+                    </div>
+                    <div class="queue-table-box" title="Mesa de origen">
+                        <div class="queue-table-icon">🏠</div>
+                        <div class="queue-table-text">${mesaText}</div>
+                    </div>
+                </div>
+                <div class="admin-player-controls" style="margin-top: 6px;">
+                    <button class="player-btn" data-id="${song.id}" data-action="restart" title="Reiniciar">${restartIcon}</button>
+                    <button class="player-btn player-btn-large" data-id="${song.id}" data-action="${middleAction}" title="${middleTitle}">${middleIcon}</button>
+                    <button class="player-btn" data-id="${song.id}" data-action="play-next" title="Siguiente">${nextIcon}</button>
                 </div>
             </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                ${statusBadge}
-            </div>
-            ${buttonsHtml}
         </div>
     `;
 
@@ -371,60 +378,89 @@ function renderApprovedSongs(songs, listElement) {
 }
 
 function renderLazySongs(songs, listElement) {
-    console.log("songs ", songs, "listElement ", listElement)
+    if (!listElement) return;
     listElement.innerHTML = '';
 
     if (!songs || songs.length === 0) {
         const emptyItem = document.createElement('li');
-        emptyItem.innerHTML = '<div class="bees-alert bees-alert-info"><span class="bees-alert-icon">✅</span><div>No hay canciones en cola lazy.</div></div>';
+        emptyItem.className = 'queue-item-container';
+        emptyItem.innerHTML = '<div class="bees-alert bees-alert-info"><span class="bees-alert-icon">✅</span><div>No hay canciones en la cola de espera.</div></div>';
         listElement.appendChild(emptyItem);
         return;
     }
 
+    const lazyCount = Array.isArray(songs) ? songs.length : 0;
+
     songs.forEach((song, index) => {
         const li = document.createElement('li');
-        li.style.marginBottom = '16px';
+        li.className = 'queue-item-container';
+        li.id = `lazy-song-${song.id}`;
 
-        let addedBy = 'Desconocido';
+        let userNick = 'Anónimo';
+        let mesaText = 'General';
+
         if (song.usuario) {
-            addedBy = song.usuario.mesa ? song.usuario.mesa.nombre : song.usuario.nick;
+            if (song.usuario.nick) userNick = song.usuario.nick;
+            if (song.usuario.mesa && song.usuario.mesa.nombre) {
+                mesaText = song.usuario.mesa.nombre;
+            } else if (song.usuario.mesa_id) {
+                mesaText = `Mesa ${song.usuario.mesa_id}`;
+            }
+        } else if (song.mesa_nombre) {
+            mesaText = song.mesa_nombre;
+        } else if (song.mesa_id) {
+            mesaText = `Mesa ${song.mesa_id}`;
         }
 
-        // Indicador de posición en la cola lazy
-        const positionBadge = index === 0
-            ? '<span class="bees-badge bees-badge-success">🎯 Siguiente en aprobarse</span>'
-            : `<span class="bees-badge bees-badge-info">#${index + 1} en cola lazy</span>`;
-
-        // Botones para gestionar la canción lazy
-        // Mostrar/ocultar botones según la posición en la cola (primero / último)
-        const lazyCount = Array.isArray(songs) ? songs.length : 0;
-        const showMoveUp = index > 0 && lazyCount > 1;
-        const showMoveDown = index < lazyCount - 1 && lazyCount > 1;
-        const lazyButtons = [];
-        if (showMoveUp) lazyButtons.push(`<button class="bees-btn bees-btn-info bees-btn-small" data-id="${song.id}" data-action="move-lazy-up" title="Subir">⬆️ Subir</button>`);
-        if (showMoveDown) lazyButtons.push(`<button class="bees-btn bees-btn-warning bees-btn-small" data-id="${song.id}" data-action="move-lazy-down" title="Bajar">⬇️ Bajar</button>`);
-        // Siempre permitir eliminar
-        lazyButtons.push(`<button class="bees-btn bees-btn-danger bees-btn-small" data-id="${song.id}" data-action="remove-lazy" title="Eliminar">❌ Eliminar</button>`);
-
-        const buttonsHtml = `
-            <div style="display: grid; grid-template-columns: repeat(${lazyButtons.length}, 1fr); gap: 8px; margin-top: 12px;">
-                ${lazyButtons.join('')}
-            </div>
-        `;
+        const isFirst = index === 0;
+        const isLast = index === lazyCount - 1;
 
         li.innerHTML = `
-            <div style="background: var(--page-input-bg); border-radius: 12px; padding: 16px; border-left: 4px solid var(--bees-blue);">
-                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                    <img src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura" style="width: 60px; height: 45px; border-radius: 6px; object-fit: cover;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--page-text); margin-bottom: 4px; word-break: break-word;">${song.titulo}</div>
-                        <div style="font-size: 12px; color: var(--page-text-secondary);">Agregada por: <strong>${addedBy}</strong></div>
+            <div class="queue-song-card">
+                <!-- Cinta vertical izquierda con el número de turno grande -->
+                <div class="queue-turn-ribbon">
+                    <span class="queue-turn-number">${index + 1}</span>
+                </div>
+
+                <!-- Contenido principal de la canción -->
+                <div class="queue-song-main">
+                    <div class="queue-song-header">
+                        <img class="queue-song-thumb" src="https://i.ytimg.com/vi/${song.youtube_id}/mqdefault.jpg" alt="Miniatura" onerror="this.onerror=null;this.src='https://placehold.co/120x90/1A1A1A/FFD700?text=Song';">
+                        
+                        <div class="queue-song-info">
+                            <div class="queue-song-title" title="${song.titulo}">${song.titulo}</div>
+                            <div class="queue-song-meta">
+                                <span class="queue-song-requester">👤 <strong>${userNick}</strong></span>
+                                ${isFirst ? '<span class="bees-badge bees-badge-success" style="font-size:0.75em; padding:2px 8px;">🎯 Siguiente en sonar</span>' : ''}
+                            </div>
+                        </div>
+
+                        <!-- Cuadro a la derecha con número de mesa grande -->
+                        <div class="queue-table-box" title="Mesa de origen">
+                            <div class="queue-table-icon">🏠</div>
+                            <div class="queue-table-text">${mesaText}</div>
+                        </div>
+                    </div>
+
+                    <!-- Panel de botones de acción con iconos -->
+                    <div class="queue-actions-panel">
+                        <button class="queue-action-btn queue-btn-top" data-id="${song.id}" data-action="move-lazy-top" title="Subir al tope (primero)" ${isFirst ? 'disabled' : ''}>
+                            ⏫
+                        </button>
+                        <button class="queue-action-btn queue-btn-up" data-id="${song.id}" data-action="move-lazy-up" title="Subir una posición" ${isFirst ? 'disabled' : ''}>
+                            ⬆️
+                        </button>
+                        <button class="queue-action-btn queue-btn-down" data-id="${song.id}" data-action="move-lazy-down" title="Bajar una posición" ${isLast ? 'disabled' : ''}>
+                            ⬇️
+                        </button>
+                        <button class="queue-action-btn queue-btn-bottom" data-id="${song.id}" data-action="move-lazy-bottom" title="Bajar al final (último)" ${isLast ? 'disabled' : ''}>
+                            ⏬
+                        </button>
+                        <button class="queue-action-btn queue-btn-delete" data-id="${song.id}" data-action="remove-lazy" title="Eliminar de la cola">
+                            🗑️
+                        </button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                    ${positionBadge}
-                </div>
-                ${buttonsHtml}
             </div>
         `;
         listElement.appendChild(li);
@@ -637,11 +673,31 @@ async function handleQueueActions(event) {
                 showNotification(`Error al mover: ${error.message}`, 'error');
             }
 
+        } else if (action === 'move-lazy-top') {
+            // Mover canción lazy al tope
+            try {
+                await apiFetch(`/admin/canciones/lazy/${songId}/move-top`, { method: 'POST' });
+                showNotification('⏫ Canción movida al tope de la cola', 'info');
+                shouldReloadQueue = true;
+            } catch (error) {
+                showNotification(`Error al mover: ${error.message}`, 'error');
+            }
+
+        } else if (action === 'move-lazy-bottom') {
+            // Mover canción lazy al final
+            try {
+                await apiFetch(`/admin/canciones/lazy/${songId}/move-bottom`, { method: 'POST' });
+                showNotification('⏬ Canción movida al final de la cola', 'info');
+                shouldReloadQueue = true;
+            } catch (error) {
+                showNotification(`Error al mover: ${error.message}`, 'error');
+            }
+
         } else if (action === 'move-lazy-up') {
             // Mover canción lazy hacia arriba
             try {
                 await apiFetch(`/admin/canciones/lazy/${songId}/move-up`, { method: 'POST' });
-                showNotification('⬆️ Canción movida hacia arriba en cola lazy', 'info');
+                showNotification('⬆️ Canción movida hacia arriba en cola', 'info');
                 shouldReloadQueue = true;
             } catch (error) {
                 showNotification(`Error al mover: ${error.message}`, 'error');
@@ -651,7 +707,7 @@ async function handleQueueActions(event) {
             // Mover canción lazy hacia abajo
             try {
                 await apiFetch(`/admin/canciones/lazy/${songId}/move-down`, { method: 'POST' });
-                showNotification('⬇️ Canción movida hacia abajo en cola lazy', 'info');
+                showNotification('⬇️ Canción movida hacia abajo en cola', 'info');
                 shouldReloadQueue = true;
             } catch (error) {
                 showNotification(`Error al mover: ${error.message}`, 'error');
@@ -659,13 +715,13 @@ async function handleQueueActions(event) {
 
         } else if (action === 'remove-lazy') {
             // Eliminar una canción lazy
-            if (!confirm('¿Eliminar esta canción de la cola lazy?')) {
+            if (!confirm('¿Eliminar esta canción de la cola?')) {
                 button.disabled = false;
                 return;
             }
             try {
                 await apiFetch(`/canciones/${songId}/rechazar`, { method: 'POST' });
-                showNotification('❌ Canción eliminada de cola lazy', 'info');
+                showNotification('🗑️ Canción eliminada de la cola', 'info');
                 shouldReloadQueue = true;
             } catch (error) {
                 showNotification(`Error: ${error.message}`, 'error');

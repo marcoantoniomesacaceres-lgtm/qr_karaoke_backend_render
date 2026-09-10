@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LA CANTA QUE RANA</title>
-    <link rel="stylesheet" href="/static/styles_bees.css">
+    <link rel="stylesheet" href="/static/styles_bees.css?v=20260910_btn_pos">
 </head>
 
 <body>
@@ -70,7 +70,7 @@
                     <!-- Los resultados se insertarán aquí -->
                 </div>
                 <div style="margin: 20px 10px; font-size: 11px; color: #888; text-align: center; line-height: 1.4;">
-                    Búsqueda impulsada por YouTube API Services. Al buscar canciones aceptas los <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" style="color: #bbb; text-decoration: underline;">Términos de YouTube</a> y la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style="color: #bbb; text-decoration: underline;">Privacidad de Google</a>.<br>
+                    Búsqueda impulsada por YouTube API Services para My Qr Music. Al buscar canciones aceptas los <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" style="color: #bbb; text-decoration: underline;">Términos de YouTube</a> y la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style="color: #bbb; text-decoration: underline;">Privacidad de Google</a>.<br>
                     <a href="/terminos" target="_blank" style="color: #bbb; text-decoration: underline;">Términos y Condiciones</a> &bull; <a href="/privacidad" target="_blank" style="color: #bbb; text-decoration: underline;">Política de Privacidad</a>
                 </div>
             </div>
@@ -84,9 +84,61 @@
                         <span id="cart-count">0</span>
                     </button>
                 </div>
-                <div id="product-catalog-list" class="product-grid">
-                    <!-- Los productos se insertarán aquí -->
+
+                <!-- BUSCADOR DE PRODUCTOS -->
+                <div class="catalog-search-container">
+                    <div class="catalog-search-box">
+                        <span class="catalog-search-icon">🔍</span>
+                        <input type="text" id="catalog-search-input" placeholder="Buscar cerveza, trago, snack..." autocomplete="off">
+                        <button id="catalog-search-clear-btn" class="catalog-search-clear-btn hidden" title="Limpiar búsqueda">✕</button>
+                    </div>
                 </div>
+
+                <!-- BANNER: PEDIR OTRA RONDA -->
+                <div id="repeat-round-container" class="repeat-round-container hidden">
+                    <div class="repeat-round-card">
+                        <div class="repeat-round-header">
+                            <span class="repeat-round-badge">🍻 ¿Otra ronda igual?</span>
+                            <span id="repeat-round-time" class="repeat-round-time"></span>
+                        </div>
+                        <div class="repeat-round-content">
+                            <div class="repeat-round-icon">🔄</div>
+                            <div class="repeat-round-details">
+                                <div id="repeat-round-summary" class="repeat-round-summary"></div>
+                                <div id="repeat-round-price" class="repeat-round-price"></div>
+                            </div>
+                        </div>
+                        <div class="repeat-round-actions">
+                            <button id="repeat-round-btn" class="btn-repeat-round">
+                                <span>🍻</span> Pedir Otra Ronda
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA DE CATEGORÍAS (PANEL INICIAL) -->
+                <div id="catalog-categories-view" class="catalog-categories-view">
+                    <div class="categories-header-title">
+                        <span>📂 Categorías del Menú</span>
+                    </div>
+                    <div id="catalog-category-grid" class="category-grid">
+                        <!-- Las tarjetas de categorías se insertarán aquí -->
+                    </div>
+                </div>
+
+                <!-- VISTA DE PRODUCTOS DE LA CATEGORÍA / RESULTADOS DE BÚSQUEDA -->
+                <div id="catalog-products-view" class="catalog-products-view hidden">
+                    <div class="catalog-breadcrumb">
+                        <button id="catalog-back-to-categories-btn" class="catalog-back-btn">
+                            ⬅️ Categorías
+                        </button>
+                        <span id="catalog-category-current-title" class="catalog-current-cat-title"></span>
+                    </div>
+                    <div id="product-catalog-list" class="product-grid">
+                        <!-- Los productos se insertarán aquí -->
+                    </div>
+                </div>
+
                 <button id="add-all-btn" class="btn-add-all hidden">Agregar todo</button>
             </div>
 
@@ -191,6 +243,25 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIRMAR OTRA RONDA -->
+    <div id="repeat-round-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>🍻 Pedir Otra Ronda</h3>
+            <p style="color: #718096; font-size: 0.9em; margin-bottom: 12px;">Se enviará el siguiente pedido idéntico al anterior:</p>
+            <div id="repeat-round-modal-items" class="cart-items">
+                <!-- Lista de productos de la ronda -->
+            </div>
+            <div style="text-align: right; font-weight: bold; font-size: 1.15em; margin: 14px 0; color: var(--bees-black);" id="repeat-round-modal-total">
+                <!-- Total: $XX.XXX -->
+            </div>
+            <div class="modal-actions" style="display: flex; flex-direction: column; gap: 8px;">
+                <button id="confirm-repeat-round-btn" class="btn-confirm" style="width: 100%;">🍻 Confirmar Esta Ronda</button>
+                <button id="edit-repeat-round-in-cart-btn" class="btn-primary" style="width: 100%; background: #edf2f7; color: #2d3748; border: 1px solid #cbd5e0;">🛒 Modificar en Carrito</button>
+                <button id="cancel-repeat-round-btn" class="btn-cancel" style="width: 100%;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- NOTIFICACIÓN FLOTANTE -->
     <div id="notification-banner"></div>
 
@@ -198,7 +269,7 @@
     <div id="reaction-container" class="reaction-container"></div>
 
     <!-- SCRIPT PRINCIPAL -->
-    <script src="/static/qr_music_app.js"></script>
+    <script src="/static/qr_music_app.js?v=20260910_round"></script>
 </body>
 
 </html>

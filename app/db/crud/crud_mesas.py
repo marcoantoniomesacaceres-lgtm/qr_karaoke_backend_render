@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas import MesaCreate
 from app.utils.cache_manager import cache_manager as cache
+from app.utils.timezone_utils import now_bogota
 
 
 from typing import Optional
@@ -25,13 +26,16 @@ def get_mesas(db: Session, local_id: Optional[int] = None):
 
 
 def create_mesa(db: Session, mesa: MesaCreate):
-    """Crea una nueva mesa en el CACHE."""
+    """Crea una nueva mesa en el CACHE con un session_id único."""
+    import uuid
+    session_id = uuid.uuid4().hex[:8]
     mesa_data = {
         "nombre": mesa.nombre,
         "qr_code": mesa.qr_code,
         "local_id": mesa.local_id,
+        "session_id": session_id,
         "is_active": True,
-        "created_at": datetime.datetime.now().isoformat(),
+        "created_at": now_bogota().isoformat(),
         "usuarios": []
     }
     mesa_id = cache.create_mesa(mesa_data)

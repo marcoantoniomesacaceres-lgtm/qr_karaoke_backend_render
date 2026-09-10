@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         QrMusic TV Player 2
+// @name         My Qr Music TV Player 2
 // @namespace    http://tampermonkey.net/
-// @version      7.0
-// @description  Integración de QrMusic con YouTube. Soporte Multi-Local, 2 Bloques Inferiores Independientes para 100", Logos 2x y Reacciones.
+// @version      7.2
+// @description  Integración de My Qr Music con YouTube. Soporte Multi-Local, Pantalla Completa Permanente sin Recargas, Paneles Temporizados y Reacciones.
 // @author       Antigravity
 // @match        https://www.youtube.com/*
 // @match        https://youtube.com/*
@@ -35,14 +35,14 @@
                 createHTML: (string) => string
             });
         } catch (e) {
-            console.warn("[QrMusic] No se pudo crear la política TrustedTypes (usando fallback):", e);
+            console.warn("[My Qr Music] No se pudo crear la política TrustedTypes (usando fallback):", e);
         }
     }
 
     try {
-        console.log("%c[QrMusic] !!! SCRIPT INICIALIZADO Y ACTIVO (v7.0 - Multi-Local & 2 Cajas 100\") !!!", "color: #9d4edd; font-size: 16px; font-weight: bold;");
+        console.log("%c[My Qr Music] !!! SCRIPT INICIALIZADO Y ACTIVO (v7.2 - Fullscreen Permanente & Paneles Temporizados) !!!", "color: #9d4edd; font-size: 16px; font-weight: bold;");
 
-        // 1. Configuración de IP/Host y Sede de QrMusic
+        // 1. Configuración de IP/Host y Sede de My Qr Music
         let qrmusicHost = localStorage.getItem("qrmusic_host") || "localhost:8000";
         let qrmusicLocalId = localStorage.getItem("qrmusic_local_id") || "";
 
@@ -92,7 +92,7 @@
         window.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {
                 const input = prompt(
-                    "Configure la URL o Host del servidor QrMusic:\n" +
+                    "Configure la URL o Host del servidor My Qr Music:\n" +
                     "(Ejemplos: 'localhost:8000?local=1', '192.168.1.50:8000', o 'http://miservidor.com?local=sede-norte')",
                     qrmusicLocalId ? `${qrmusicHost}?local=${qrmusicLocalId}` : qrmusicHost
                 );
@@ -154,7 +154,7 @@
                 .then(data => {
                     if (data.owner_logo) {
                         ownerLogoUrl = data.owner_logo.startsWith('http') ? data.owner_logo : `${proto}://${qrmusicHost}${data.owner_logo}`;
-                        console.log("[QrMusic] Logo corporativo / sede cargado:", ownerLogoUrl);
+                        console.log("[My Qr Music] Logo corporativo / sede cargado:", ownerLogoUrl);
                     }
                     if (data.local_logo) {
                         localLogoUrl = data.local_logo.startsWith('http') ? data.local_logo : `${proto}://${qrmusicHost}${data.local_logo}`;
@@ -181,7 +181,7 @@
                         localLogoEl.src = localLogoUrl || ownerLogoUrl;
                     }
                 })
-                .catch(err => console.warn("[QrMusic] Error cargando logo corporativo del dueño:", err));
+                .catch(err => console.warn("[My Qr Music] Error cargando logo corporativo del dueño:", err));
         };
         fetchOwnerSettings();
 
@@ -226,11 +226,11 @@
         // 2. Módulo de Reacciones (Emojis flotantes basados en imágenes)
         const setupReactions = () => {
             if (isPlayer2Page) {
-                console.log("[QrMusic SetupReactions] Omitiendo setup en página de vinculación.");
+                console.log("[My Qr Music SetupReactions] Omitiendo setup en página de vinculación.");
                 return;
             }
             if (!document.head || !document.body) {
-                console.log("[QrMusic SetupReactions] document.head o document.body son nulos. Reintentando luego.");
+                console.log("[My Qr Music SetupReactions] document.head o document.body son nulos. Reintentando luego.");
                 return;
             }
 
@@ -238,7 +238,7 @@
                 // Inyectar estilos específicos de reacciones (se remueve !important de bottom en .reaction-emoji para permitir animación)
                 const styleId = 'qrmusic-reaction-styles';
                 if (!document.getElementById(styleId)) {
-                    console.log("[QrMusic SetupReactions] Inyectando hoja de estilos para reacciones flotantes...");
+                    console.log("[My Qr Music SetupReactions] Inyectando hoja de estilos para reacciones flotantes...");
                     const style = document.createElement('style');
                     style.id = styleId;
                     const cssText = `
@@ -300,7 +300,7 @@
                     `;
                     style.appendChild(document.createTextNode(cssText));
                     document.head.appendChild(style);
-                    console.log("[QrMusic SetupReactions] Hoja de estilos inyectada con éxito.");
+                    console.log("[My Qr Music SetupReactions] Hoja de estilos inyectada con éxito.");
                 }
 
                 // Determinar el padre destino correcto: el reproductor de YouTube si existe, de lo contrario body.
@@ -309,21 +309,21 @@
 
                 // Si el contenedor existe pero está colocado en el padre incorrecto (por cache de SPA), recolocarlo.
                 if (container && container.parentNode !== targetParent) {
-                    console.log("[QrMusic SetupReactions] Recolocando contenedor en el padre correcto (movie_player)...");
+                    console.log("[My Qr Music SetupReactions] Recolocando contenedor en el padre correcto (movie_player)...");
                     container.remove();
                     container = null;
                 }
 
                 // Inyectar contenedor si no existe
                 if (!container) {
-                    console.log("[QrMusic SetupReactions] Creando y añadiendo contenedor #qrmusic-reaction-container...");
+                    console.log("[My Qr Music SetupReactions] Creando y añadiendo contenedor #qrmusic-reaction-container...");
                     const rc = document.createElement('div');
                     rc.id = 'qrmusic-reaction-container';
                     targetParent.appendChild(rc);
-                    console.log("[QrMusic SetupReactions] Contenedor añadido con éxito a:", targetParent.id || "body");
+                    console.log("[My Qr Music SetupReactions] Contenedor añadido con éxito a:", targetParent.id || "body");
                 }
             } catch (err) {
-                console.error("[QrMusic SetupReactions] Error crítico en setupReactions:", err);
+                console.error("[My Qr Music SetupReactions] Error crítico en setupReactions:", err);
             }
         };
 
@@ -348,9 +348,9 @@
             if (!indicator.dataset.hasClickListener) {
                 indicator.dataset.hasClickListener = "true";
                 indicator.style.cursor = "pointer";
-                indicator.title = "Haz click aquí para configurar el servidor QrMusic";
+                indicator.title = "Haz click aquí para configurar el servidor My Qr Music";
                 indicator.addEventListener('click', () => {
-                    const newHost = prompt("Introduce la dirección (host/IP) del servidor QrMusic (ej: qr-karaoke-backend-render-pb3m.onrender.com):", qrmusicHost);
+                    const newHost = prompt("Introduce la dirección (host/IP) del servidor My Qr Music (ej: qr-karaoke-backend-render-pb3m.onrender.com):", qrmusicHost);
                     if (newHost !== null) {
                         const cleanHost = newHost.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
                         if (cleanHost) {
@@ -381,11 +381,15 @@
             }
         };
 
-        // 3. Determinar si estamos en el Home de YouTube o en un video
-        const isHomePath = () => {
+        // 3. Control de Estado Ocioso (espera) y determinación de vista
+        let isIdleMode = false;
+
+        const isIdle = () => {
             if (isPlayer2Page) return true;
-            return window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '';
+            return isIdleMode || window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '';
         };
+
+        const isHomePath = () => isIdle();
 
         // 4. Inyectar estilos globales
         const injectStyles = () => {
@@ -466,7 +470,7 @@
                     background: #000000 !important;
                 }
                 
-                /* Pantalla de Espera Personalizada de QrMusic (Home de YouTube) */
+                /* Pantalla de Espera Personalizada de My Qr Music (Home de YouTube) */
                 #qrmusic-welcome-screen {
                     position: fixed !important;
                     top: 0 !important;
@@ -593,6 +597,14 @@
                     display: flex !important;
                     flex-direction: column !important;
                     text-align: left !important;
+                    opacity: 0 !important;
+                    transform: translateY(35px) scale(0.96) !important;
+                    transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+                }
+
+                #qrmusic-now-playing-box.show {
+                    opacity: 1 !important;
+                    transform: translateY(0) scale(1) !important;
                 }
 
                 /* BLOQUE DERECHO: SIGUIENTE EN COLA (Alineado a la derecha) */
@@ -616,6 +628,14 @@
                     display: flex !important;
                     flex-direction: column !important;
                     text-align: right !important;
+                    opacity: 0 !important;
+                    transform: translateY(35px) scale(0.96) !important;
+                    transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+                }
+
+                #qrmusic-next-song-box.show {
+                    opacity: 1 !important;
+                    transform: translateY(0) scale(1) !important;
                 }
 
                 /* Tipografía Duplicada (2x) para Pantalla Gigante (100") */
@@ -849,7 +869,7 @@
                             </div>
                             <h2 class="welcome-title">¡Listo para Empezar!</h2>
                             <p class="welcome-desc">
-                                El reproductor de TV de QrMusic está sincronizado. Envía tus canciones desde el administrador o escanea el QR de la mesa para empezar.
+                                El reproductor de TV de My Qr Music está sincronizado. Envía tus canciones desde el administrador o escanea el QR de la mesa para empezar.
                             </p>
                             <div class="welcome-footer">
                                 📡 Esperando canción en cola...
@@ -865,7 +885,7 @@
                     if (configBtn) {
                         configBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            const newHost = prompt("Introduce el host/IP del servidor QrMusic (ej: qr-karaoke-backend-render-pb3m.onrender.com):", qrmusicHost);
+                            const newHost = prompt("Introduce el host/IP del servidor My Qr Music (ej: qr-karaoke-backend-render-pb3m.onrender.com):", qrmusicHost);
                             if (newHost !== null) {
                                 const cleanHost = newHost.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
                                 if (cleanHost) {
@@ -879,7 +899,7 @@
 
                     // Doble click en el fondo para atajo de emergencia
                     welcomeScreen.addEventListener('dblclick', () => {
-                        const newHost = prompt("Configure la dirección del servidor QrMusic:", qrmusicHost);
+                        const newHost = prompt("Configure la dirección del servidor My Qr Music:", qrmusicHost);
                         if (newHost !== null) {
                             const cleanHost = newHost.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
                             if (cleanHost) {
@@ -901,7 +921,7 @@
                 const welcomeScreen = document.getElementById('qrmusic-welcome-screen');
                 if (welcomeScreen) welcomeScreen.remove();
 
-                // Marca de agua QR de QrMusic (Esquina superior derecha)
+                // Marca de agua QR de My Qr Music (Esquina superior derecha)
                 if (!document.getElementById('qrmusic-watermark')) {
                     const img = document.createElement('img');
                     img.id = 'qrmusic-watermark';
@@ -965,21 +985,80 @@
             if (nextUserEl) nextUserEl.textContent = nextUser;
         };
 
+        // Control dinámico y temporizado de visibilidad para los 2 paneles inferiores:
+        //  1. Primeros 10 segundos al inicio de la canción (0s a 10s)
+        //  2. 10 segundos a la mitad exacta de la canción ((duracion/2 - 5s) a (duracion/2 + 5s))
+        //  3. 10 segundos comenzando 20 segundos antes de terminar la canción ((duracion - 20s) a (duracion - 10s))
+        //  4. Ocultos el resto del tiempo (con suave transición fade / slide)
+        const updateBoxesVisibility = () => {
+            if (isPlayer2Page || isHomePath()) {
+                const nowBox = document.getElementById('qrmusic-now-playing-box');
+                const nextBox = document.getElementById('qrmusic-next-song-box');
+                if (nowBox) nowBox.classList.remove('show');
+                if (nextBox) nextBox.classList.remove('show');
+                return;
+            }
+
+            const video = document.querySelector('video');
+            const nowBox = document.getElementById('qrmusic-now-playing-box');
+            const nextBox = document.getElementById('qrmusic-next-song-box');
+
+            if (!nowBox && !nextBox) return;
+
+            // Si no hay video, está pausado o estamos en plena cortina/transición
+            if (!video || isNaN(video.currentTime) || video.paused || window._qrmusicTransitioning || window._qrmusicCurtainActive) {
+                if (nowBox) nowBox.classList.remove('show');
+                if (nextBox) nextBox.classList.remove('show');
+                return;
+            }
+
+            const t = video.currentTime;
+            const d = video.duration;
+
+            let shouldShow = false;
+
+            // Condición 1: Primeros 10 segundos de la canción
+            if (t <= 10.0) {
+                shouldShow = true;
+            } 
+            // Condiciones con duración conocida
+            else if (d && d > 20.0) {
+                const mid = d / 2.0;
+                // Condición 2: 10 segundos a la mitad de la canción (mid - 5s hasta mid + 5s)
+                const isMiddle = (t >= (mid - 5.0)) && (t <= (mid + 5.0));
+
+                // Condición 3: 10 segundos comenzando 20 segundos antes de terminar (d - 20s hasta d - 10s)
+                const isNearEnd = (t >= (d - 20.0)) && (t <= (d - 10.0));
+
+                if (isMiddle || isNearEnd) {
+                    shouldShow = true;
+                }
+            }
+
+            if (shouldShow) {
+                if (nowBox) nowBox.classList.add('show');
+                if (nextBox) nextBox.classList.add('show');
+            } else {
+                if (nowBox) nowBox.classList.remove('show');
+                if (nextBox) nextBox.classList.remove('show');
+            }
+        };
+
         // Helper para llamar al endpoint /siguiente y forzar el inicio de reproducción
         let triggeringNext = false;
         const triggerNextSong = async () => {
             if (triggeringNext) return;
             triggeringNext = true;
-            console.log(`[QrMusic] Canciones detectadas en cola (local: ${qrmusicLocalId || 'General'}). Avanzando de manera automática...`);
+            console.log(`[My Qr Music] Canciones detectadas en cola (local: ${qrmusicLocalId || 'General'}). Avanzando de manera automática...`);
             try {
                 let nextUrl = `${getHttpProto()}://${qrmusicHost}/api/v1/canciones/siguiente`;
                 if (qrmusicLocalId) {
                     nextUrl += `?local_id=${encodeURIComponent(qrmusicLocalId)}`;
                 }
                 const response = await fetch(nextUrl, { method: 'POST' });
-                console.log("[QrMusic] Respuesta avanzar automática:", response.status);
+                console.log("[My Qr Music] Respuesta avanzar automática:", response.status);
             } catch (err) {
-                console.error("[QrMusic] Error al iniciar canción automática:", err);
+                console.error("[My Qr Music] Error al iniciar canción automática:", err);
             } finally {
                 setTimeout(() => { triggeringNext = false; }, 3000);
             }
@@ -993,7 +1072,7 @@
                     try {
                         player.unMute();
                         player.setVolume(100);
-                        console.log("[QrMusic] Reproductor desmutado correctamente.");
+                        console.log("[My Qr Music] Reproductor desmutado correctamente.");
                     } catch(e) {}
                 }
             }
@@ -1012,27 +1091,27 @@
             if (qrmusicLocalId) {
                 wsUrl += `?local=${encodeURIComponent(qrmusicLocalId)}`;
             }
-            console.log(`[QrMusic] Conectando a WebSocket: ${wsUrl}`);
+            console.log(`[My Qr Music] Conectando a WebSocket: ${wsUrl}`);
             
             socket = new WebSocket(wsUrl);
             
             socket.onopen = () => {
-                console.log(`[QrMusic] WebSocket conectado correctamente (Sede: ${qrmusicLocalId || 'General'}).`);
+                console.log(`[My Qr Music] WebSocket conectado correctamente (Sede: ${qrmusicLocalId || 'General'}).`);
                 updateStatusIndicator(true);
             };
 
             socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log("[QrMusic] Mensaje WebSocket recibido:", data);
+                    console.log("[My Qr Music] Mensaje WebSocket recibido:", data);
                     
                     // A. Comando para reproducir canción
                     if (data.type === 'play_song') {
                         const payload = data.payload || {};
                         const youtube_id = payload.youtube_id;
                         if (youtube_id) {
+                            isIdleMode = false;
                             const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-                            const onWatchPage = window.location.pathname.includes('/watch');
                             
                             // Activar transición limpia sin parpadeo (pantalla negra/espera mientras carga)
                             window._qrmusicTransitioning = true;
@@ -1042,14 +1121,18 @@
                                 window._qrmusicTransitioning = false;
                             }, 8000); // 8 segundos de protección
 
-                            if (onWatchPage && player && typeof player.loadVideoById === 'function') {
-                                console.log(`[QrMusic] Cargando video vía SPA (loadVideoById): ${youtube_id}`);
+                            if (player && typeof player.loadVideoById === 'function') {
+                                console.log(`[My Qr Music] 🎬 Cargando video vía SPA in-place (loadVideoById): ${youtube_id}`);
                                 try {
-                                    history.pushState(null, "", "/watch?v=" + youtube_id);
+                                    history.replaceState(null, "", "/watch?v=" + youtube_id);
                                 } catch(e) {}
                                 player.loadVideoById(youtube_id);
+                                if (typeof player.playVideo === 'function') {
+                                    try { player.playVideo(); } catch(e) {}
+                                }
+                                unmuteActivePlayer();
                             } else {
-                                console.log(`[QrMusic] Navegando a video vía yt-navigate Event (SPA Router): ${youtube_id}`);
+                                console.log(`[My Qr Music] Navegando a video vía yt-navigate Event (SPA Router): ${youtube_id}`);
                                 const ytdApp = document.querySelector('ytd-app');
                                 if (ytdApp) {
                                     try {
@@ -1068,7 +1151,7 @@
                                             }
                                         }));
                                     } catch (e) {
-                                        console.error("[QrMusic] Error en yt-navigate event:", e);
+                                        console.error("[My Qr Music] Error en yt-navigate event:", e);
                                         window.location.href = `https://www.youtube.com/watch?v=${youtube_id}`;
                                     }
                                 } else {
@@ -1088,55 +1171,51 @@
                         const v = document.querySelector('video');
                         if (v) v.currentTime = 0;
                     } 
-                    // C. Auto-play o Limpieza en caliente desde WebSocket (VUELTA AL HOME VIRTUAL PARA NO PERDER FULLSCREEN)
+                    // C. Auto-play o Limpieza en caliente desde WebSocket (SIN RECARGA / SIN SALIR DE FULLSCREEN)
                     else if (data.type === 'queue_update') {
                         const payload = data.payload || {};
                         const nowPlaying = payload.now_playing;
                         const upcoming = payload.upcoming || [];
                         const lazy = payload.lazy_queue || [];
                         
-                        if (isHomePath()) {
+                        if (isIdle()) {
                             if (upcoming.length > 0 || lazy.length > 0) {
                                 triggerNextSong();
                             }
                         } else {
                             if (!nowPlaying && upcoming.length === 0 && lazy.length === 0) {
-                                console.log("[QrMusic] Cola vaciada. Volviendo al Home de forma virtual (sin recarga)...");
+                                console.log("[My Qr Music] Cola vaciada. Activando pantalla de espera sin alterar pantalla completa...");
+                                isIdleMode = true;
                                 const v = document.querySelector('video');
                                 if (v) v.pause();
-                                try {
-                                    history.pushState(null, "", "/");
-                                } catch(e) {
-                                    window.location.href = "https://www.youtube.com/";
-                                }
                             }
                         }
                     }
                     // D. Procesamiento de Emojis/Reacciones
                     else if (data.type === 'reaction' && data.payload && data.payload.reaction) {
                         const reactionVal = data.payload.reaction;
-                        console.log("[QrMusic Reaction] Procesando reacción:", reactionVal);
+                        console.log("[My Qr Music Reaction] Procesando reacción:", reactionVal);
                         
                         const isHome = isHomePath();
-                        console.log("[QrMusic Reaction] Estado actual - isHomePath():", isHome, 
+                        console.log("[My Qr Music Reaction] Estado actual - isHomePath():", isHome, 
                                     "| _qrmusicTransitioning:", window._qrmusicTransitioning, 
                                     "| _qrmusicCurtainActive:", window._qrmusicCurtainActive);
 
                         // REQUERIMIENTO: Solo mostrar reacciones cuando se está reproduciendo activamente un video (NO en Home/Espera/Transición)
                         if (isHome || window._qrmusicTransitioning || window._qrmusicCurtainActive) {
-                            console.log("[QrMusic Reaction] Reacción ignorada por estar en home, transición o cortina activa.");
+                            console.log("[My Qr Music Reaction] Reacción ignorada por estar en home, transición o cortina activa.");
                             return;
                         }
 
                         // Asegurar e inyectar de forma dinámica el contenedor si fue destruido por transiciones SPA de YouTube
                         let container = document.getElementById('qrmusic-reaction-container');
-                        console.log("[QrMusic Reaction] Contenedor existente:", !!container);
+                        console.log("[My Qr Music Reaction] Contenedor existente:", !!container);
                         
                         if (!container) {
-                            console.log("[QrMusic Reaction] Contenedor no encontrado. Llamando a setupReactions()...");
+                            console.log("[My Qr Music Reaction] Contenedor no encontrado. Llamando a setupReactions()...");
                             setupReactions();
                             container = document.getElementById('qrmusic-reaction-container');
-                            console.log("[QrMusic Reaction] Contenedor tras setupReactions:", !!container);
+                            console.log("[My Qr Music Reaction] Contenedor tras setupReactions:", !!container);
                         }
 
                         if (container) {
@@ -1154,23 +1233,23 @@
                                     el.style.left = leftVal;
                                     el.appendChild(img);
                                     
-                                    console.log("[QrMusic Reaction] Creando elemento reaction-emoji con imagen:", imgUrl, "en left:", leftVal);
+                                    console.log("[My Qr Music Reaction] Creando elemento reaction-emoji con imagen:", imgUrl, "en left:", leftVal);
                                     
                                     container.appendChild(el);
-                                    console.log("[QrMusic Reaction] Elemento añadido con éxito al contenedor.");
+                                    console.log("[My Qr Music Reaction] Elemento añadido con éxito al contenedor.");
                                     
                                     setTimeout(() => {
                                         el.remove();
-                                        console.log("[QrMusic Reaction] Elemento removido después de timeout.");
+                                        console.log("[My Qr Music Reaction] Elemento removido después de timeout.");
                                     }, 6000);
                                 } else {
-                                    console.warn("[QrMusic Reaction] No se pudo resolver la URL de imagen para el emoji:", reactionVal);
+                                    console.warn("[My Qr Music Reaction] No se pudo resolver la URL de imagen para el emoji:", reactionVal);
                                 }
                             } catch(err) {
-                                console.error("[QrMusic Reaction] Error crítico creando/añadiendo emoji:", err);
+                                console.error("[My Qr Music Reaction] Error crítico creando/añadiendo emoji:", err);
                             }
                         } else {
-                            console.error("[QrMusic Reaction] ERROR: El contenedor sigue siendo NULL incluso después de setupReactions()!");
+                            console.error("[My Qr Music Reaction] ERROR: El contenedor sigue siendo NULL incluso después de setupReactions()!");
                         }
                     }
                     // E. Procesamiento de Comunicados de Administración (Banner Neón)
@@ -1189,18 +1268,18 @@
                         }
                     }
                 } catch (err) {
-                    console.error("[QrMusic] Error procesando mensaje WebSocket:", err);
+                    console.error("[My Qr Music] Error procesando mensaje WebSocket:", err);
                 }
             };
 
             socket.onclose = () => {
-                console.log("[QrMusic] WebSocket desconectado. Reconectando en 3 segundos...");
+                console.log("[My Qr Music] WebSocket desconectado. Reconectando en 3 segundos...");
                 updateStatusIndicator(false);
                 setTimeout(connectWebSocket, 3000);
             };
 
             socket.onerror = (err) => {
-                console.error("[QrMusic] Error en WebSocket:", err);
+                console.error("[My Qr Music] Error en WebSocket:", err);
                 updateStatusIndicator(false);
             };
         };
@@ -1255,23 +1334,19 @@
                         }
                         window._qrmusicNextSongDetails = nextSongDetails;
                         
-                        if (isHome) {
+                        if (isIdle()) {
                             if (upcoming.length > 0 || lazy.length > 0) {
                                 triggerNextSong();
                             }
                             return;
                         }
                         
-                        // VUELTA AL HOME VIRTUAL SI LA COLA SE VACÍA EN CALIENTE
+                        // VUELTA AL MODO ESPERA SI LA COLA SE VACÍA EN CALIENTE (SIN RECARGAR / SIN SALIR DE PANTALLA COMPLETA)
                         if (!data.now_playing && upcoming.length === 0 && lazy.length === 0) {
-                            console.log("[QrMusic] Poller detectó cola vacía. Volviendo al Home virtualmente...");
+                            console.log("[My Qr Music] Poller detectó cola vacía. Activando pantalla de espera sin alterar pantalla completa...");
+                            isIdleMode = true;
                             const v = document.querySelector('video');
                             if (v) v.pause();
-                            try {
-                                history.pushState(null, "", "/");
-                            } catch(e) {
-                                window.location.href = "https://www.youtube.com/";
-                            }
                             return;
                         }
 
@@ -1336,7 +1411,7 @@
                 if (isFinished && !video._qrmusicReported) {
                     video._qrmusicReported = true;
                     lastReportedVideoId = currentVideoId;
-                    console.log(`[QrMusic] 🏁 Canción finalizada detectada (${currentVideoId}) en sede (${qrmusicLocalId || 'General'}). Solicitando siguiente...`);
+                    console.log(`[My Qr Music] 🏁 Canción finalizada detectada (${currentVideoId}) en sede (${qrmusicLocalId || 'General'}). Solicitando siguiente...`);
 
                     try {
                         let nextUrl = `${getHttpProto()}://${qrmusicHost}/api/v1/canciones/siguiente`;
@@ -1345,19 +1420,15 @@
                         }
                         const response = await fetch(nextUrl, { method: 'POST' });
                         if (response.status === 204) {
-                            console.log("[QrMusic] 📭 Cola vacía (204). Regresando al Home virtualmente para no perder pantalla completa...");
+                            console.log("[My Qr Music] 📭 Cola vacía (204). Activando pantalla de espera (permaneciendo en fullscreen)...");
+                            isIdleMode = true;
                             const v = document.querySelector('video');
                             if (v) v.pause();
-                            try {
-                                history.pushState(null, "", "/");
-                            } catch (e) {
-                                window.location.href = "https://www.youtube.com/";
-                            }
                         } else {
-                            console.log("[QrMusic] ⏭️ Siguiente canción iniciada exitosamente.");
+                            console.log("[My Qr Music] ⏭️ Siguiente canción iniciada exitosamente.");
                         }
                     } catch (err) {
-                        console.error("[QrMusic] Error al solicitar la siguiente canción:", err);
+                        console.error("[My Qr Music] Error al solicitar la siguiente canción:", err);
                         video._qrmusicReported = false;
                     }
                 }
@@ -1372,7 +1443,7 @@
                 // Solo interceptar clicks reales del usuario (isTrusted === true)
                 // para evitar interferir con clicks programados por el script (como el fsBtn.click())
                 if (event.isTrusted) {
-                    console.log("[QrMusic] Interceptando click del usuario para evitar pausa nativa de YouTube");
+                    console.log("[My Qr Music] Interceptando click del usuario para evitar pausa nativa de YouTube");
                     event.stopPropagation();
                     event.preventDefault();
 
@@ -1381,7 +1452,7 @@
                     // 1. Activar pantalla completa nativa del navegador
                     if (!document.fullscreenElement) {
                         document.documentElement.requestFullscreen().catch(err => {
-                            console.debug("[QrMusic] Pantalla completa nativa del navegador omitida o no permitida:", err.message);
+                            console.debug("[My Qr Music] Pantalla completa nativa del navegador omitida o no permitida:", err.message);
                         });
                     }
                     
@@ -1422,7 +1493,7 @@
             if (window._qrmusicTransitioning) {
                 // Si el video ya está cargado y reproduciéndose más allá de 0.5s, quitamos la pantalla de espera y la cortina
                 if (video && !video.paused && video.currentTime > 0.5) {
-                    console.log("[QrMusic] Video detectado en reproducción activa. Quitante pantalla de espera.");
+                    console.log("[My Qr Music] Video detectado en reproducción activa. Quitante pantalla de espera.");
                     window._qrmusicTransitioning = false;
                     window._qrmusicCurtainActive = false;
                 }
@@ -1465,13 +1536,10 @@
 
             // --- CONTROL DINÁMICO DE VISIBILIDAD DE YOUTUBE ---
             if (isPlayer2Page) return; 
-            const ytdApp = document.querySelector('ytd-app');
             const welcome = document.getElementById('qrmusic-welcome-screen');
             
             if (showWelcome) {
-                if (ytdApp) {
-                    ytdApp.style.setProperty('display', 'none', 'important');
-                }
+                // NOTA CRÍTICA: NUNCA aplicar display: none a ytd-app para no destruir el contenedor de fullscreen del navegador
                 if (welcome) {
                     welcome.style.setProperty('display', 'flex', 'important');
                     // Actualizar footer si está en transición / cargando
@@ -1481,14 +1549,17 @@
                     }
                 }
             } else {
-                if (ytdApp) {
-                    ytdApp.style.removeProperty('display');
-                }
                 if (welcome) {
                     welcome.style.setProperty('display', 'none', 'important');
                 }
             }
             // --------------------------------------------------
+
+            // Desactivar Autoplay nativo de YouTube para evitar que salte a videos aleatorios no solicitados
+            const autoNavBtn = document.querySelector('.ytp-autonav-toggle-button');
+            if (autoNavBtn && autoNavBtn.getAttribute('aria-checked') === 'true') {
+                autoNavBtn.click();
+            }
 
             if (window.location.href.includes('/watch')) {
                 // Desactivar subtítulos por defecto si están activos
@@ -1497,6 +1568,9 @@
                     ccBtn.click();
                 }
             }
+
+            // Actualizar visibilidad temporizada de los paneles "Sonando Ahora" y "Siguiente en Cola"
+            updateBoxesVisibility();
         }, 50);
 
         // Sincronizar estado gráfico inicial
@@ -1509,7 +1583,7 @@
         setupFullscreenClickListener();
 
     } catch (e) {
-        console.error("[QrMusic] CRASH INICIAL:", e);
+        console.error("[My Qr Music] CRASH INICIAL:", e);
         updateStatusIndicator(false);
     }
 })();

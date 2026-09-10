@@ -9,6 +9,7 @@ import logging
 from app.database import SessionLocal
 from app.auth import verify_token, log_admin_action
 from app.utils.cache_manager import cache_manager as cache
+from app.utils.timezone_utils import now_bogota
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -114,12 +115,17 @@ def create_mesa_endpoint(
         mesa_id = db_mesa.get('id')
         
         if not is_active:
-            # Reactivar mesa si existe pero está inactiva
+            import uuid
+            # Reactivar mesa como nueva sesión limpia desde 0
             crud.set_mesa_active_status(db, mesa_id=mesa_id, is_active=True)
+            db_mesa['session_id'] = uuid.uuid4().hex[:8]
+            db_mesa['created_at'] = now_bogota().isoformat()
             if mesa.nombre and mesa_nombre != mesa.nombre:
-                # Actualizar nombre si es necesario (asumiendo que crud tiene esta lógica o la implementamos)
                 db_mesa['nombre'] = mesa.nombre
-                cache.update_mesa(mesa_id, db_mesa)
+            cache.update_mesa(mesa_id, db_mesa)
+            cache.clear_mesa_cache(mesa_id)
+            cache.clear_usuarios_de_mesa(mesa_id)
+            cache.clear_consumos_de_mesa(mesa_id)
             return db_mesa
         else:
             raise HTTPException(
@@ -157,21 +163,32 @@ def generar_qr_key(
     db: Session = Depends(get_db)
 ):
     """
-    Genera un token encriptado URL-Safe que encapsula (local_id, mesa_id, user_num).
+    Genera un token encriptado URL-Safe que encapsula (local_id, mesa_id, user_num, session_id).
     """
+    db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
+    if not db_mesa:
+        raise HTTPException(status_code=404, detail="La mesa no existe.")
+
     if local_id is None:
-        db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
-        if db_mesa and db_mesa.get("local_id"):
+        if db_mesa.get("local_id"):
             local_id = db_mesa.get("local_id")
         else:
             local_id = 1
 
-    token = generate_qr_token(local_id=local_id, mesa_id=mesa_id, user_num=user_num)
+    session_id = db_mesa.get("session_id")
+    if not session_id:
+        import uuid
+        session_id = uuid.uuid4().hex[:8]
+        db_mesa["session_id"] = session_id
+        cache.update_mesa(mesa_id, db_mesa)
+
+    token = generate_qr_token(local_id=local_id, mesa_id=mesa_id, user_num=user_num, session_id=session_id)
     return {
         "key": token,
         "local_id": local_id,
         "mesa_id": mesa_id,
-        "usuario_numero": user_num
+        "usuario_numero": user_num,
+        "session_id": session_id
     }
 
 
@@ -179,6 +196,7 @@ def generar_qr_key(
 def resolver_qr_key(key: str, db: Session = Depends(get_db)):
     """
     Desencripta la clave QR y devuelve la información de la sede, mesa y usuario.
+    Valida que la sesión de la mesa siga activa y coincida con el session_id del token.
     """
     decrypted = decrypt_qr_token(key)
     if not decrypted:
@@ -190,12 +208,20 @@ def resolver_qr_key(key: str, db: Session = Depends(get_db)):
     local_id = decrypted["local_id"]
     mesa_id = decrypted["mesa_id"]
     usuario_numero = decrypted["usuario_numero"]
+    token_session_id = decrypted.get("session_id", "")
 
     db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
-    if not db_mesa:
+    if not db_mesa or not db_mesa.get("is_active", True):
         raise HTTPException(
-            status_code=404,
-            detail=f"La mesa asociada al código QR no existe."
+            status_code=403,
+            detail="Esta sesión de mesa ya ha finalizado. Por favor escanea el código QR actual de la mesa."
+        )
+
+    mesa_session_id = db_mesa.get("session_id", "")
+    if token_session_id and mesa_session_id and token_session_id != mesa_session_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Esta sesión de mesa ya ha finalizado. Por favor escanea el código QR actual de la mesa."
         )
 
     local_nombre = f"Sede {local_id}"
@@ -214,6 +240,7 @@ def resolver_qr_key(key: str, db: Session = Depends(get_db)):
         "mesa_id": mesa_id,
         "mesa_nombre": db_mesa.get("nombre", f"Mesa {mesa_id}"),
         "usuario_numero": usuario_numero,
+        "session_id": mesa_session_id or token_session_id,
         "is_active": db_mesa.get("is_active", True)
     }
 
@@ -226,6 +253,7 @@ def conectar_usuario_con_key(
 ):
     """
     Conecta al usuario a la mesa y local utilizando el token encriptado del QR.
+    Valida que la sesión de la mesa no haya expirado o cambiado.
     """
     decrypted = decrypt_qr_token(key)
     if not decrypted:
@@ -237,18 +265,20 @@ def conectar_usuario_con_key(
     local_id = decrypted["local_id"]
     mesa_id = decrypted["mesa_id"]
     usuario_numero = decrypted["usuario_numero"]
+    token_session_id = decrypted.get("session_id", "")
 
     db_mesa = crud.get_mesa_by_id(db, mesa_id=mesa_id)
-    if not db_mesa:
-        raise HTTPException(
-            status_code=404,
-            detail="La mesa asociada a este código QR no existe."
-        )
-
-    if not db_mesa.get("is_active", True):
+    if not db_mesa or not db_mesa.get("is_active", True):
         raise HTTPException(
             status_code=403,
-            detail="Esta mesa se encuentra desactivada temporalmente."
+            detail="Esta sesión de mesa ya ha finalizado. Por favor escanea el código QR actual de la mesa."
+        )
+
+    mesa_session_id = db_mesa.get("session_id", "")
+    if token_session_id and mesa_session_id and token_session_id != mesa_session_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Esta sesión de mesa ya ha finalizado. Por favor escanea el código QR actual de la mesa."
         )
 
     mesa_nombre = db_mesa.get("nombre", f"Mesa {mesa_id}")
